@@ -2,7 +2,7 @@
 ## Title: |cffffd100Nootropic|r Guild Manager
 ## Notes: Guild roster for WoW: Forever with mains and alts, professions, specs, contact info, an officer log, a roster change log and recruiting tools. Synced between guildmates.
 ## Author: Nootropic
-## Version: 2.4.0
+## Version: 2.5.0
 ## X-Website: https://github.com/keasbeexd/nootropic-guild-manager
 ## X-License: MIT
 ## SavedVariables: NootropicGuildManagerDB
@@ -28,6 +28,7 @@ Services\Audit.lua
 Services\RosterLog.lua
 Services\Recipes.lua
 Services\Readiness.lua
+Services\Sharing.lua
 
 # Interface
 UI\Widgets.lua
@@ -48,5 +49,6 @@ UI\AuditView.lua
 UI\MainFrame.lua
 UI\MinimapButton.lua
 UI\Options.lua
+UI\Welcome.lua
 UI\Communities.lua
 UI\WhoWhisper.lua

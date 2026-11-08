@@ -98,6 +98,7 @@ end
 -- Publishes our spec/professions if they changed.
 function C:Report()
     if not IsInGuild() or not ns.DB:Guild() then return end
+    if ns.Sharing and not ns.Sharing:Get("report") then return end -- Options > Sharing
     ns.DB:SetSelfReport(self:Snapshot())
 end
 

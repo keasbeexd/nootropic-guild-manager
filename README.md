@@ -58,6 +58,10 @@ is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 2. Restart the game or `/reload`, and make sure Nootropic Guild Manager is enabled on the character select AddOns screen.
 3. If it shows as "out of date" after a patch, tick **Load out of date AddOns**, or update the `## Interface:` line in `NootropicGuildManager.toc` (`/dump select(4, GetBuildInfo())` prints your client's number).
 
+## First launch
+
+The first time you log in with the addon (and once after updating to 2.5.0), a short **welcome tour** opens: a page for each tab (Find, Play Together, Who Can Craft?, Profiles and Raids, and Recruitment or Audit if your rank uses them), then your **sharing choices**, your **profile basics** (Discord name, contact note and roles), a **permissions** page for the Guild Master, and where to find things later. Skip it any time; reopen it from **Options** or with `/ngm welcome`.
+
 ## Opening it
 
 - `/ngm` (or `/nootropic`), the minimap button, the addon compartment menu, or the **shortcut tab on the Guild & Communities window**.
@@ -193,7 +197,8 @@ Open from **Options > AddOns > Nootropic Guild Manager**, `/ngm options`, right-
 Options has four pages in the game's AddOns list:
 
 - **Nootropic Guild Manager** (main page)
-  - **Appearance**: the **addon icon** (the **Nootropic Medallion** by default, or the game's Ale Mug or Brewfest Stein icons, or your **Guild Emblem**; shown on the window, the minimap button and the Guild & Communities shortcut; the emblem falls back to the medallion outside a guild or without a tabard), **use my guild's name in the window title** (also in the "x using ... Guild Manager" text), **show how many guildmates use the addon** (on by default), the **shortcut on the Guild & Communities window**, **Show alts and profiles on the Guild roster** (on by default), and **Learn when I usually play** (on by default).
+  - **Appearance**: the **addon icon** (the **Nootropic Medallion** by default, or the game's Ale Mug or Brewfest Stein icons, or your **Guild Emblem**; shown on the window, the minimap button and the Guild & Communities shortcut; the emblem falls back to the medallion outside a guild or without a tabard), **use my guild's name in the window title** (also in the "x using ... Guild Manager" text), **show how many guildmates use the addon** (on by default), the **shortcut on the Guild & Communities window**, and **Show alts and profiles on the Guild roster** (on by default).
+  - **Sharing** (what your copy shares with the guild; all on by default): **Share my spec and professions**, **Share my recipes**, **Learn when I usually play** (this character) and **Show me in Play Together**. Turning one off stops sharing it and clears what was already shared. A **Show the Welcome Tour** button reopens the walkthrough.
   - **Minimap Button**: show/hide it (also `/ngm minimap`), and choose what left-click, right-click and shift-click do (Find, Play Together, Recruitment, Audit, Options, show/hide window, or nothing). Drag the button to move it around the edge of the minimap; the spot is saved. The game's own AddOns menu button on the minimap (where this addon is also listed) is Blizzard's and can't be moved.
   - **Reset**: window size and position, and list columns (roster and recruitment list).
   - **Sync and Commands**: sync stats with a **Sync Now** button, **Open Guild Manager**, and the most useful commands.
@@ -258,7 +263,7 @@ In testing, three simulated clients (two officers and a member) with 40-50% of m
 Everything is saved per guild in `WTF/Account/<account>/SavedVariables/NootropicGuildManager.lua`, along with your settings. **Private notes never leave your computer**; shared data syncs as described above.
 
 What is shared:
-- With everyone running the addon: each player's own professions and spec, mains/alts, spec/profession overrides, contact info (Discord name and note), roles, when each person usually plays (only the learned summary), the recipes they know, their raid readiness, the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, and the Guild Master's permissions.
+- With everyone running the addon (each part can be switched off in **Options > Sharing**, except the basics like your version): each player's own professions and spec, mains/alts, spec/profession overrides, contact info (Discord name and note), roles, when each person usually plays (only the learned summary), the recipes they know, their raid readiness, the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, and the Guild Master's permissions.
 - With officers only: Officer Log entries (140 characters max; deleting one deletes it for every officer) and the audit trail.
 
 Each of 1.x, 2.0 and 2.1 uses its own sync protocol, so guildmates on different ones don't exchange data at all; everyone should run the latest release. When you first load 2.0, data from removed features (reviews, ratings, map dots, polls, stats, goals, kudos, About me, status, pronouns, tab settings) is deleted from your saved data. Loading 2.1 does the same for tags, tag assignments, tag icons and the tag permissions.
@@ -271,6 +276,7 @@ A note on trust: every copy of the addon checks each change it receives against 
 | --- | --- |
 | `/ngm` | open or close |
 | `/ngm find <text>` | open with a search |
+| `/ngm welcome` | the welcome tour again |
 | `/ngm play` | open the Play Together tab |
 | `/ngm craft <name>` | who in the guild can craft it (the Who Can Craft? window) |
 | `/ngm recruit` | open the Recruitment tab |
@@ -287,9 +293,9 @@ A note on trust: every copy of the addon checks each change it receives against 
 ```
 NootropicGuildManager.toc
 Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs, professions, roles, raid checks, links)  Database.lua (saved data, permissions)  Sync.lua (records, repair, transport)
-Services/  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)
+Services/  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)
 Media/     Logo.tga (the addon's icon, from docs/logo.svg)
-UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
+UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
 docs/      ARCHITECTURE.md (how it works inside)  logo.svg  preview/ (source of preview.png)
 tests/     run.sh and offline tests (not in the release zip)
 ```

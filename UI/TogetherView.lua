@@ -50,7 +50,7 @@ function TV:Lists()
     local online, usual = {}, {}
     for _, e in ipairs(ns.Roster.members) do
         local group = e.main or e.full
-        if group ~= myGroup and not e.isSelf then
+        if group ~= myGroup and not e.isSelf and not ns.Sharing:HiddenFromTogether(e.full) then
             if e.online then
                 if range == 0 or math.abs((e.level or 0) - level) <= range then online[#online + 1] = e end
             elseif ns.Profile:UsuallyOnNow(e.full) then

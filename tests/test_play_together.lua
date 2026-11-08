@@ -7,6 +7,8 @@ local settings = {}
 ns.DB = { Settings = function() return settings end }
 function ns.PlayerFullName() return "Me Main-R" end
 local usual = { ["Night Owl-R"] = true, ["Off Far-R"] = true }
+hidden = {}
+ns.Sharing = { HiddenFromTogether = function(_, f) return hidden[f] or false end }
 ns.Profile = { UsuallyOnNow = function(_, f) return usual[f] or false end }
 local function m(full, level, online, zone, main) return { full = full, short = full:gsub("%-.*", ""), level = level, online = online, zone = zone or "", main = main } end
 ns.Roster = { members = {
@@ -30,4 +32,7 @@ assert(names(L.online) == "Near Zone, Near Other" and names(L.usual) == "Night O
 settings.playRange = 0
 L = TV:Lists(); print("any level online:", names(L.online))
 assert(names(L.online) == "Near Zone, Too High, Near Other")
+hidden["Near Zone-R"] = true
+L = TV:Lists(); print("someone hiding:", names(L.online))
+assert(names(L.online) == "Too High, Near Other")
 print("OK")

@@ -9,8 +9,8 @@ The addon is plain Lua and Blizzard frames, no libraries. Files load in the orde
 | Folder | What's in it |
 | --- | --- |
 | `Core/` | `Core.lua` (namespace, events, helpers, slash commands, start-up), `Data.lua` (classes, specs, professions, roles, recruiting defaults, raid readiness checks, About links), `Database.lua` (saved data, settings, permissions), `Sync.lua` (shared records, repair, transport, security checks) |
-| `Services/` | Logic with no windows: `Roster.lua` (guild roster, search, sort), `Comm.lua` (your own spec and professions), `Profile.lua` (contact info, usual play hours), `Recruit.lua` (/who, whispers, lockouts, Do Not Whisper, invites), `Messages.lua` (custom recruitment messages), `Audit.lua` (audit text), `RosterLog.lua` (joins, leaves, promotions from the guild event log and roster), `Recipes.lua` (shared recipes), `Readiness.lua` (raid attunements and keys) |
-| `UI/` | Windows and hooks: `MainFrame.lua` (the window and its tabs), `RosterView.lua` (Find), `TogetherView.lua` (Play Together), `RecruitView.lua` + `MessagesView.lua` (Recruitment), `AuditView.lua`, `DetailPanel.lua` (profiles), `RecipesView.lua` (Who Can Craft?), `DNWView.lua` (Do Not Whisper window and name menus), `InvitePrompt.lua`, `Options.lua`, `GuildRoster.lua` + `Communities.lua` (hooks on the game's Guild & Communities window), `WhoWhisper.lua` (button on the game's /who results), `MinimapButton.lua`, and shared pieces (`Widgets.lua`, `Columns.lua`, `ScheduleGrid.lua`, `BrandIcon.lua`, `MemberPicker.lua`) |
+| `Services/` | Logic with no windows: `Roster.lua` (guild roster, search, sort), `Comm.lua` (your own spec and professions), `Profile.lua` (contact info, usual play hours), `Recruit.lua` (/who, whispers, lockouts, Do Not Whisper, invites), `Messages.lua` (custom recruitment messages), `Audit.lua` (audit text), `RosterLog.lua` (joins, leaves, promotions from the guild event log and roster), `Recipes.lua` (shared recipes), `Readiness.lua` (raid attunements and keys), `Sharing.lua` (what you share: switches that stop and clear your shared data) |
+| `UI/` | Windows and hooks: `MainFrame.lua` (the window and its tabs), `RosterView.lua` (Find), `TogetherView.lua` (Play Together), `RecruitView.lua` + `MessagesView.lua` (Recruitment), `AuditView.lua`, `DetailPanel.lua` (profiles), `RecipesView.lua` (Who Can Craft?), `DNWView.lua` (Do Not Whisper window and name menus), `InvitePrompt.lua`, `Options.lua`, `Welcome.lua` (first-launch tour), `GuildRoster.lua` + `Communities.lua` (hooks on the game's Guild & Communities window), `WhoWhisper.lua` (button on the game's /who results), `MinimapButton.lua`, and shared pieces (`Widgets.lua`, `Columns.lua`, `ScheduleGrid.lua`, `BrandIcon.lua`, `MemberPicker.lua`) |
 | `docs/` | This file |
 | `tests/` | Offline tests that run the real files against stand-ins for the game (see [Testing](#testing)) |
 
@@ -58,6 +58,7 @@ Local changes are sent together 15 seconds after the first one (a **batch**, whi
 | `SC:<member>` | usual play hours (168 bits as hex) | guild | the member only |
 | `RP:<member>:<professionID>` | `profession;id,id,...` (base-36 recipe spell IDs) | guild | the member only |
 | `RR:<member>` | completed readiness checks (`ony,brooch`, or `-`) | guild | the member only |
+| `PS:<member>` | sharing choices others must respect (`together` = leave me out of Play Together) | guild | the member only |
 | `DN:<player>` | `time;what they said` ("" = removed) | guild | anyone adds; removing needs **recruit** |
 | `RS:<player>` | `whispered;replied;invited;reply` (kept 14 days) | guild | anyone in the guild |
 | `GS:<name>` | guild setting, e.g. `GS:perm_links = "1,3"` | guild | officers; `perm_*` only the Guild Master |
@@ -72,7 +73,7 @@ A record's author is only what the sender claims; the sender is the one name the
 
 - The author must be allowed to write the record (their own data, their rank's permissions from the guild roster, or officer), and must be the sender, unless the sender is a **known officer** passing on someone else's record. Officers are known by having sent on the officer channel, which the game only allows officer ranks to do.
 - Permission settings (`GS:perm_*`) only count when their author is the current Guild Master.
-- "Self-only" records (`P`, `AV`, `SC`, `RP`, `RR`) must be authored by the member they're about.
+- "Self-only" records (`P`, `AV`, `SC`, `RP`, `RR`, `PS`) must be authored by the member they're about.
 - Records on the officer channel come only from officers, by the game's rules.
 - Keys or authors containing `|` are dropped and `|` in values is replaced, so shared text can't inject textures, colors or links. Chunked messages are capped (16 parts, 8 unfinished per sender, no chunks inside chunks).
 

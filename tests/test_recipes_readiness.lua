@@ -29,6 +29,9 @@ assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
 ns.Sync.readyFor = "g"; ns.Sync.QueueOutgoing = function() end
 assert(loadfile(ROOT .. "/Services/Recipes.lua"))("NGM", ns)
 assert(loadfile(ROOT .. "/Services/Readiness.lua"))("NGM", ns)
+assert(loadfile(ROOT .. "/Services/Sharing.lua"))("NGM", ns)
+local reports = 0
+ns.Comm.Report = function() reports = reports + 1 end
 local RCP, RD = ns.Recipes, ns.Readiness
 local names = { [2330] = "Minor Healing Potion", [3170] = "Weak Troll's Blood Elixir", [7836] = "Blackmouth Oil", [17635] = "Flask of the Titans" }
 C_Spell = { GetSpellName = function(id) return names[id] end }
@@ -71,4 +74,17 @@ C_Container.GetContainerItemInfo = function() return { hyperlink = "|cff0070dd|H
 RD:Publish(); assert(RD:For("Me Self-R").brooch and settings.knownItemIds["Brooch of the Wardens"] == 999001)
 C_Container.GetContainerItemInfo = function() return nil end; items[999001] = 1; RD:Publish(); assert(RD:For("Me Self-R").brooch, "known ID in bank")
 print("readiness:", guild.sync.guild["RR:Me Self-R"].v, " unknown member:", tostring(RD:For("Ann Smith-R")))
+-- sharing switches
+local SH = ns.Sharing
+profs = { { name = "Alchemy" } }; visible = { 2330 }; RCP:Capture()
+assert(guild.sync.guild[key].v ~= "", "recipes not shared again")
+SH:Set("recipes", false)
+assert(guild.sync.guild[key].v == "", "recipes not cleared when sharing turned off")
+RCP:Capture(); assert(guild.sync.guild[key].v == "", "captured while sharing is off")
+guild.sync.guild["P:Me Self-R"] = { v = "Holy;;", t = 1, a = "Me Self-R" }
+SH:Set("report", false); assert(guild.sync.guild["P:Me Self-R"].v == "", "report not cleared")
+local before = reports; SH:Set("report", true); assert(reports == before + 1, "report not re-sent when turned back on")
+SH:Set("together", false); assert(SH:HiddenFromTogether("Me Self-R"), "together opt-out not published")
+SH:Set("together", true); assert(not SH:HiddenFromTogether("Me Self-R"))
+print("sharing switches: ok")
 print("OK")
