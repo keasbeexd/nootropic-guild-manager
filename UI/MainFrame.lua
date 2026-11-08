@@ -1,6 +1,7 @@
 --[[
     Nootropic Guild Manager - Main window
-    Blizzard portrait frame with bottom tabs (Roster / Content Tags),
+    Blizzard portrait frame with icon tabs down the right side (Find,
+    Recruitment, Tags, Audit),
     a status line, and the member detail flyout.
 ]]
 local _, ns = ...
@@ -10,9 +11,9 @@ ns.UI = UI
 
 local FRAME_W, FRAME_H = 1000, 580
 local MIN_W, MIN_H, MAX_W, MAX_H = 640, 520, 1800, 1100
-local TAB_LABELS = { "Roster", "Recruitment", "Polls", "Tags", "Audit", "Reviews" }
-UI.TAB_ROSTER, UI.TAB_RECRUIT, UI.TAB_POLLS, UI.TAB_TAGS, UI.TAB_AUDIT, UI.TAB_REVIEWS = 1, 2, 3, 4, 5, 6
-local OFFICER_TABS = { [4] = true, [5] = true } -- Tags and Audit
+local TAB_LABELS = { "Find", "Recruitment", "Tags", "Audit" }
+UI.TAB_ROSTER, UI.TAB_RECRUIT, UI.TAB_TAGS, UI.TAB_AUDIT = 1, 2, 3, 4
+local OFFICER_TABS = { [3] = true, [4] = true } -- Tags and Audit
 
 ------------------------------------------------------------------------
 -- Creation
@@ -40,7 +41,6 @@ function UI:Create()
 
     self:UpdateTitle()
     self:BuildPortrait(f)
-    self:BuildOptionsButton(f)
     self:RestorePosition()
 
     -- Status line along the bottom edge
@@ -54,11 +54,9 @@ function UI:Create()
     ns.RosterView.LIST_WIDTH = math.floor(f:GetWidth() - ns.RosterView.LIST_INSET)
     ns.RosterView:Build(f)
     ns.RecruitView:Build(f)
-    ns.PollsView:Build(f)
     ns.TagsView:Build(f)
     ns.AuditView:Build(f)
-    ns.ReviewsView:Build(f)
-    ns.DetailPanel:Build(f)
+    ns.DetailPanel:Build()
     self:BuildTabs(f)
     self:BuildResizeGrip(f)
     ns.TagsView:OnResize(f:GetWidth())
@@ -82,7 +80,10 @@ function UI:Create()
 
     ns:On("ROSTER_UPDATED", function()
         UI:UpdateTitle() -- the guild name may have just arrived
-        if f:IsShown() then UI:RefreshStatus() end
+        if f:IsShown() then
+            UI:RefreshStatus()
+            UI:LayoutTabs() -- your rank may have changed
+        end
     end)
     ns:On("SETTINGS_CHANGED", function()
         UI:UpdateTitle()
@@ -97,25 +98,6 @@ end
 -- The portrait shows the addon icon (mug, stein or guild emblem).
 function UI:BuildPortrait(f)
     self.portrait = ns.Brand:AttachPortrait(f)
-end
-
-function UI:BuildOptionsButton(f)
-    local b = CreateFrame("Button", nil, f)
-    b:SetSize(20, 20)
-    local close = f.CloseButton or (f.GetName and _G[f:GetName() .. "CloseButton"])
-    if close then
-        b:SetPoint("RIGHT", close, "LEFT", -2, 0)
-    else
-        b:SetPoint("TOPRIGHT", -28, -4)
-    end
-    b:SetFrameLevel(f:GetFrameLevel() + 10)
-    b.Icon = b:CreateTexture(nil, "ARTWORK")
-    b.Icon:SetAllPoints()
-    b.Icon:SetTexture("Interface\\Buttons\\UI-OptionsButton")
-    b:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
-    b:SetScript("OnClick", function() ns.Options:Open() end)
-    W.Tooltip(b, "Options", "Icon, minimap button and Guild & Communities shortcut.")
-    self.optionsButton = b
 end
 
 function UI:BuildResizeGrip(f)
@@ -159,62 +141,240 @@ function UI:SaveSize()
     ns.DB:Settings().frameSize = { w = math.floor(f:GetWidth()), h = math.floor(f:GetHeight()) }
 end
 
+------------------------------------------------------------------------
+-- Tabs: icon tabs down the right side of the window, built exactly like
+-- the character panel's (CharacterFrameModeTab1..: a 55x55 frame, the
+-- common-sidetab art at 55x60, a 50x50 icon nudged 4 left, the
+-- common-sidetab-selected art when chosen, common-sidetab-hover on hover,
+-- each tab 2 below the last). Hover one for its title.
+-- Clients without that art fall back to the spellbook's tab art.
+------------------------------------------------------------------------
+local TAB_SIZE, TAB_GAP = 55, 2
+UI.TAB_OUTSIDE = 55 -- how far the tabs reach past the window's right edge
+
+local function HasAtlas(name)
+    return C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(name) ~= nil
+end
+
+-- An icon file if this client has it, else the fallback.
+local function IconIfPresent(path, fallback)
+    if GetFileIDFromPath then
+        local ok, id = pcall(GetFileIDFromPath, path)
+        if ok and id then return path end
+        if ok then return fallback end
+    end
+    return path
+end
+
+-- Each tab's icon.
+UI.DEFAULT_TAB_ICONS = {
+    -- a group of people, as on the Guild & Communities window's roster tab
+    IconIfPresent("Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend", "Interface\\Icons\\Spell_Holy_PrayerOfFortitude"), -- Roster
+    "Interface\\Icons\\Ability_Warrior_BattleShout",  -- Recruitment
+    "Interface\\Icons\\INV_Misc_Note_01",             -- Tags
+    "Interface\\Icons\\INV_Misc_Spyglass_02",         -- Audit
+}
+
+-- Flips a texture left to right (keeps an atlas's own coordinates).
+local function Mirror(tex)
+    local ulx, uly, llx, lly, urx, ury, lrx, lry = tex:GetTexCoord()
+    tex:SetTexCoord(urx, ury, lrx, lry, ulx, uly, llx, lly)
+end
+
+-- The tabs always run down the window's right side.
+function UI:TabSide()
+    return "right"
+end
+
+function UI:TabsOnLeft()
+    return self:TabSide() == "left"
+end
+
+local function CreateSideTab(f, i)
+    local tab = CreateFrame("CheckButton", "NootropicGMFrameTab" .. i, f)
+    if HasAtlas("common-sidetab") then
+        -- the character panel's tabs
+        tab:SetSize(TAB_SIZE, TAB_SIZE)
+        tab.Bg = tab:CreateTexture(nil, "BACKGROUND")
+        tab.Bg:SetAtlas("common-sidetab")
+        tab.Bg:SetSize(55, 60)
+        tab.Bg:SetPoint("CENTER")
+        tab.Icon = tab:CreateTexture(nil, "ARTWORK")
+        tab.Icon:SetSize(50, 50)
+        tab.Icon:SetPoint("CENTER", -4, 0)
+        tab.iconCoords = { 0.031, 0.969, 0.031, 0.969 }
+        -- trims the icon to the tab's beveled shape (the same mask Blizzard uses)
+        if HasAtlas("common-sidetab-mask") and tab.CreateMaskTexture then
+            local mask = tab:CreateMaskTexture()
+            mask:SetAtlas("common-sidetab-mask", false)
+            mask:SetSize(55, 60)
+            mask:SetPoint("CENTER")
+            tab.Icon:AddMaskTexture(mask)
+            tab.Mask = mask
+        end
+        tab.Selected = tab:CreateTexture(nil, "OVERLAY")
+        tab.Selected:SetAtlas("common-sidetab-selected")
+        tab.Selected:SetSize(55, 60)
+        tab.Selected:SetPoint("CENTER")
+        tab.Selected:Hide()
+        local hl = tab:CreateTexture(nil, "HIGHLIGHT")
+        hl:SetAtlas("common-sidetab-hover")
+        hl:SetSize(55, 60)
+        hl:SetPoint("CENTER")
+        tab.Hl = hl
+        tab.atlases = { Bg = "common-sidetab", Selected = "common-sidetab-selected", Hl = "common-sidetab-hover", Mask = "common-sidetab-mask" }
+        tab.iconX = 4
+        tab.gap = TAB_GAP
+    else
+        -- older clients: the spellbook's skill line tab
+        tab:SetSize(32, 32)
+        tab.Bg = tab:CreateTexture(nil, "BACKGROUND")
+        tab.Bg:SetTexture("Interface\\SpellBook\\SpellBook-SkillLineTab")
+        tab.Bg:SetSize(64, 64)
+        tab.Bg:SetPoint("TOPLEFT", -3, 11)
+        tab.Icon = tab:CreateTexture(nil, "ARTWORK")
+        tab.Icon:SetAllPoints()
+        tab:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+        tab.Selected = tab:CreateTexture(nil, "OVERLAY")
+        tab.Selected:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+        tab.Selected:SetBlendMode("ADD")
+        tab.Selected:SetAllPoints()
+        tab.Selected:Hide()
+        tab.gap = 17
+    end
+    tab:SetID(i)
+    -- shows or hides the selected art (instead of a checked texture)
+    function tab:SetSelected(on) self.Selected:SetShown(on and true or false) end
+    -- Puts the tab's art the right way round for where it is ("right",
+    -- "left" or "bottom"): the art opens toward the window. On the left it's
+    -- mirrored; at the bottom it's turned a quarter so it opens upward. The
+    -- icon itself is never flipped or turned.
+    function tab:SetSide(side)
+        if self.side == side then return end
+        self.side = side
+        local left, bottom = side == "left", side == "bottom"
+        if self.atlases then
+            -- frame, selected border, hover glow
+            for key, atlas in pairs(self.atlases) do
+                local tex = self[key]
+                if tex and key ~= "Mask" then
+                    tex:SetAtlas(atlas)
+                    if tex.SetRotation then pcall(tex.SetRotation, tex, bottom and -math.pi / 2 or 0) end
+                    if left then pcall(Mirror, tex) end
+                end
+            end
+            -- The shaped trim can't be mirrored (the game then hides the whole
+            -- icon), but it can be turned: the tab is the same shape top and
+            -- bottom, so half a turn gives the left-side shape, and a quarter
+            -- turn the bottom one. Where turning isn't possible, the icon goes
+            -- untrimmed and a little smaller.
+            if self.Mask then
+                self.Mask:SetAtlas(self.atlases.Mask, false)
+                local angle = left and math.pi or bottom and -math.pi / 2 or 0
+                local turned = angle == 0
+                if self.Mask.SetRotation then
+                    local ok = pcall(self.Mask.SetRotation, self.Mask, angle)
+                    turned = turned or ok
+                end
+                self.Icon:RemoveMaskTexture(self.Mask)
+                if turned then
+                    self.Icon:AddMaskTexture(self.Mask)
+                    self.Icon:SetSize(50, 50)
+                else
+                    self.Icon:SetSize(44, 44)
+                end
+            end
+            -- the icon sits a little toward the window
+            self.Icon:ClearAllPoints()
+            if bottom then
+                self.Icon:SetPoint("CENTER", 0, self.iconX)
+            else
+                self.Icon:SetPoint("CENTER", left and self.iconX or -self.iconX, 0)
+            end
+        else
+            self.Bg:SetTexCoord(left and 1 or 0, left and 0 or 1, 0, 1)
+            if self.Bg.SetRotation then self.Bg:SetRotation(bottom and -math.pi / 2 or 0) end
+            self.Bg:ClearAllPoints()
+            if left then self.Bg:SetPoint("TOPRIGHT", 3, 11) else self.Bg:SetPoint("TOPLEFT", -3, 11) end
+        end
+    end
+    tab:SetScript("OnClick", function(self)
+        UI:SelectTab(self:GetID())
+        ns.PlaySound("IG_CHARACTER_INFO_TAB")
+    end)
+    tab:SetScript("OnEnter", function(self)
+        local id = self:GetID()
+        GameTooltip:SetOwner(self, self.side == "left" and "ANCHOR_LEFT" or self.side == "bottom" and "ANCHOR_BOTTOM" or "ANCHOR_RIGHT")
+        GameTooltip:AddLine(UI:TabTitle(id) .. (OFFICER_TABS[id] and " |cff9d9d9d(officers only)|r" or ""))
+        GameTooltip:Show()
+    end)
+    tab:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    return tab
+end
+
 function UI:BuildTabs(f)
     f.Tabs = {}
-    local prev
-    for i, label in ipairs(TAB_LABELS) do
-        local tab, template = W.TryCreate("Button", "NootropicGMFrameTab" .. i, f,
-            "PanelTabButtonTemplate", "CharacterFrameTabButtonTemplate")
-        tab:SetID(i)
-        tab:SetText(label)
-        tab.gap = template == "PanelTabButtonTemplate" and 3 or -15
-        tab:SetScript("OnClick", function(self)
-            UI:SelectTab(self:GetID())
-            ns.PlaySound("IG_CHARACTER_INFO_TAB")
-        end)
-        if PanelTemplates_TabResize then pcall(PanelTemplates_TabResize, tab, 0) end
-        if OFFICER_TABS[i] then
-            tab:HookScript("OnEnter", function(self)
-                GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                GameTooltip:AddLine(label .. " |cff9d9d9d(officers only)|r")
-                GameTooltip:Show()
-            end)
-            tab:HookScript("OnLeave", function() GameTooltip:Hide() end)
-        end
-        f.Tabs[i] = tab
-    end
-    if PanelTemplates_SetNumTabs then PanelTemplates_SetNumTabs(f, #TAB_LABELS) end
+    for i in ipairs(TAB_LABELS) do f.Tabs[i] = CreateSideTab(f, i) end
     self:LayoutTabs()
 end
 
+function UI:TabIcon(id)
+    return self.DEFAULT_TAB_ICONS[id]
+end
+
 function UI:IsTabAvailable(id)
-    if id == UI.TAB_REVIEWS then
-        -- officers can turn reviews off; then only officers see the tab
-        return ns.IsOfficer() or ns.DB:ReviewsEnabled()
-    end
+    if id == UI.TAB_RECRUIT then return ns.DB:HasPerm("recruit") end
+    if id == UI.TAB_TAGS and ns.DB:HasPerm("tags") then return true end
     return not OFFICER_TABS[id] or ns.IsOfficer()
 end
 
--- Shows only the tabs this player may use, packed left to right.
+function UI:TabTitle(id)
+    return TAB_LABELS[id]
+end
+
+-- Shows only the tabs this player may use: down the chosen side, or along
+-- the bottom (left to right).
 function UI:LayoutTabs()
     local f = self.frame
     if not (f and f.Tabs) then return end
-    -- officers read reviews; everyone else writes one
-    local reviews = f.Tabs[UI.TAB_REVIEWS]
-    local label = ns.IsOfficer() and "Reviews" or "Review Guild"
-    if reviews:GetText() ~= label then
-        reviews:SetText(label)
-        if PanelTemplates_TabResize then pcall(PanelTemplates_TabResize, reviews, 0) end
+    local side = self:TabSide()
+    local left, bottom = side == "left", side == "bottom"
+    -- keep the tabs on screen when the window is dragged to that edge
+    if f.SetClampRectInsets then
+        if bottom then
+            f:SetClampRectInsets(0, 0, 0, -UI.TAB_OUTSIDE)
+        elseif left then
+            f:SetClampRectInsets(-UI.TAB_OUTSIDE, 0, 0, 0)
+        else
+            f:SetClampRectInsets(0, UI.TAB_OUTSIDE, 0, 0)
+        end
     end
     local prev
     for i, tab in ipairs(f.Tabs) do
+        tab:SetSide(side)
+        W.SetIcon(tab.Icon, self:TabIcon(i))
+        if tab.iconCoords then tab.Icon:SetTexCoord(unpack(tab.iconCoords)) end
         tab:ClearAllPoints()
         if self:IsTabAvailable(i) then
             if prev then
-                tab:SetPoint("TOPLEFT", prev, "TOPRIGHT", tab.gap or 3, 0)
+                if bottom then
+                    -- turned, the art is a little wider than the tab
+                    tab:SetPoint("TOPLEFT", prev, "TOPRIGHT", tab.gap + 5, 0)
+                elseif left then
+                    tab:SetPoint("TOPRIGHT", prev, "BOTTOMRIGHT", 0, -tab.gap)
+                else
+                    tab:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -tab.gap)
+                end
+            elseif bottom then
+                -- under the window, starting near its left corner
+                tab:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 24, 2)
+            elseif left then
+                -- below the round portrait in the top-left corner
+                tab:SetPoint("TOPRIGHT", f, "TOPLEFT", 2, -72)
             else
-                tab:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 12, 2)
+                tab:SetPoint("TOPLEFT", f, "TOPRIGHT", -2, -48)
             end
+            tab:SetSelected(i == self.tab)
             tab:Show()
             prev = tab
         else
@@ -222,13 +382,15 @@ function UI:LayoutTabs()
         end
     end
     if self.tab and not self:IsTabAvailable(self.tab) then self:SelectTab(UI.TAB_ROSTER) end
+    self:UpdateTitle()
 end
 
 function UI:SelectTab(id)
     local f = self.frame
     if not self:IsTabAvailable(id) then id = UI.TAB_ROSTER end
     self.tab = id
-    if PanelTemplates_SetTab then PanelTemplates_SetTab(f, id) end
+    for i, tab in ipairs(f.Tabs or {}) do tab:SetSelected(i == id) end
+    self:UpdateTitle()
 
     -- Roster and Recruitment need room above the inset for a second toolbar row.
     f.Inset:ClearAllPoints()
@@ -237,11 +399,9 @@ function UI:SelectTab(id)
 
     ns.RosterView.page:SetShown(id == UI.TAB_ROSTER)
     ns.RecruitView.page:SetShown(id == UI.TAB_RECRUIT)
-    ns.PollsView.page:SetShown(id == UI.TAB_POLLS)
     ns.TagsView.page:SetShown(id == UI.TAB_TAGS)
     ns.AuditView.page:SetShown(id == UI.TAB_AUDIT)
-    ns.ReviewsView.page:SetShown(id == UI.TAB_REVIEWS)
-    if id ~= UI.TAB_ROSTER then ns.DetailPanel:Hide() end
+    if id ~= UI.TAB_ROSTER and ns.DetailPanel.host == f then ns.DetailPanel:Hide() end
 end
 
 ------------------------------------------------------------------------
@@ -256,8 +416,12 @@ function UI:Title()
     return "Nootropic Guild Manager"
 end
 
+-- The window title, with the open tab's name ("Nootropic Guild Manager - Insights").
 function UI:UpdateTitle()
-    if self.frame then W.SetTitle(self.frame, self:Title()) end
+    if not self.frame then return end
+    local title = self:Title()
+    if self.tab and self.frame.Tabs then title = title .. "  |cffffffff-  " .. self:TabTitle(self.tab) .. "|r" end
+    W.SetTitle(self.frame, title)
 end
 
 -- "x using <title>" after the status line. Click: roster of addon users with versions.
@@ -296,8 +460,7 @@ function UI:ShowAddonUsers()
     self:Show()
     self:SelectTab(UI.TAB_ROSTER)
     ns.RosterView:Relayout()
-    ns.RosterView:SetSearch("is:addon")
-    ns.RosterView:Refresh()
+    ns.RosterView:ShowAddonUsers() -- Filter > Only guildmates using the addon
     ns.PlaySound("IG_CHARACTER_INFO_TAB")
 end
 

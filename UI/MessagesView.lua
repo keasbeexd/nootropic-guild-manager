@@ -2,7 +2,7 @@
     Nootropic Guild Manager - Custom Messages window
     Left: the messages in priority order (top wins), with on/off switches,
     New / Copy / Delete and up/down to change priority.
-    Right: the selected message's filters (class, race, level, zone, guild)
+    Right: the selected message's filters (class, race, level, zone)
     and text, with a live preview and how many players in the Recruitment
     list it applies to.
     Import / Export trade messages as plain text; Class Defaults adds back
@@ -70,29 +70,6 @@ local function InputBox(parent, width, maxLetters, numeric)
     eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
     eb:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
     return eb
-end
-
--- A pill that toggles on/off (gold when on).
-local function Toggle(parent, text, onClick)
-    local p = W.Pill(parent, 18, 14)
-    p:SetLabel(text)
-    function p:SetOn(on)
-        self.on = on
-        if on then
-            self:SetBackdropColor(0.35, 0.27, 0, 0.95)
-            self:SetBackdropBorderColor(1, 0.82, 0, 1)
-            self.Text:SetTextColor(1, 0.92, 0.5)
-        else
-            self:SetBackdropColor(0.06, 0.06, 0.06, 0.85)
-            self:SetBackdropBorderColor(0.32, 0.32, 0.32, 0.9)
-            self.Text:SetTextColor(0.6, 0.6, 0.6)
-        end
-    end
-    p:SetScript("OnClick", function(self)
-        onClick(self)
-        ns.PlaySound("U_CHAT_SCROLL_BUTTON")
-    end)
-    return p
 end
 
 local function SmallIconButton(parent, normal, pushed, tip)
@@ -335,21 +312,6 @@ function MV:BuildEditor(f)
     end
     y = y - 38
 
-    -- Guild
-    local guildLabel = Label(e, "Guild")
-    guildLabel:SetPoint("TOPLEFT", 0, y - 3)
-    self.guildToggles = {}
-    local x = 50
-    for _, opt in ipairs({ { "any", "Any" }, { "none", "No guild" }, { "guilded", "In a guild" } }) do
-        local t = Toggle(e, opt[2], function() if MV.selected then ns.Messages:Update(MV.selected, "guild", opt[1]) end end)
-        t:SetPoint("TOPLEFT", x, y)
-        x = x + t:GetWidth() + 4
-        t.key = opt[1]
-        self.guildToggles[#self.guildToggles + 1] = t
-    end
-    W.Tooltip(self.guildToggles[3], "In a guild", "For players found with the Recruitment tab's Guild search.")
-    y = y - 30
-
     -- Level and zone
     local lvlLabel = Label(e, "Level")
     lvlLabel:SetPoint("TOPLEFT", 0, y - 4)
@@ -420,11 +382,10 @@ function MV:BuildEditor(f)
     self.matchInfo:SetWidth(EW - 4)
     self.matchInfo:SetJustifyH("LEFT")
 
-    self.editorWidgets = { nameLabel, self.nameBox, classLabel, raceLabel, guildLabel, lvlLabel,
+    self.editorWidgets = { nameLabel, self.nameBox, classLabel, raceLabel, lvlLabel,
         self.minLevel, to, self.maxLevel, zoneLabel, self.zoneBox, msgLabel, self.count, ef, tokens, self.preview, self.matchInfo }
     for _, b in ipairs(self.classButtons) do self.editorWidgets[#self.editorWidgets + 1] = b end
     for _, b in ipairs(self.raceButtons) do self.editorWidgets[#self.editorWidgets + 1] = b end
-    for _, t in ipairs(self.guildToggles) do self.editorWidgets[#self.editorWidgets + 1] = t end
 end
 
 function MV:ToggleSet(field, key)
@@ -489,7 +450,6 @@ function MV:Refresh(loadTexts)
         end
         if on then b:SetBackdropBorderColor(1, 0.82, 0, 1) else b:SetBackdropBorderColor(0.25, 0.25, 0.25, 1) end
     end
-    for _, t in ipairs(self.guildToggles) do t:SetOn((rule.guild or "any") == t.key) end
     self:RefreshEditorInfo()
 end
 
@@ -520,7 +480,7 @@ function MV:RefreshEditorInfo()
     local r = ns.Recruit:Settings()
     local note = ""
     if not (r and r.useRules) then
-        note = "  |cffff8080Custom messages are turned off on the Recruitment tab.|r"
+        note = ("  |cffff8080Custom messages are turned off on the %s tab.|r"):format(ns.TabName("recruit"))
     elseif not rule.enabled then
         note = "  |cffff8080This message is switched off.|r"
     elseif matches > wins then
@@ -619,7 +579,7 @@ function MV:ShowTransfer(mode)
         t.Result:SetText(("%d message%s."):format(#ns.Messages:Rules(), #ns.Messages:Rules() == 1 and "" or "s"))
     else
         t.Title:SetText("Import Custom Messages")
-        t.Help:SetText("Paste exported messages here (Ctrl+V). Each one starts with \"message:\" followed by lines like classes:, races:, levels:, zones:, guild: and text:.")
+        t.Help:SetText("Paste exported messages here (Ctrl+V). Each one starts with \"message:\" followed by lines like classes:, races:, levels:, zones: and text:.")
         t.Box:SetText("")
     end
     self.frame:Show()
@@ -635,7 +595,7 @@ function MV:DoImport(mode)
     if n > 0 then
         msg = ("|cff40ff40Imported %d message%s.|r"):format(n, n == 1 and "" or "s")
         local r = ns.Recruit:Settings()
-        if r and not r.useRules then msg = msg .. " Tick Use custom messages on the Recruitment tab to use them." end
+        if r and not r.useRules then msg = msg .. (" Tick Use custom messages on the %s tab to use them."):format(ns.TabName("recruit")) end
     else
         msg = "|cffff5555Nothing imported.|r"
     end

@@ -1,7 +1,7 @@
 --[[
     Nootropic Guild Manager - Recruitment tab
-    Left: /who search controls and the list of players found (unguilded, or
-    members of a guild you name).
+    Left: /who search controls and the list of players found (players
+    without a guild only).
     Right: default message, custom messages switch, auto-invite, Do Not Whisper.
     Flow: search, tick the players to message, Send Whispers (paced queue).
 ]]
@@ -13,18 +13,25 @@ ns.RecruitView = RCV
 local ROW_H = 26
 local PANEL_W = 360
 local FOOTER_H = 30
+-- Movable, resizable, hideable (UI/Columns.lua). The tick box stays first.
 local COLUMNS = {
-    { key = "pick",    label = "",         width = 28,  min = 28, locked = true },
+    { key = "pick",    label = "",         width = 28,  min = 28, locked = true, pinned = true, fixed = true },
     { key = "name",    label = "Name",     width = 120, min = 90, locked = true },
-    { key = "level",   label = "Lvl",      width = 34,  min = 30, justify = "CENTER", locked = true },
+    { key = "level",   label = "Lvl",      width = 34,  min = 30, justify = "CENTER", hidePriority = 4 },
     { key = "class",   label = "Class",    width = 80,  min = 60, hidePriority = 1 },
-    { key = "zone",    label = "Zone",     width = 120, min = 60, hidePriority = 2, flex = true },
+    { key = "zone",    label = "Zone",     width = 120, min = 60, hidePriority = 2 },
     { key = "status",  label = "Status",   width = 150, min = 80, hidePriority = 3 },
 }
-local COL = {}
-for _, c in ipairs(COLUMNS) do COL[c.key] = c end
 
-RCV.layoutVersion = 0
+RCV.cols = ns.Columns.New({
+    columns = COLUMNS,
+    store = function()
+        local s = ns.DB:Settings()
+        s.recruitColumns = s.recruitColumns or {}
+        return s.recruitColumns
+    end,
+    onChange = function() RCV:RedrawRows() end,
+})
 
 ------------------------------------------------------------------------
 -- Small helpers
@@ -90,49 +97,76 @@ function RCV:Build(frame)
     ns:On("MESSAGES_CHANGED", function()
         if page:IsVisible() then ns.Debounce("recruitview", 0.05, function() RCV:Refresh() end) end
     end)
+    -- zone and levels follow you (unless you typed your own)
+    for _, event in ipairs({ "ZONE_CHANGED_NEW_AREA", "PLAYER_LEVEL_UP", "PLAYER_ENTERING_WORLD" }) do
+        ns:RegisterEvent(event, function()
+            C_Timer.After(0.5, function() if page:IsVisible() then RCV:SyncQueryBoxes() end end)
+        end)
+    end
 end
 
+-- One row: Name, Zone, Level ... Filter, Search. Under it, a summary line
+-- (players, last search, active filters). Class, Step levels, Hide
+-- contacted and the guild search live in the Filter menu.
 function RCV:BuildSearchBar(page, frame)
-    local levelLabel = Label(page, "Level")
-    levelLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 80, -38)
+    -- Name: filters the list as you type, and Search looks for it too
+    local nameLabel = Label(page, "Name")
+    nameLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 80, -38)
+    local nameBox = InputBox(page, 110, 24)
+    nameBox:SetPoint("LEFT", nameLabel, "RIGHT", 8, 0)
+    nameBox:HookScript("OnTextChanged", function(self, user)
+        local r = ns.Recruit:Settings()
+        if user and r then r.query.name = self:GetText() end
+        if user then ns.Debounce("recruitname", 0.15, function() RCV:Refresh() end) end
+    end)
+    W.Tooltip(nameBox, "Search by name",
+        "Shows only players in the list whose name contains this text.",
+        "Search also looks for it, so you can find a specific character. Clear it to see everyone again.")
+    self.nameBox = nameBox
 
+    -- Zone: your current zone unless you type another (clear it to follow you again)
+    local zoneLabel = Label(page, "Zone")
+    zoneLabel:SetPoint("LEFT", nameBox, "RIGHT", 14, 0)
+    local zoneBox = InputBox(page, 130, 40)
+    zoneBox:SetPoint("LEFT", zoneLabel, "RIGHT", 8, 0)
+    zoneBox:HookScript("OnTextChanged", function(self, user)
+        local r = ns.Recruit:Settings()
+        if not (user and r) then return end
+        r.query.zone = self:GetText()
+        r.query.zoneAuto = ns.Trim(self:GetText()) == ""
+    end)
+    W.Tooltip(zoneBox, "Zone",
+        "Starts as the zone you're in and follows you as you travel.",
+        "Type another zone to keep it; clear the box to follow your zone again.")
+    self.zoneBox = zoneBox
+
+    -- Level: 3 below to 2 above you unless you type your own
+    local levelLabel = Label(page, "Level")
+    levelLabel:SetPoint("LEFT", zoneBox, "RIGHT", 14, 0)
     local minBox = InputBox(page, 26, 2, true)
-    minBox:SetPoint("LEFT", levelLabel, "RIGHT", 10, 0)
-    local to = Label(page, "to", "GameFontHighlightSmall")
-    to:SetPoint("LEFT", minBox, "RIGHT", 6, 0)
+    minBox:SetPoint("LEFT", levelLabel, "RIGHT", 8, 0)
+    local dash = Label(page, "-", "GameFontHighlightSmall")
+    dash:SetPoint("LEFT", minBox, "RIGHT", 4, 0)
     local maxBox = InputBox(page, 26, 2, true)
-    maxBox:SetPoint("LEFT", to, "RIGHT", 10, 0)
+    maxBox:SetPoint("LEFT", dash, "RIGHT", 8, 0)
     local function saveLevels()
         local r = ns.Recruit:Settings()
         if not r then return end
         r.query.min = tonumber(minBox:GetText()) or r.query.min
         r.query.max = tonumber(maxBox:GetText()) or r.query.max
+        r.query.levelAuto = minBox:GetText() == "" and maxBox:GetText() == ""
     end
     minBox:HookScript("OnTextChanged", function(_, user) if user then saveLevels() end end)
     maxBox:HookScript("OnTextChanged", function(_, user) if user then saveLevels() end end)
+    W.Tooltip(minBox, "Level range", "Starts at 3 levels below you to 2 above, and follows you as you level.",
+        "Type your own range to keep it; clear both boxes to follow your level again.")
     self.minBox, self.maxBox = minBox, maxBox
 
-    local classBtn = W.Button(page, "Any class", 110, 22)
-    classBtn:SetPoint("LEFT", maxBox, "RIGHT", 12, 0)
-    classBtn:SetScript("OnClick", function(btn) RCV:ShowClassMenu(btn) end)
-    self.classBtn = classBtn
-
-    local zoneLabel = Label(page, "Zone")
-    zoneLabel:SetPoint("LEFT", classBtn, "RIGHT", 10, 0)
-    local zoneBox = InputBox(page, 110, 40)
-    zoneBox:SetPoint("LEFT", zoneLabel, "RIGHT", 10, 0)
-    zoneBox:HookScript("OnTextChanged", function(self, user)
-        local r = ns.Recruit:Settings()
-        if user and r then r.query.zone = self:GetText() end
-    end)
-    zoneBox:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
-    self.zoneBox = zoneBox
-
-    local search = W.Button(page, "Search /who", 110, 22)
-    search:SetPoint("LEFT", zoneBox, "RIGHT", 10, 0)
-    -- /who is restricted to Blizzard's UI, so the click runs a secure "/who"
-    -- command. This plain handler only runs when that isn't available
-    -- (in combat, or on clients without secure buttons).
+    -- Search (right edge). /who is restricted to Blizzard's UI, so the click
+    -- runs a secure "/who" command; this plain handler only runs when that
+    -- isn't available (in combat, or on clients without secure buttons).
+    local search = W.Button(page, "Search", 96, 22)
+    search:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -33)
     search:SetScript("OnClick", function()
         if InCombatLockdown and InCombatLockdown() then
             ns:Print("You can't search while in combat.")
@@ -147,61 +181,112 @@ function RCV:BuildSearchBar(page, frame)
         post = function() RCV:Refresh() end,
     })
     W.Tooltip(search, "Find players without a guild",
-        "Runs a /who search with these filters and keeps everyone who has no guild.",
+        "Runs a /who search with these settings and keeps everyone who has no guild.",
         "The game returns at most 50 players per search, so narrow level ranges find more people.",
         ("To keep you clear of spam detection, searches are limited to one every %d seconds and %d per %d minutes."):format(
             ns.Recruit.WHO_COOLDOWN, ns.Recruit.WHO_MAX_PER_WINDOW, ns.Recruit.WHO_WINDOW / 60))
     self.searchBtn = search
 
-    -- Row 2
-    local step = Check(page, "Step levels")
-    step:SetPoint("TOPLEFT", frame, "TOPLEFT", 76, -58)
+    local filter = W.Button(page, "Filter", 86, 22)
+    filter:SetPoint("RIGHT", search, "LEFT", -6, 0)
+    filter.Arrow = filter:CreateTexture(nil, "OVERLAY")
+    filter.Arrow:SetSize(16, 16)
+    filter.Arrow:SetPoint("RIGHT", -4, 0)
+    filter.Arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
+    filter:SetScript("OnClick", function() RCV.filterPanel:SetShown(not RCV.filterPanel:IsShown()) end)
+    W.Tooltip(filter, "Filter", "Class, Step levels and Hide contacted.")
+    self.filterBtn = filter
+
+    -- Summary line: players, last search, and which filters are on
+    local filters = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    filters:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -16, -66)
+    filters:SetJustifyH("RIGHT")
+    filters:SetWordWrap(false)
+    self.filterInfo = filters
+    local status = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    status:SetPoint("TOPLEFT", frame, "TOPLEFT", 80, -66)
+    status:SetPoint("RIGHT", filters, "LEFT", -12, 0)
+    status:SetJustifyH("LEFT")
+    status:SetWordWrap(false)
+    self.statusText = status
+
+    self:BuildFilterPanel(page, filter)
+end
+
+-- The Filter menu: a small panel under the Filter button.
+function RCV:BuildFilterPanel(page, anchor)
+    local p = CreateFrame("Frame", nil, page, "BackdropTemplate")
+    p:SetSize(260, 116)
+    p:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, -4)
+    p:SetFrameStrata("DIALOG")
+    p:EnableMouse(true)
+    p:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+    p:SetBackdropColor(0.06, 0.05, 0.04, 0.97)
+    p:SetBackdropBorderColor(0.7, 0.6, 0.4, 1)
+    p:Hide()
+    page:HookScript("OnHide", function() p:Hide() end)
+    self.filterPanel = p
+
+    local classLabel = Label(p, "Class")
+    classLabel:SetPoint("TOPLEFT", 14, -16)
+    local classBtn = W.Button(p, "Any class", 150, 22)
+    classBtn:SetPoint("LEFT", classLabel, "RIGHT", 12, 0)
+    classBtn:SetScript("OnClick", function(btn) RCV:ShowClassMenu(btn) end)
+    self.classBtn = classBtn
+
+    local step = Check(p, "Step levels")
+    step:SetPoint("TOPLEFT", 10, -42)
     step:SetScript("OnClick", function(self)
         local r = ns.Recruit:Settings()
         if r then r.query.step = self:GetChecked() and true or false end
+        RCV:LoadSettings()
     end)
     W.Tooltip(step, "Step through levels",
         "After each search the level range moves up by its own size (10-14, then 15-19, ...), wrapping back to 1 at max level. Keep clicking Search to sweep every level.")
     self.stepCheck = step
 
-    local hide = Check(page, "Hide contacted")
-    hide:SetPoint("LEFT", step.Label, "RIGHT", 14, -1)
-    hide:SetScript("OnClick", function() RCV:Refresh() end)
+    local hide = Check(p, "Hide contacted")
+    hide:SetPoint("TOPLEFT", step, "BOTTOMLEFT", 0, -2)
+    hide:SetScript("OnClick", function(self)
+        local r = ns.Recruit:Settings()
+        if r then r.query.hideContacted = self:GetChecked() and true or false end
+        RCV:LoadSettings()
+        RCV:Refresh()
+    end)
     self.hideCheck = hide
 
-    -- Search a specific guild (off by default)
-    local guildCheck = Check(page, "Guild:")
-    guildCheck:SetPoint("LEFT", hide.Label, "RIGHT", 14, -1)
-    guildCheck:SetScript("OnClick", function(self)
+    local reset = W.Button(p, "Reset filters", 110, 20)
+    reset:SetPoint("BOTTOMLEFT", 12, 10)
+    reset:SetScript("OnClick", function()
         local r = ns.Recruit:Settings()
-        if r then r.query.guildOn = self:GetChecked() and true or false end
+        if not r then return end
+        local q = r.query
+        q.class, q.step, q.hideContacted = nil, false, false
         RCV:LoadSettings()
+        RCV:Refresh()
     end)
-    W.Tooltip(guildCheck, "Search a guild",
-        "When ticked, Search finds members of the guild named here instead of players without a guild.",
-        "Your own guild is never included.")
-    self.guildCheck = guildCheck
-    local guildBox = InputBox(page, 120, 24)
-    guildBox:SetPoint("LEFT", guildCheck.Label, "RIGHT", 8, 0)
-    guildBox:HookScript("OnTextChanged", function(self, user)
-        local r = ns.Recruit:Settings()
-        if user and r then r.query.guild = self:GetText() end
-    end)
-    self.guildBox = guildBox
+    local close = W.Button(p, CLOSE or "Close", 70, 20)
+    close:SetPoint("BOTTOMRIGHT", -12, 10)
+    close:SetScript("OnClick", function() p:Hide() end)
+end
 
-    local clear = W.Button(page, "Clear New", 86, 20)
-    clear:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -59)
-    clear:SetScript("OnClick", function()
-        W.Confirm("Remove everyone you haven't contacted from the list?", function() ns.Recruit:ClearUncontacted() end)
-    end)
-    W.Tooltip(clear, "Clear the list", "Removes players you haven't whispered or invited. Contacted players are kept so you don't message them twice.")
+-- "Mage, step levels" for the summary line and the Filter button.
+function RCV:ActiveFilters()
+    local r = ns.Recruit:Settings()
+    local out = {}
+    if not r then return out end
+    local q = r.query
+    if q.class then out[#out + 1] = ("|c%s%s|r"):format(ns.ClassHex(q.class), D:ClassName(q.class)) end
+    if q.step then out[#out + 1] = "step levels" end
+    if q.hideContacted then out[#out + 1] = "hide contacted" end
+    return out
+end
 
-    local status = page:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    status:SetPoint("LEFT", guildBox, "RIGHT", 12, 0)
-    status:SetPoint("RIGHT", clear, "LEFT", -10, 0)
-    status:SetJustifyH("RIGHT")
-    status:SetWordWrap(false)
-    self.statusText = status
+function RCV:RefreshFilterInfo()
+    local list = self:ActiveFilters()
+    self.filterInfo:SetText(#list > 0 and ("Filters: " .. table.concat(list, ", ")) or "")
+    self.filterBtn:SetText(#list > 0 and ("Filter (%d)"):format(#list) or "Filter")
 end
 
 function RCV:ShowClassMenu(owner)
@@ -232,12 +317,7 @@ function RCV:BuildList(page, inset)
     header:SetPoint("TOPLEFT", inset, "TOPLEFT", 4, -4)
     header:SetHeight(24)
     self.header = header
-    self.headers = {}
-    for _, c in ipairs(COLUMNS) do
-        local h = W.ColumnHeader(header, c.label, c.width, c.justify)
-        h:EnableMouse(false)
-        self.headers[c.key] = h
-    end
+    self.cols:BuildHeaders(header) -- right-click a header for the Columns menu
 
     local scrollBox = CreateFrame("Frame", nil, page, "WowScrollBoxList")
     scrollBox:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
@@ -275,9 +355,17 @@ function RCV:BuildFooter(page, inset)
     local clear = W.Button(f, "Clear", 60, 22)
     clear:SetPoint("LEFT", selNew, "RIGHT", 4, 0)
     clear:SetScript("OnClick", function() ns.Recruit:ClearSelection() end)
+    W.Tooltip(clear, "Clear", "Unticks everyone.")
+
+    local clearNew = W.Button(f, "Clear New", 86, 22)
+    clearNew:SetPoint("LEFT", clear, "RIGHT", 4, 0)
+    clearNew:SetScript("OnClick", function()
+        W.Confirm("Remove everyone you haven't contacted from the list?", function() ns.Recruit:ClearUncontacted() end)
+    end)
+    W.Tooltip(clearNew, "Clear New", "Removes players you haven't whispered or invited from the list. Contacted players are kept so you don't message them twice.")
 
     self.sendInfo = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    self.sendInfo:SetPoint("LEFT", clear, "RIGHT", 10, 0)
+    self.sendInfo:SetPoint("LEFT", clearNew, "RIGHT", 10, 0)
     self.sendInfo:SetJustifyH("LEFT")
     self.sendInfo:SetWordWrap(false)
 
@@ -291,7 +379,9 @@ function RCV:BuildFooter(page, inset)
     self.sendInfo:SetPoint("RIGHT", send, "LEFT", -8, 0)
 end
 
-function RCV:OnSendClicked()
+-- Send / Stop / Send Next, shared by the footer and the mini recruiter.
+-- order: the list as shown (whispers go out in that order), or nil.
+function RCV:OnSendClicked(order)
     local RC = ns.Recruit
     local r = RC:Settings()
     if RC:IsSending() then
@@ -302,13 +392,15 @@ function RCV:OnSendClicked()
             ns:Print("Stopped sending whispers.")
         end
     else
-        local n = RC:StartSending(self.list)
+        local n = RC:StartSending(order or self.list)
         if n == 0 then ns:Print("Tick the players you want to whisper first (or click Select New).") end
     end
     self:Refresh()
 end
 
-function RCV:RefreshFooter()
+-- The Send button's text, whether it's clickable, and a status line.
+-- short: "Send (3)" instead of "Send Whispers (3)", for the mini recruiter.
+function RCV:SendState(short)
     local RC = ns.Recruit
     local r = RC:Settings()
     local selected = RC:SelectedCount()
@@ -316,87 +408,38 @@ function RCV:RefreshFooter()
     if RC:IsSending() then
         local left = #RC.queue
         if r and r.whisperMode == "click" then
-            self.sendBtn:SetText(wait > 0 and ("Wait %ds"):format(math.ceil(wait)) or "Send Next")
-            self.sendBtn:SetEnabled(true)
-            self.sendInfo:SetText(("%d waiting - click Send Next for each"):format(left))
-        else
-            self.sendBtn:SetText("Stop")
-            self.sendInfo:SetText(("Sending: %d left, next in %ds"):format(left, math.ceil(wait)))
+            return wait > 0 and ("Wait %ds"):format(math.ceil(wait)) or "Send Next", true,
+                ("%d waiting - click Send Next for each"):format(left)
         end
-    else
-        self.sendBtn:SetText(selected > 0 and ("Send Whispers (%d)"):format(selected) or "Send Whispers")
-        self.sendBtn:SetEnabled(selected > 0)
-        if wait > 0 and #RC.sentTimes >= RC.WHISPER_MAX then
-            self.sendInfo:SetText(("Hourly limit reached - %d min"):format(math.ceil(wait / 60)))
-        else
-            self.sendInfo:SetText(selected > 0 and (selected .. " selected") or "Tick players to whisper")
-        end
+        return "Stop", true, ("Sending: %d left, next in %ds"):format(left, math.ceil(wait))
     end
+    local label = short and "Send" or "Send Whispers"
+    local text = selected > 0 and ("%s (%d)"):format(label, selected) or label
+    if wait > 0 and #RC.sentTimes >= RC.WHISPER_MAX then
+        return text, selected > 0, ("Hourly limit reached - %d min"):format(math.ceil(wait / 60))
+    end
+    return text, selected > 0, selected > 0 and (selected .. " selected") or "Tick players to whisper"
 end
 
--- Fits columns into the list width, hiding low-priority ones when narrow.
+function RCV:RefreshFooter()
+    local text, enabled, info = self:SendState()
+    self.sendBtn:SetText(text)
+    self.sendBtn:SetEnabled(enabled)
+    self.sendInfo:SetText(info)
+end
+
+-- Fits the columns into the list width (UI/Columns.lua does the work).
 function RCV:Layout(listW)
-    local vis = {}
-    for i, c in ipairs(COLUMNS) do
-        c.order, c.autoHidden = i, false
-        vis[#vis + 1] = c
-    end
-    local function sum(field)
-        local n = 0
-        for _, c in ipairs(vis) do n = n + c[field] end
-        return n
-    end
-    while sum("min") > listW do
-        local victim, vi
-        for i, c in ipairs(vis) do
-            if not c.locked and (not victim or c.hidePriority < victim.hidePriority) then victim, vi = c, i end
-        end
-        if not victim then break end
-        victim.autoHidden = true
-        table.remove(vis, vi)
-    end
-    -- Bring back any hidden column that fits in the space left over.
-    local hidden = {}
-    for _, c in ipairs(COLUMNS) do if c.autoHidden then hidden[#hidden + 1] = c end end
-    table.sort(hidden, function(a, b) return a.hidePriority > b.hidePriority end)
-    for _, c in ipairs(hidden) do
-        if sum("min") + c.min <= listW then
-            c.autoHidden = false
-            vis[#vis + 1] = c
-        end
-    end
-    table.sort(vis, function(a, b) return a.order < b.order end)
-    for _, c in ipairs(COLUMNS) do c.shown = false end
-    local extra = listW - sum("width")
-    local flexShown = false
-    for _, c in ipairs(vis) do if c.flex then flexShown = true end end
-    local x = 0
-    for _, c in ipairs(vis) do
-        c.shown = true
-        c.w = c.width
-        if extra < 0 and not c.locked then
-            c.w = math.max(c.min, c.width + math.floor(extra * (c.width - c.min) / math.max(1, sum("width") - sum("min"))))
-        elseif extra > 0 and (c.flex or (not flexShown and c.key == "name")) then
-            c.w = c.width + extra
-        end
-        c.x = x
-        x = x + c.w
-    end
-    for _, c in ipairs(COLUMNS) do
-        local h = self.headers[c.key]
-        if c.shown then
-            h:ClearAllPoints()
-            h:SetPoint("TOPLEFT", c.x, 0)
-            h:SetColumnWidth(c.w)
-            h:Show()
-        else
-            h:Hide()
-        end
-    end
     self.header:SetWidth(listW)
     self.scrollBox:SetWidth(listW)
     if self.footer then self.footer:SetWidth(listW) end
-    self.layoutVersion = self.layoutVersion + 1
+    self.cols:Layout(listW)
+end
+
+function RCV:RedrawRows()
+    if self.scrollBox and self.scrollBox.ForEachFrame then
+        self.scrollBox:ForEachFrame(function(row) if row.person then RCV:InitRow(row, row.person) end end)
+    end
 end
 
 function RCV:OnResize()
@@ -405,9 +448,7 @@ function RCV:OnResize()
     if listW == self.listW then return end
     self.listW = listW
     self:Layout(listW)
-    if self.scrollBox.ForEachFrame then
-        self.scrollBox:ForEachFrame(function(row) if row.person then RCV:InitRow(row, row.person) end end)
-    end
+    self:RedrawRows()
 end
 
 local function Text(parent, justify)
@@ -495,20 +536,7 @@ function RCV:InitRow(row, p)
         BuildRow(row)
         row.built = true
     end
-    if row.layoutVersion ~= self.layoutVersion then
-        for _, c in ipairs(COLUMNS) do
-            local cell = row.cells[c.key]
-            if c.shown then
-                cell:ClearAllPoints()
-                cell:SetPoint("LEFT", row, "LEFT", c.x, 0)
-                cell:SetWidth(c.w)
-                cell:Show()
-            else
-                cell:Hide()
-            end
-        end
-        row.layoutVersion = self.layoutVersion
-    end
+    self.cols:PlaceCells(row, row.cells, row)
     row.person = p
     row.Stripe:SetShown(p._stripe)
     W.SetClassIcon(row.ClassIcon, p.classFile)
@@ -551,8 +579,12 @@ function RCV:ShowRowTooltip(row, p)
         GameTooltip:AddLine("\"" .. c.reply .. "\"", 0.4, 1, 0.4, true)
     end
     if c.invited then GameTooltip:AddDoubleLine("Invited", ns.FormatAgo(c.invited), 1, 0.82, 0, 1, 1, 1) end
-    if c.by then
-        GameTooltip:AddLine(("Already contacted by %s, so they can't be whispered again for now."):format(ns.ShortName(c.by)), 1, 0.5, 0.5, true)
+    local locked = ns.Recruit:LockedUntil(p)
+    if locked then
+        GameTooltip:AddLine(("%s whispered them, so nobody in the guild can whisper them again for %s."):format(
+            c.by and ns.ShortName(c.by) or "You", ns.FormatWait(locked - ns.DB:Now())), 1, 0.5, 0.5, true)
+    elseif c.by and c.invited then
+        GameTooltip:AddLine(("Already invited by %s."):format(ns.ShortName(c.by)), 1, 0.5, 0.5, true)
     end
     if p.joined then GameTooltip:AddDoubleLine("Joined", ns.FormatAgo(p.joined), 1, 0.82, 0, 0.4, 1, 0.4) end
     GameTooltip:AddLine(" ")
@@ -642,7 +674,7 @@ function RCV:BuildPanel(page, inset)
     use:SetPoint("TOPLEFT", self.preview, "BOTTOMLEFT", -4, -8)
     use:SetScript("OnClick", function(self) ns.Messages:SetUseRules(self:GetChecked()) end)
     W.Tooltip(use, "Custom messages",
-        "Pick a message by class, race, level, zone or guild. The first matching message (top of the list wins) is used; everyone else gets the Default message.")
+        "Pick a message by class, race, level or zone. The first matching message (top of the list wins) is used; everyone else gets the Default message.")
     self.useRulesCheck = use
 
     local edit = W.Button(panel, "Custom Messages...", 150, 22)
@@ -652,91 +684,44 @@ function RCV:BuildPanel(page, inset)
     self.rulesInfo = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     self.rulesInfo:SetPoint("LEFT", edit, "RIGHT", 8, 0)
 
-    -- Auto-invite
-    local title2, line2 = W.SectionHeader(panel, "Auto-Invite")
+    -- Replies: auto-invite and Do Not Whisper live in Options > Recruiting;
+    -- this shows how they're set and opens that page.
+    local title2, line2 = W.SectionHeader(panel, "Replies")
     title2:SetPoint("TOPLEFT", edit, "BOTTOMLEFT", 0, -18)
     line2:SetPoint("RIGHT", panel, "RIGHT", -12, 0)
-
-    local auto = Check(panel, "Invite when they reply with a keyword")
-    auto:SetPoint("TOPLEFT", title2, "BOTTOMLEFT", -4, -4)
-    auto:SetScript("OnClick", function(self)
-        local r = ns.Recruit:Settings()
-        if r then r.autoInvite = self:GetChecked() and true or false end
-    end)
-    self.autoCheck = auto
-
-    local confirm = Check(panel, "Ask me first (one-click Invite popup)")
-    confirm:SetPoint("TOPLEFT", auto, "BOTTOMLEFT", 0, 0)
-    confirm:SetScript("OnClick", function(self)
-        local r = ns.Recruit:Settings()
-        if r then r.inviteMode = self:GetChecked() and "confirm" or "auto" end
-    end)
-    self.confirmCheck = confirm
-
-    local kwLabel = Label(panel, "Keywords (whole words, any case)")
-    kwLabel:SetPoint("TOPLEFT", confirm, "BOTTOMLEFT", 4, -6)
-
-    local BOX_W, BOX_STEP = 88, 100
-    self.keywordBoxes = {}
-    for i = 1, D.MAX_KEYWORDS do
-        local eb = InputBox(panel, BOX_W, 24)
-        local col, rowN = (i - 1) % 3, math.floor((i - 1) / 3)
-        eb:SetPoint("TOPLEFT", kwLabel, "BOTTOMLEFT", 6 + col * BOX_STEP, -4 - rowN * 24)
-        eb:HookScript("OnTextChanged", function(self, user)
-            local r = ns.Recruit:Settings()
-            if user and r then r.keywords[i] = ns.Trim(self:GetText()) end
-        end)
-        self.keywordBoxes[i] = eb
-    end
-
-    local help = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    help:SetPoint("TOPLEFT", kwLabel, "BOTTOMLEFT", 0, -56)
-    help:SetWidth(IW)
-    help:SetJustifyH("LEFT")
-    help:SetText("Only replies from players you whispered from this tab are checked.")
-
-    -- Do Not Whisper
-    local title3, line3 = W.SectionHeader(panel, "Do Not Whisper")
-    title3:SetPoint("TOPLEFT", help, "BOTTOMLEFT", 0, -18)
-    line3:SetPoint("RIGHT", panel, "RIGHT", -12, 0)
-
-    local dnw = Check(panel, "Do Not Whisper list")
-    dnw:SetPoint("TOPLEFT", title3, "BOTTOMLEFT", -4, -4)
-    dnw:SetScript("OnClick", function(self)
-        local r = ns.Recruit:Settings()
-        if r then r.dnwEnabled = self:GetChecked() and true or false end
-    end)
-    W.Tooltip(dnw, "Do Not Whisper list",
-        "When someone you whispered replies with one of these words, they're added to the list and never whispered or invited again.",
-        "Untick to stop adding people. Anyone already on the list stays protected until you remove them.")
-    self.dnwCheck = dnw
-
-    local dnwLabel = Label(panel, "Words (whole words, any case)")
-    dnwLabel:SetPoint("TOPLEFT", dnw, "BOTTOMLEFT", 4, -6)
-    self.dnwBoxes = {}
-    for i = 1, D.MAX_KEYWORDS do
-        local eb = InputBox(panel, BOX_W, 32)
-        local col, rowN = (i - 1) % 3, math.floor((i - 1) / 3)
-        eb:SetPoint("TOPLEFT", dnwLabel, "BOTTOMLEFT", 6 + col * BOX_STEP, -4 - rowN * 24)
-        eb:HookScript("OnTextChanged", function(self, user)
-            local r = ns.Recruit:Settings()
-            if user and r then r.dnwWords[i] = ns.Trim(self:GetText()) end
-        end)
-        self.dnwBoxes[i] = eb
-    end
-
-    self.dnwCount = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    self.dnwCount:SetPoint("TOPLEFT", dnwLabel, "BOTTOMLEFT", 0, -60)
-    local view = W.Button(panel, "View List", 90, 20)
-    view:SetPoint("LEFT", self.dnwCount, "LEFT", IW - 90, 0)
+    self.replyInfo = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    self.replyInfo:SetPoint("TOPLEFT", title2, "BOTTOMLEFT", 0, -8)
+    self.replyInfo:SetWidth(IW)
+    self.replyInfo:SetJustifyH("LEFT")
+    self.replyInfo:SetSpacing(3)
+    local replyBtn = W.Button(panel, "Reply Settings...", 140, 22)
+    replyBtn:SetPoint("TOPLEFT", self.replyInfo, "BOTTOMLEFT", 0, -8)
+    replyBtn:SetScript("OnClick", function() ns.Options:Open("recruiting") end)
+    W.Tooltip(replyBtn, "Reply settings", "Auto-invite keywords and the Do Not Whisper list, in Options > Recruiting.")
+    local view = W.Button(panel, "Do Not Whisper List", 150, 22)
+    view:SetPoint("LEFT", replyBtn, "RIGHT", 6, 0)
     view:SetScript("OnClick", function(btn) RCV:ShowDNWMenu(btn) end)
     W.Tooltip(view, "Do Not Whisper list", "Shared with everyone in the guild using the addon. Click a name to take them off it.")
-    self.dnwView = view
-    self.panelLast = view
+    self.panelLast = replyBtn
 
     -- Grow the scroll area to fit (the preview's height changes with the text).
     self.panelTitle = title
     content:SetScript("OnSizeChanged", function() RCV:FitPanel() end)
+end
+
+-- "Auto-invite: on, ask first (keywords: invite, inv)" / "Do Not Whisper: on, 3 people"
+function RCV:RefreshReplyInfo()
+    local r = ns.Recruit:Settings()
+    if not (r and self.replyInfo) then return end
+    local words = {}
+    for _, k in ipairs(r.keywords or {}) do if ns.Trim(k) ~= "" then words[#words + 1] = k end end
+    local ON, OFF = "|cff40ff40on|r", "|cff9d9d9doff|r"
+    local invite = r.autoInvite and (ON .. (r.inviteMode == "confirm" and ", asks you first" or ", automatic")) or OFF
+    local n = #ns.Recruit:DNWList()
+    self.replyInfo:SetText(("|cffffd100Auto-invite:|r %s%s\n|cffffd100Do Not Whisper:|r %s, %s on the list"):format(
+        invite, (r.autoInvite and #words > 0) and ("  |cff9d9d9d(" .. table.concat(words, ", ") .. ")|r") or "",
+        r.dnwEnabled and ON or OFF, n == 1 and "1 person" or (n .. " people")))
+    self:FitPanel()
 end
 
 function RCV:FitPanel()
@@ -787,27 +772,29 @@ function RCV:RefreshRulesInfo()
     self.rulesButton:SetAlpha(r.useRules and 1 or 0.6)
 end
 
+-- Zone and level boxes: your zone and level unless you typed your own.
+function RCV:SyncQueryBoxes()
+    local r = ns.Recruit:Settings()
+    if not r then return end
+    ns.Recruit:ApplyAutoQuery()
+    local q = r.query
+    if not self.minBox:HasFocus() and not self.maxBox:HasFocus() then
+        self.minBox:SetText(tostring(q.min or 1))
+        self.maxBox:SetText(tostring(q.max or 60))
+    end
+    if not self.zoneBox:HasFocus() then self.zoneBox:SetText(q.zone or "") end
+end
+
 function RCV:LoadSettings()
     local r = ns.Recruit:Settings()
     if not r then return end
     local q = r.query
-    if not self.minBox:HasFocus() then self.minBox:SetText(tostring(q.min or 1)) end
-    if not self.maxBox:HasFocus() then self.maxBox:SetText(tostring(q.max or 60)) end
-    if not self.zoneBox:HasFocus() then self.zoneBox:SetText(q.zone or "") end
+    self:SyncQueryBoxes()
     self.classBtn:SetText(q.class and ("|c%s%s|r"):format(ns.ClassHex(q.class), D:ClassName(q.class)) or "Any class")
     self.stepCheck:SetChecked(q.step)
-    self.guildCheck:SetChecked(q.guildOn)
-    if not self.guildBox:HasFocus() then self.guildBox:SetText(q.guild or "") end
-    self.guildBox:SetAlpha(q.guildOn and 1 or 0.5)
-    self.dnwCheck:SetChecked(r.dnwEnabled)
-    for i, eb in ipairs(self.dnwBoxes) do
-        if not eb:HasFocus() then eb:SetText(r.dnwWords[i] or "") end
-    end
-    self.autoCheck:SetChecked(r.autoInvite)
-    self.confirmCheck:SetChecked(r.inviteMode == "confirm")
-    for i, eb in ipairs(self.keywordBoxes) do
-        if not eb:HasFocus() then eb:SetText(r.keywords[i] or "") end
-    end
+    self.hideCheck:SetChecked(q.hideContacted)
+    if not self.nameBox:HasFocus() then self.nameBox:SetText(q.name or "") end
+    self:RefreshFilterInfo()
     if not self.editor:HasFocus() then self.editor:SetText(r.default or "") end
     self:RefreshPreview()
     self:RefreshRulesInfo()
@@ -816,6 +803,15 @@ end
 ------------------------------------------------------------------------
 -- Refresh
 ------------------------------------------------------------------------
+-- The Search button's text and whether it's clickable (shared with the mini recruiter).
+function RCV:SearchState()
+    local RC = ns.Recruit
+    local wait = RC:CooldownRemaining()
+    if RC.searching then return "Searching...", false end
+    if wait > 0 then return ("Wait %ds"):format(math.ceil(wait)), false end
+    return "Search", RC:Settings() ~= nil
+end
+
 -- Keep refreshing every second while a countdown is visible.
 function RCV:IsShownTicking()
     local RC = ns.Recruit
@@ -827,7 +823,8 @@ function RCV:Refresh()
     local RC = ns.Recruit
     local r = RC:Settings()
 
-    local list = RC:List({ hideContacted = self.hideCheck:GetChecked() })
+    local hideContacted = r and r.query.hideContacted
+    local list = RC:List({ hideContacted = hideContacted, name = self.nameBox:GetText() })
     self.list = list
     for i, p in ipairs(list) do p._stripe = (i % 2 == 0) end
     local retain = ScrollBoxConstants and ScrollBoxConstants.RetainScrollPosition
@@ -835,45 +832,20 @@ function RCV:Refresh()
 
     if not r then
         self.emptyText:SetText("Join a guild to start recruiting.")
+    elseif #list == 0 and ns.Trim(self.nameBox:GetText()) ~= "" then
+        self.emptyText:SetText("Nobody in the list has that name. Click Search to look for them.")
     elseif #list == 0 then
-        self.emptyText:SetText("Set a level range and click Search /who to find players without a guild.")
+        self.emptyText:SetText("Click Search to find players without a guild in your zone and level range.")
     else
         self.emptyText:SetText("")
     end
 
-    local wait = RC:CooldownRemaining()
-    self.searchBtn:SetEnabled(r ~= nil and not RC.searching and wait <= 0)
-    if RC.searching then
-        self.searchBtn:SetText("Searching...")
-    elseif wait > 0 then
-        self.searchBtn:SetText(("Wait %ds"):format(math.ceil(wait)))
-        -- tick the countdown while the tab is open
-        if not self.ticking then
-            self.ticking = true
-            C_Timer.After(1, function()
-                RCV.ticking = false
-                if RCV.page:IsVisible() then RCV:Refresh() end
-            end)
-        end
-    else
-        self.searchBtn:SetText("Search /who")
-    end
+    local searchText, searchOn = self:SearchState()
+    self.searchBtn:SetText(searchText)
+    self.searchBtn:SetEnabled(searchOn)
 
-    local last = RC.last
-    if RC.searching then
-        self.statusText:SetText("|cffffd100Searching:|r " .. (RC.pendingQuery or ""))
-    elseif last and last.timedOut then
-        self.statusText:SetText("|cffff8080No reply from /who. The server limits how often you can search - wait a few seconds.|r")
-    elseif last then
-        local capped = (last.total or 0) > (last.shown or 0)
-        self.statusText:SetText(("%d players, %d %s, |cff40ff40%d new|r%s%s"):format(
-            last.total or 0, last.matched or last.unguilded or 0,
-            last.guild and ("in <" .. last.guild .. ">") or "unguilded", last.new or 0,
-            (last.skipped or 0) > 0 and ("  |cffff8080" .. last.skipped .. " do-not-whisper skipped|r") or "",
-            capped and "  |cffff8080(capped at 50 - narrow the range)|r" or ""))
-    else
-        self.statusText:SetText(("%d in list"):format(#list))
-    end
+    self.statusText:SetText(self:SummaryText())
+    self:RefreshFilterInfo()
 
     self:RefreshFooter()
     self:RefreshRulesInfo()
@@ -887,13 +859,40 @@ function RCV:Refresh()
         end
     end
 
-    if self.dnwCount then
-        local n = #ns.Recruit:DNWList()
-        self.dnwCount:SetText(n == 1 and "1 person on the list" or (n .. " people on the list"))
-    end
+    self:RefreshReplyInfo()
 
-    if r and not self.minBox:HasFocus() and not self.maxBox:HasFocus() then
-        self.minBox:SetText(tostring(r.query.min or 1))
-        self.maxBox:SetText(tostring(r.query.max or 60))
+    self:SyncQueryBoxes()
+end
+
+-- "139 players · 9 new from last search · 12 whispered · 3 replied", or
+-- what a search in progress / a failed search is doing.
+function RCV:SummaryText()
+    local RC = ns.Recruit
+    if not RC:Settings() then return "" end
+    if RC.searching then return "|cffffd100Searching:|r " .. (RC.pendingQuery or "") end
+    local last = RC.last
+    if last and last.timedOut then
+        return "|cffff8080No reply from /who. The server limits how often you can search - wait a few seconds.|r"
     end
+    local total, whispered, replied = 0, 0, 0
+    for _, p in ipairs(RC:List()) do
+        total = total + 1
+        local st = RC:Status(p)
+        if st == "whispered" then whispered = whispered + 1 elseif st == "replied" then replied = replied + 1 end
+    end
+    local SEP = "  |cff6d6d6d-|r  "
+    local parts = { total == 1 and "1 player" or (total .. " players") }
+    if last then
+        parts[#parts + 1] = ("|cff40ff40%d new|r from last search"):format(last.new or 0)
+    end
+    parts[#parts + 1] = ("|cffb0b0ff%d whispered|r"):format(whispered)
+    parts[#parts + 1] = ("|cff40ff40%d replied|r"):format(replied)
+    local text = table.concat(parts, SEP)
+    if last and (last.skipped or 0) > 0 then
+        text = text .. SEP .. ("|cffff8080%d do-not-whisper skipped|r"):format(last.skipped)
+    end
+    if last and (last.total or 0) > (last.shown or 0) then
+        text = text .. SEP .. "|cffff8080capped at 50 - narrow the range|r"
+    end
+    return text
 end

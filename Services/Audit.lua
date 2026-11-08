@@ -10,15 +10,15 @@ ns.Audit = AU
 
 AU.CATEGORIES = {
     { key = "MT", label = "Tags" },
-    { key = "RT", label = "Rating" },
     { key = "M",  label = "Main / Alt" },
     { key = "MS", label = "Spec" },
+    { key = "RL", label = "Role" },
     { key = "MP", label = "Professions" },
     { key = "P",  label = "Reported by their addon" },
     { key = "L",  label = "Officer log" },
     { key = "T",  label = "Tag list" },
     { key = "TI", label = "Tag icons" },
-    { key = "PL", label = "Polls" },
+    { key = "CN", label = "Contact" },
     { key = "GS", label = "Guild settings" },
     { key = "DN", label = "Do Not Whisper" },
 }
@@ -56,9 +56,6 @@ function AU:Describe(e)
     if t == "MT" then
         local diff = SetDiff(old, new, TagName)
         return "Tags: " .. (diff ~= "" and diff or GRAY .. "unchanged|r")
-    elseif t == "RT" then
-        local o, n = tonumber(old) or 0, tonumber(new) or 0
-        return ("Rating changed from %s to %s"):format(D:StarText(o), D:StarText(n))
     elseif t == "M" then
         if new ~= "" and old == "" then return "Marked as an alt of " .. ShortChar(new) end
         if new == "" then return "Unlinked from main " .. ShortChar(old) .. " (now a main)" end
@@ -115,17 +112,38 @@ function AU:Describe(e)
         local icon = D:ParseIcon(new)
         return "Tag icon changed: " .. (icon and ("|T" .. icon .. ":14:14:0:0:64:64:5:59:5:59|t ") or "") .. TagName(e.ref or "?")
     elseif t == "GS" then
-        if e.ref == "reviews" then
-            return new == "0" and (RED .. "Guild reviews turned off|r for guildmates") or (GREEN .. "Guild reviews turned on|r for guildmates")
+        local perm = (e.ref or ""):match("^perm_(.+)$")
+        local def = perm and ns.DB:PermDef(perm)
+        if def then
+            local function Who(v)
+                if v == "" then return ns.DB:PermDefaultText(perm) .. " (default)" end
+                if v == "-" then return "Guild Master only" end
+                local names = {}
+                for _, r in ipairs(ns.DB:GuildRanks()) do
+                    for n in v:gmatch("%d+") do if tonumber(n) == r.index then names[#names + 1] = r.name end end
+                end
+                return #names > 0 and table.concat(names, ", ") or v
+            end
+            return ("Permission \"%s\" set to %s"):format(def.label, Who(new))
         end
         return "Guild setting changed: " .. (e.ref or "?")
-    elseif t == "PL" then
-        local o, n = ns.Sync.Codec.ParsePoll(old), ns.Sync.Codec.ParsePoll(new)
-        local q = n and n.question or (o and o.question) or "?"
-        if n and not o then return "Poll created: \"" .. q .. "\"" end
-        if n and n.deleted and not (o and o.deleted) then return RED .. "Poll deleted:|r \"" .. q .. "\"" end
-        if o and n and n.closeAt < o.closeAt then return "Poll closed early: \"" .. q .. "\"" end
-        return "Poll changed: \"" .. q .. "\""
+    elseif t == "CN" then
+        local function D2(v) return (v or ""):match("^([^;]*)") or "" end
+        local od, nd = D2(old), D2(new)
+        local who = e.author and e.member and e.author ~= e.member and (" by " .. ShortChar(e.author)) or ""
+        if new == "" then return RED .. "Contact info cleared|r" .. who end
+        if od ~= nd then return ("Discord changed%s: %s"):format(who, nd ~= "" and nd or (GRAY .. "none|r")) end
+        return "Contact note changed" .. who
+    elseif t == "RL" then
+        local function Names(v)
+            local out = {}
+            for key in v:gmatch("[^,]+") do
+                local r = ns.Data:Role(key)
+                out[#out + 1] = r and r.label or key
+            end
+            return #out > 0 and table.concat(out, ", ") or "none"
+        end
+        return "Role set to " .. Names(new) .. (old ~= "" and (GRAY .. " (was " .. Names(old) .. ")|r") or "")
     end
     return t .. " changed"
 end

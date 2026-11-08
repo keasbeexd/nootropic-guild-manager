@@ -19,6 +19,16 @@ end
 ns.version = Meta("Version") or "dev"
 
 ------------------------------------------------------------------------
+-- Tab names in text ("Open the Recruitment tab"). key: "roster",
+-- "recruit", "tags" or "audit".
+------------------------------------------------------------------------
+local TAB_NAMES = { roster = "Find", recruit = "Recruitment", tags = "Tags", audit = "Audit" }
+
+function ns.TabName(key)
+    return TAB_NAMES[key] or key
+end
+
+------------------------------------------------------------------------
 -- Printing
 ------------------------------------------------------------------------
 function ns:Print(...)
@@ -82,17 +92,31 @@ function ns.Debounce(key, delay, fn)
     end)
 end
 
+-- "1.13-beta2" -> { 1, 13 }, "beta2"
+local function ParseVersion(v)
+    local main, tag = tostring(v or ""):match("^([^%-]*)%-?(.*)$")
+    local parts = {}
+    for n in main:gmatch("[^%.]+") do parts[#parts + 1] = tonumber(n:match("^%d+") or "") or 0 end
+    return parts, tag
+end
+
 -- -1, 0 or 1 comparing versions like "1.9" and "1.10" part by part.
--- Anything that isn't a number counts as 0 ("dev" < "1.0").
+-- Anything that isn't a number counts as 0 ("dev" < "1.0"). A beta comes
+-- before its release and after the one before: 1.12 < 1.13-beta1 <
+-- 1.13-beta2 < 1.13.
 function ns.CompareVersions(a, b)
-    local pa, pb = {}, {}
-    for n in tostring(a or ""):gmatch("[^%.]+") do pa[#pa + 1] = tonumber(n) or 0 end
-    for n in tostring(b or ""):gmatch("[^%.]+") do pb[#pb + 1] = tonumber(n) or 0 end
+    local pa, ta = ParseVersion(a)
+    local pb, tb = ParseVersion(b)
     for i = 1, math.max(#pa, #pb) do
         local x, y = pa[i] or 0, pb[i] or 0
         if x ~= y then return x < y and -1 or 1 end
     end
-    return 0
+    if ta == tb then return 0 end
+    if ta == "" then return 1 end
+    if tb == "" then return -1 end
+    local x, y = tonumber(ta:match("%d+") or "") or 0, tonumber(tb:match("%d+") or "") or 0
+    if x ~= y then return x < y and -1 or 1 end
+    return ta < tb and -1 or 1
 end
 
 function ns.Trim(s)
@@ -151,8 +175,12 @@ function ns.SplitName(short)
     return short or "", ""
 end
 
+-- Your own name as the guild roster spells it. Normally "Name-Realm" from
+-- UnitName; if the roster lists you differently (found by character GUID in
+-- Services/Roster.lua), that spelling wins, so your shared data (version,
+-- professions, votes...) lands on your roster row.
 function ns.PlayerFullName()
-    return ns.NormalizeName(UnitName("player"))
+    return ns.selfName or ns.NormalizeName(UnitName("player"))
 end
 
 function ns.ClassColor(classFile)
@@ -235,6 +263,16 @@ function ns.FormatLastSeen(hours)
     return ("%dy"):format(math.floor(months / 12))
 end
 
+-- seconds -> "3 hours", "2 days" (rounded up)
+function ns.FormatWait(sec)
+    if sec >= 86400 then
+        local d = math.ceil(sec / 86400)
+        return d == 1 and "1 day" or (d .. " days")
+    end
+    local h = math.ceil(sec / 3600)
+    return h == 1 and "1 hour" or (h .. " hours")
+end
+
 function ns.FormatAgo(timestamp)
     if not timestamp then return "never" end
     local secs = math.max(0, time() - timestamp)
@@ -260,14 +298,13 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.Sync:Init()
     ns.Comm:Init()
     ns.Recruit:Init()
-    ns.Location:Init()
-    ns.Reviews:Init()
-    ns.Polls:Init()
+    ns.Profile:Init()
     ns.Minimap:Init()
     ns.Options:Init()
     ns.Communities:Init()
+    ns.GuildRoster:Init()
+    ns.WhoWhisper:Init()
     ns.Brand:Init()
-    ns.MapPins:Init()
     ns:Print(("v%s loaded. Type |cffffffff/ngm|r to open."):format(ns.version))
 end)
 
@@ -276,14 +313,12 @@ end)
 ------------------------------------------------------------------------
 local function PrintHelp()
     ns:Print("commands:")
-    ns:Print("  |cffffffff/ngm|r  - open or close the roster")
+    ns:Print("  |cffffffff/ngm|r  - open or close the window")
     ns:Print("  |cffffffff/ngm find <text>|r  - open with a search")
     ns:Print("  |cffffffff/ngm sync|r  - sync with guildmates now and show sync stats")
-    ns:Print("  |cffffffff/ngm audit|r  - open the Audit tab (officers)")
-    ns:Print("  |cffffffff/ngm polls|r  - open the Polls tab (vote on guild polls)")
-    ns:Print("  |cffffffff/ngm reviews|r  - open the Reviews tab (review the guild)")
+    ns:Print(("  |cffffffff/ngm audit|r  - open the %s tab (officers)"):format(ns.TabName("audit")))
     ns:Print("  |cffffffff/ngm minimap|r  - show or hide the minimap button")
-    ns:Print("  |cffffffff/ngm recruit|r  - open the Recruitment tab")
+    ns:Print(("  |cffffffff/ngm recruit|r  - open the %s tab"):format(ns.TabName("recruit")))
     ns:Print("  |cffffffff/ngm options|r  - open the options")
     ns:Print("  |cffffffff/ngm diag|r  - troubleshoot the Guild & Communities shortcut")
     ns:Print("  |cffffffff/ngm reset|r  - reset the window size and position")
@@ -302,6 +337,9 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns.UI:SetSearch(rest)
     elseif cmd == "diag" then
         ns.Communities:Diagnose()
+        ns.GuildRoster:Diagnose()
+        ns.WhoWhisper:Diagnose()
+        ns.Roster:Diagnose()
     elseif cmd == "options" or cmd == "config" or cmd == "settings" then
         ns.Options:Open()
     elseif cmd == "recruit" then
@@ -317,15 +355,6 @@ SlashCmdList.NOOTROPICGM = function(msg)
     elseif cmd == "audit" then
         ns.UI:Show()
         ns.UI:SelectTab(ns.UI.TAB_AUDIT)
-    elseif cmd == "poll" or cmd == "polls" then
-        ns.UI:Show()
-        ns.UI:SelectTab(ns.UI.TAB_POLLS)
-    elseif cmd == "review" or cmd == "reviews" then
-        ns.UI:Show()
-        if not ns.UI:IsTabAvailable(ns.UI.TAB_REVIEWS) then
-            ns:Print("Guild reviews are turned off by the officers.")
-        end
-        ns.UI:SelectTab(ns.UI.TAB_REVIEWS)
     elseif cmd == "minimap" then
         ns.Minimap:ToggleShown()
     elseif cmd == "reset" then
@@ -350,7 +379,7 @@ end
 function NootropicGuildManager_OnCompartmentEnter(_, button)
     GameTooltip:SetOwner(button or UIParent, "ANCHOR_LEFT")
     GameTooltip:AddLine("Nootropic Guild Manager")
-    GameTooltip:AddLine("Click to open the guild roster.", 1, 1, 1)
+    GameTooltip:AddLine("Click to open Nootropic Guild Manager.", 1, 1, 1)
     GameTooltip:AddLine("Right-click for options.", 0.8, 0.8, 0.8)
     GameTooltip:Show()
 end

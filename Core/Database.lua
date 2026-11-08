@@ -12,7 +12,7 @@
           recruit = { ... },                                           -- see Services/Recruit.lua
       }
 
-    Shared data (tags, links, specs, professions, ratings, officer log) is
+    Shared data (tags, links, specs, professions, officer log) is
     written through ns.Sync, which checks permissions, versions, broadcasts
     and audits each change. Setters return true, or nil plus an error.
 ]]
@@ -24,17 +24,18 @@ local DEFAULTS = {
     version = 1,
     settings = {
         minimap = { angle = 200, hide = false, left = "roster", right = "options", shift = "recruit" },
-        shareLocation = true,        -- send my position to guildmates
-        showOnMap = true,            -- draw guildmates on the world map
         iconStyle = "mug",           -- "mug" | "stein" | "emblem"
         communitiesButton = true,    -- shortcut on the Guild & Communities window
+        blizzRoster = true,          -- tags, alts and tooltips on the game's guild roster
         titleUseGuild = false,       -- window title: "<Guild> Guild Manager"
         showAddonCount = true,       -- "x using ... Guild Manager" at the bottom of the window
+        whoWhisperButton = true,     -- recruitment whisper button on the game's /who results
         auditDays = 30,              -- audit history kept: 30, 60 or 90 days
         onlineOnly = false,
         sortKey = "rank",
         sortAsc = true,
-        hiddenColumns = { rating = true, version = true }, -- false = shown on purpose
+        -- the game's own roster already shows level, class, zone and rank
+        hiddenColumns = { version = true, second = true, level = true, class = true, zone = true, rank = true }, -- false = shown on purpose
         columnWidths = {},
         frameSize = { w = 1000, h = 580 },
     },
@@ -55,13 +56,19 @@ end
 function DB:Init()
     NootropicGuildManagerDB = NootropicGuildManagerDB or {}
     local sv = NootropicGuildManagerDB
-    local fresh = sv.settings == nil
     ApplyDefaults(DEFAULTS, sv)
-    -- 1.5: the rating column starts hidden (it's officer-only now)
-    if not fresh and not sv.settings.ratingHiddenOnce then
-        sv.settings.hiddenColumns.rating = true
+    -- 2.0: settings of removed features
+    local st = sv.settings
+    st.ratingHiddenOnce, st.hiddenColumns.rating = nil, nil
+    st.tabSide, st.compact, st.miniPos, st.export = nil, nil, nil, nil
+    st.shareLocation, st.showOnMap, st.customDots = nil, nil, nil
+    st.reviewed, st.kudosGiven = nil, nil
+    sv.inspectLog = nil
+    for _, mine in pairs(st.schedules or {}) do mine.days = nil end
+    for _, g in pairs(sv.guilds) do
+        g.myGoals, g.myStats, g.goalHistory, g.pollsSeen = nil, nil, nil, nil
+        g.kudosOutbox, g.reviewOutbox = nil, nil
     end
-    sv.settings.ratingHiddenOnce = true
     self.sv = sv
 end
 
@@ -144,7 +151,7 @@ function DB:FindTagByName(name)
 end
 
 function DB:CanManageTags()
-    return ns.IsOfficer()
+    return self:HasPerm("tags")
 end
 
 local function ValidateTagName(name)
@@ -162,7 +169,7 @@ end
 
 function DB:CreateTag(name, color, icon)
     if not self:Guild() then return nil, "You are not in a guild." end
-    if not self:CanManageTags() then return nil, "Only officers can manage tags." end
+    if not self:CanManageTags() then return nil, "Your rank can't manage tags." end
     local clean, err = ValidateTagName(name)
     if not clean then return nil, err end
     if self:FindTagByName(clean) then
@@ -171,7 +178,7 @@ function DB:CreateTag(name, color, icon)
     local tags = self:GetTags()
     local order = (#tags > 0 and tags[#tags].order or 0) + 10
     local id = "c" .. ns.Sync.Base36(self:Now()) .. ns.Sync.Base36(math.random(0, 1295))
-    color = color or (#tags % #ns.Data.TAG_COLORS) + 1
+    color = color or ns.Data:NextColor(#tags)
     local ok, serr = SaveTag(id, color, order, false, clean)
     if not ok then return nil, serr end
     if icon then self:SetTagIcon(id, icon) end
@@ -246,14 +253,99 @@ end
 ------------------------------------------------------------------------
 -- Guild-wide settings (shared; officers change them)
 ------------------------------------------------------------------------
--- Guild reviews are on unless an officer turned them off.
-function DB:ReviewsEnabled()
-    return ns.Sync:Value("GS:reviews") ~= "0"
+------------------------------------------------------------------------
+-- Permissions: the Guild Master picks which ranks may do each of these
+-- (Options > Officers > Permissions). GS:perm_<key> = "" (the default:
+-- officers, i.e. ranks that can read officer notes; everyone for recruit)
+-- or rank numbers "1,3,4" ("-" = nobody but the Guild Master). The Guild Master (rank 0) always may, and only they change
+-- these. Officer-only data (officer log, audit, officer stats) can't be
+-- handed out: the game only delivers it to officer ranks.
+------------------------------------------------------------------------
+DB.PERMS = {
+    { key = "tags",      label = "Manage the tag list",               hint = "Create, rename, recolor, reorder and delete tags (Tags tab)." },
+    { key = "tagothers", label = "Tag other guildmates",              hint = "Everyone can always tag themselves." },
+    { key = "links",     label = "Link mains and alts",               hint = "Mark alts, change mains, unlink." },
+    { key = "recruit",   label = "Recruit",                           everyone = true,
+      hint = "The Recruitment tab and the /who whisper button: search, whisper and invite." },
+    { key = "profiles",  label = "Edit other guildmates' profiles",   hint = "Spec, roles, professions and contact info. Everyone can always edit their own." },
+}
+DB.PERM_BY_TYPE = { T = "tags", TI = "tags", MT = "tagothers", M = "links",
+    MS = "profiles", RL = "profiles", MP = "profiles", CN = "profiles" }
+
+-- { [rankIndex] = true }, or nil for the default (officers).
+function DB:PermRanks(key)
+    local v = ns.Sync:Value("GS:perm_" .. key)
+    if not v or v == "" then return nil end
+    local set = {}
+    for n in v:gmatch("%d+") do set[tonumber(n)] = true end
+    return set
 end
 
-function DB:SetReviewsEnabled(on)
-    if not ns.IsOfficer() then return nil, "Only officers can turn reviews on or off." end
-    return ns.Sync:Set("GS:reviews", on and "1" or "0")
+function DB:IsGuildMaster()
+    return IsInGuild() and self:MyRankIndex() == 0
+end
+
+-- May you do `key`? (the Guild Master always may)
+function DB:PermDef(key)
+    for _, p in ipairs(self.PERMS) do if p.key == key then return p end end
+end
+
+function DB:HasPerm(key)
+    if not IsInGuild() then return false end
+    local rank = self:MyRankIndex()
+    if rank == 0 then return true end
+    local set = self:PermRanks(key)
+    if not set then
+        local def = self:PermDef(key)
+        return (def and def.everyone) and true or ns.IsOfficer()
+    end
+    return rank ~= nil and set[rank] == true
+end
+
+-- set = { [rankIndex] = true } or nil for the default (officers).
+function DB:SetPermRanks(key, set)
+    if not self:IsGuildMaster() then return nil, "Only the Guild Master can change permissions." end
+    local list = {}
+    for n in pairs(set or {}) do if n ~= 0 then list[#list + 1] = n end end
+    table.sort(list)
+    local v = set and table.concat(list, ",") or ""
+    if set and v == "" then v = "-" end -- nobody but the Guild Master
+    return ns.Sync:Set("GS:perm_" .. key, v)
+end
+
+-- The default's name: "Everyone" or "Officers".
+function DB:PermDefaultText(key)
+    local def = self:PermDef(key)
+    return (def and def.everyone) and "Everyone" or "Officers"
+end
+
+-- "Officers (default)", "Guild Master only" or "Veteran, Officer".
+function DB:PermText(key)
+    local set = self:PermRanks(key)
+    if not set then return self:PermDefaultText(key) .. " (default)" end
+    local names = {}
+    for _, r in ipairs(self:GuildRanks()) do
+        if r.index ~= 0 and set[r.index] then names[#names + 1] = r.name end
+    end
+    if #names == 0 then return "Guild Master only" end
+    return table.concat(names, ", ")
+end
+
+-- Your rank number in the guild (0 = Guild Master), or nil.
+function DB:MyRankIndex()
+    if not IsInGuild() then return nil end
+    local _, _, index = GetGuildInfo("player")
+    return index
+end
+
+-- The guild's ranks: { { index = 0, name = "Guild Master" }, ... }
+function DB:GuildRanks()
+    local out = {}
+    local n = GuildControlGetNumRanks and GuildControlGetNumRanks() or 0
+    for i = 1, n do
+        out[#out + 1] = { index = i - 1, name = GuildControlGetRankName(i) or ("Rank " .. i) }
+    end
+    return out
 end
 
 ------------------------------------------------------------------------
@@ -269,7 +361,7 @@ function DB:EnsureMember(full)
     if not g or not full then return nil end
     local m = g.members[full]
     if not m then
-        m = { tags = {}, rating = 0 }
+        m = { tags = {} }
         g.members[full] = m
     end
     m.tags = m.tags or {}
@@ -279,8 +371,7 @@ end
 -- Who may edit what on a character's profile.
 function DB:CanEditTags(full) return ns.Sync:CanWrite("MT:" .. full) end
 function DB:CanEditProfile(full) return ns.Sync:CanWrite("MS:" .. full) end
-function DB:CanEditLinks() return ns.IsOfficer() end
-function DB:CanRate() return ns.IsOfficer() end
+function DB:CanEditLinks() return self:HasPerm("links") end
 
 function DB:SetTag(full, id, state)
     local m = self:EnsureMember(full)
@@ -292,11 +383,6 @@ function DB:SetTag(full, id, state)
     return ns.Sync:Set("MT:" .. full, ns.Sync.Codec.Set(set))
 end
 
-function DB:SetRating(full, value)
-    local v = math.max(0, math.min(5, math.floor(tonumber(value) or 0)))
-    return ns.Sync:Set("RT:" .. full, tostring(v))
-end
-
 -- Private notes never leave this computer.
 function DB:SetNote(full, text)
     local m = self:EnsureMember(full)
@@ -306,6 +392,15 @@ function DB:SetNote(full, text)
     if m.note == text then return end
     m.note = text
     ns:Fire("MEMBER_CHANGED", full)
+end
+
+-- Roles: { tank = true, ... } (the member, or officers)
+function DB:SetRoles(full, set)
+    local list = {}
+    for _, r in ipairs(ns.Data.ROLES) do
+        if set and set[r.key] then list[#list + 1] = r.key end
+    end
+    return ns.Sync:Set("RL:" .. full, table.concat(list, ","))
 end
 
 function DB:SetManualSpec(full, spec)
@@ -399,7 +494,7 @@ function DB:SetMain(alt, main)
     if not alt or not main then return nil, "Pick a character." end
     if alt == main then return nil, "A character can't be its own alt." end
     if not self:Guild() then return nil, "You are not in a guild." end
-    if not self:CanEditLinks() then return nil, "Only officers can link mains and alts." end
+    if not self:CanEditLinks() then return nil, "Your rank can't link mains and alts." end
     local root = self:RootOf(main)
     if root == alt then return self:MakeMain(main) end
     local family = self:GetAltsOf(alt)
@@ -410,14 +505,14 @@ function DB:SetMain(alt, main)
 end
 
 function DB:ClearMain(alt)
-    if not self:CanEditLinks() then return nil, "Only officers can link mains and alts." end
+    if not self:CanEditLinks() then return nil, "Your rank can't link mains and alts." end
     if self:GetMainOf(alt) then return Link(alt, nil) end
     return true
 end
 
 -- Makes `full` the main of its family (its old main becomes an alt).
 function DB:MakeMain(full)
-    if not self:CanEditLinks() then return nil, "Only officers can link mains and alts." end
+    if not self:CanEditLinks() then return nil, "Your rank can't link mains and alts." end
     local root = self:RootOf(full)
     if not root or root == full then return true end
     local family = self:GetAltsOf(root)

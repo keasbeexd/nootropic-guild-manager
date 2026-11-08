@@ -13,7 +13,6 @@
           races   = { ["night elf"] = true },        -- lowercase; empty = any race
           minLevel, maxLevel,                         -- nil = no limit
           zones   = "Elwynn, Westfall",               -- any part of the zone name; empty = anywhere
-          guild   = "any" | "none" | "guilded",
           text    = "message with $name, $class ...",
           preset  = CLASSFILE,                       -- one of the built-in class messages
       }, ... }
@@ -31,8 +30,10 @@ MS.FACTION_RACES = {
     Alliance = { "Human", "Dwarf", "Night Elf", "Gnome" },
     Horde = { "Orc", "Undead", "Tauren", "Troll" },
 }
--- Classes only one faction can play in Classic.
-local FACTION_CLASS = { PALADIN = "Alliance", SHAMAN = "Horde" }
+-- Classes only one faction could play in original Classic. WoW: Forever lets
+-- both factions play them (Horde Paladins exist), so every class gets a message.
+local FACTION_CLASS = {}
+local ONCE_FACTION_ONLY = { "PALADIN", "SHAMAN" } -- skipped by 1.12 and older
 
 -- Built-in message for each class.
 MS.CLASS_DEFAULTS = {
@@ -57,7 +58,7 @@ function MS:FactionRaces()
     return self.FACTION_RACES[Faction() or ""] or self.RACES
 end
 
--- Classes your faction can play.
+-- Classes your faction can play (every class in WoW: Forever).
 function MS:FactionClasses()
     local out, mine = {}, Faction()
     for _, cls in ipairs(D.CLASSES) do
@@ -78,7 +79,11 @@ function MS:Migrate(r)
             local hadRules = #r.rules > 0
             self:AddClassDefaults(r, true)
             if not hadRules then r.useRules = true end
+        elseif not r.classDefaultsAllFactions then
+            -- 1.13: Paladin (Horde) and Shaman (Alliance) were left out before
+            self:AddClassDefaults(r, true, ONCE_FACTION_ONLY)
         end
+        r.classDefaultsAllFactions = true
         return
     end
     r.rules = {}
@@ -96,12 +101,13 @@ function MS:Migrate(r)
     end
     r.templates = nil
     self:AddClassDefaults(r, true)
+    r.classDefaultsAllFactions = true
     if r.useRules == nil then r.useRules = true end
 end
 
--- Adds the built-in message for every class (of your faction) that doesn't
--- have one in the list. Returns how many were added.
-function MS:AddClassDefaults(r, silent)
+-- Adds the built-in message (turned on) for every class that doesn't have
+-- one in the list, or only for the classes in `only`. Returns how many were added.
+function MS:AddClassDefaults(r, silent, only)
     r = r or Settings()
     if not r then return 0 end
     local have = {}
@@ -110,14 +116,19 @@ function MS:AddClassDefaults(r, silent)
         -- a message of your own for just one class counts too
         local only, n = nil, 0
         for cls in pairs(rule.classes or {}) do only, n = cls, n + 1 end
-        if n == 1 and not next(rule.races or {}) and ns.Trim(rule.zones or "") == "" and (rule.guild or "any") == "any"
+        if n == 1 and not next(rule.races or {}) and ns.Trim(rule.zones or "") == ""
             and (rule.minLevel or 1) <= 1 and (rule.maxLevel or 999) >= ns.Recruit:MaxLevel() then
             have[only] = true
         end
     end
+    local wanted
+    if only then
+        wanted = {}
+        for _, cls in ipairs(only) do wanted[cls] = true end
+    end
     local added = 0
     for _, cls in ipairs(self:FactionClasses()) do
-        if not have[cls] then
+        if not have[cls] and (not wanted or wanted[cls]) then
             local rule = self:Blank(r)
             rule.name = D:ClassName(cls)
             rule.classes[cls] = true
@@ -240,8 +251,6 @@ function MS:Matches(rule, p)
         end
         if not hit then return false end
     end
-    if rule.guild == "none" and p.guild then return false end
-    if rule.guild == "guilded" and not p.guild then return false end
     return true
 end
 
@@ -271,7 +280,6 @@ function MS:Summary(rule)
         parts[#parts + 1] = ("Lvl %s-%s"):format(rule.minLevel or 1, rule.maxLevel or ns.Recruit:MaxLevel())
     end
     if ns.Trim(rule.zones or "") ~= "" then parts[#parts + 1] = ns.Trim(rule.zones) end
-    if rule.guild == "none" then parts[#parts + 1] = "No guild" elseif rule.guild == "guilded" then parts[#parts + 1] = "In a guild" end
     if #parts == 0 then return "Everyone" end
     return table.concat(parts, " - ")
 end
@@ -285,14 +293,11 @@ end
 --   races: Night Elf
 --   levels: 10-60
 --   zones: Teldrassil, Darkshore
---   guild: any            (any, none, guilded)
 --   text: Hi $name! ...
 --
 -- Blocks start with "message:". Missing lines mean "any". Lines starting
 -- with # are ignored.
 ------------------------------------------------------------------------
-local GUILD_WORDS = { any = "any", none = "none", ["no guild"] = "none", unguilded = "none",
-    guilded = "guilded", ["in a guild"] = "guilded", guild = "guilded" }
 
 function MS:Export(rules)
     rules = rules or self:Rules()
@@ -313,7 +318,6 @@ function MS:Export(rules)
         out[#out + 1] = "races: " .. (#races > 0 and table.concat(races, ", ") or "any")
         out[#out + 1] = ("levels: %d-%d"):format(rule.minLevel or 1, rule.maxLevel or maxL)
         out[#out + 1] = "zones: " .. (ns.Trim(rule.zones or "") ~= "" and ns.Trim(rule.zones) or "any")
-        out[#out + 1] = "guild: " .. (rule.guild or "any")
         out[#out + 1] = "text: " .. (rule.text or ""):gsub("[\r\n]+", " ")
     end
     return table.concat(out, "\n")
@@ -389,7 +393,7 @@ function MS:Parse(text)
             elseif key == "zones" or key == "zone" then
                 cur.zones = IsAny(value) and "" or value:sub(1, 120)
             elseif key == "guild" then
-                cur.guild = GUILD_WORDS[value:lower()] or "any"
+                -- older exports: only players without a guild are recruited now
             elseif key == "text" or key == "message text" then
                 cur.text = value:sub(1, D.WHISPER_MAX)
             else

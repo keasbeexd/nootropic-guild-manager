@@ -54,12 +54,72 @@ function W.Button(parent, text, width, height)
     return b
 end
 
+-- Blizzard's red compact ("condense") or expand arrow button, the same
+-- family as the red close X. Built from the game's own
+-- MaximizeMinimizeButtonFrameTemplate when the client has it (so the art is
+-- whatever this client uses), else the atlas, else the older panel buttons.
+-- Returns a frame to position; the click and tooltip are set here.
+function W.SizeButton(parent, kind, size, onClick, tipTitle, ...)
+    size = size or 24
+    local holder, button
+    local ok, frame = pcall(CreateFrame, "Frame", nil, parent, "MaximizeMinimizeButtonFrameTemplate")
+    if ok and frame and frame.MinimizeButton and frame.MaximizeButton then
+        holder = frame
+        holder:SetSize(size, size)
+        -- the template shows its Maximize (expand) button while "minimized"
+        -- and its Minimize button otherwise, and re-applies that when shown
+        local expand = kind == "expand"
+        holder.isMinimized = expand
+        if expand and holder.SetMinimizedLook then
+            holder:SetMinimizedLook()
+        elseif not expand and holder.SetMaximizedLook then
+            holder:SetMaximizedLook()
+        end
+        button = expand and frame.MaximizeButton or frame.MinimizeButton
+        local other = expand and frame.MinimizeButton or frame.MaximizeButton
+        other:Hide()
+        button:ClearAllPoints()
+        button:SetAllPoints(holder)
+        button:Show()
+        -- our click replaces the template's, so it never swaps the buttons
+    else
+        button = CreateFrame("Button", nil, parent)
+        button:SetSize(size, size)
+        holder = button
+        local atlas = kind == "expand" and "RedButton-Expand" or "RedButton-Condense"
+        if C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
+            button:SetNormalAtlas(atlas)
+            button:SetPushedAtlas(atlas .. "-Pressed")
+            button:SetHighlightAtlas("RedButton-Highlight", "ADD")
+        else
+            local base = kind == "expand" and "Interface\\Buttons\\UI-Panel-BiggerButton-" or "Interface\\Buttons\\UI-Panel-SmallerButton-"
+            button:SetNormalTexture(base .. "Up")
+            button:SetPushedTexture(base .. "Down")
+            button:SetHighlightTexture(base .. "Highlight", "ADD")
+        end
+    end
+    button:SetScript("OnClick", function() if onClick then onClick() end end)
+    if tipTitle then W.Tooltip(button, tipTitle, ...) end
+    holder.Button = button
+    -- Blizzard window borders draw on a high frame level; sit on the close
+    -- button's level (like the spellbook's own button) so we're never covered.
+    function holder:MatchLevel(ref)
+        local level = ref and ref:GetFrameLevel() or (parent:GetFrameLevel() + 10)
+        self:SetFrameLevel(level)
+        if button ~= self then button:SetFrameLevel(level + 1) end
+    end
+    return holder
+end
+
+-- Title and lines may be functions, worked out each time it shows (for text
+-- that changes, such as a renamed tab's name).
 function W.Tooltip(frame, title, ...)
     local lines = { ... }
+    local function Text(v) if type(v) == "function" then return v() end return v end
     frame:HookScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(title)
-        for _, line in ipairs(lines) do GameTooltip:AddLine(line, 1, 1, 1, true) end
+        GameTooltip:AddLine(Text(title))
+        for _, line in ipairs(lines) do GameTooltip:AddLine(Text(line), 1, 1, 1, true) end
         GameTooltip:Show()
     end)
     frame:HookScript("OnLeave", function() GameTooltip:Hide() end)
@@ -224,59 +284,6 @@ function W.TagIcon(parent, size)
 end
 
 ------------------------------------------------------------------------
--- Star rating (raid-marker star)
-------------------------------------------------------------------------
-local STAR = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
-
-function W.Stars(parent, size, interactive, onChange)
-    local gap = 2
-    local f = CreateFrame("Frame", nil, parent)
-    f:SetSize(size * 5 + gap * 4, size)
-    f.value = 0
-    f.stars = {}
-
-    function f:Paint(n)
-        for i = 1, 5 do
-            local t = self.stars[i].tex
-            if i <= n then
-                t:SetDesaturated(false); t:SetAlpha(1)
-            else
-                t:SetDesaturated(true); t:SetAlpha(0.22)
-            end
-        end
-    end
-    function f:SetValue(n)
-        self.value = n or 0
-        self:Paint(self.value)
-    end
-
-    for i = 1, 5 do
-        local s = CreateFrame("Button", nil, f)
-        s:SetSize(size, size)
-        s:SetPoint("LEFT", (i - 1) * (size + gap), 0)
-        s.tex = s:CreateTexture(nil, "ARTWORK")
-        s.tex:SetAllPoints()
-        s.tex:SetTexture(STAR)
-        if interactive then
-            s:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-            s:SetScript("OnEnter", function() f:Paint(i) end)
-            s:SetScript("OnLeave", function() f:Paint(f.value) end)
-            s:SetScript("OnClick", function(_, button)
-                local v = (button == "RightButton" or f.value == i) and 0 or i
-                f:SetValue(v)
-                if onChange then onChange(v) end
-            end)
-        else
-            s:EnableMouse(false)
-        end
-        f.stars[i] = s
-    end
-
-    f:SetValue(0)
-    return f
-end
-
-------------------------------------------------------------------------
 -- Class icon
 ------------------------------------------------------------------------
 local atlasCache = {}
@@ -312,7 +319,8 @@ end
 
 ------------------------------------------------------------------------
 -- Context menus
--- items: { text, func, checked = bool|fn, radio, isTitle, divider, disabled, submenu }
+-- items: { text, func, checked = bool|fn, radio, isTitle, divider, disabled, submenu,
+--          tooltip = { title, text } }
 ------------------------------------------------------------------------
 local function Resolve(v)
     if type(v) == "function" then return v() end
@@ -339,6 +347,12 @@ local function BuildModern(desc, items)
         else
             local b = desc:CreateButton(it.text, function() if it.func then it.func() end end)
             if it.disabled and b.SetEnabled then b:SetEnabled(false) end
+            if it.tooltip and b.SetTooltip then
+                b:SetTooltip(function(tooltip)
+                    tooltip:AddLine(it.tooltip.title)
+                    tooltip:AddLine(it.tooltip.text, 1, 1, 1, true)
+                end)
+            end
         end
     end
 end
@@ -361,6 +375,10 @@ local function ShowLegacy(items)
                     info.keepShownOnClick = not it.radio
                 end
                 if it.func then info.func = function() it.func() end end
+                if it.tooltip then
+                    info.tooltipTitle, info.tooltipText = it.tooltip.title, it.tooltip.text
+                    info.tooltipOnButton = true
+                end
                 if it.submenu then
                     info.hasArrow = true
                     info.menuList = it.submenu
@@ -378,6 +396,101 @@ function W.ShowMenu(owner, items)
     else
         ShowLegacy(items)
     end
+end
+
+------------------------------------------------------------------------
+-- Result bar, like the character panel's skill bars: the common-stat-bar
+-- frame behind, the common-stat-bar-blue fill trimmed by its mask. The fill
+-- is greyed and tinted, so SetStatusBarColor gives any color with the
+-- game's shading. Clients without that art get a plain bordered bar.
+--   local holder = W.StatBar(parent, height)
+--   holder.Bar:SetValue(0.5); holder.Bar:SetStatusBarColor(r, g, b)
+------------------------------------------------------------------------
+local function HasAtlasArt(name)
+    return C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(name) ~= nil
+end
+
+function W.StatBar(parent, height)
+    if HasAtlasArt("common-stat-bar-BG") and HasAtlasArt("common-stat-bar-blue") then
+        local bar = CreateFrame("StatusBar", nil, parent)
+        bar:SetHeight(height)
+        bar:SetMinMaxValues(0, 1)
+        local bg = bar:CreateTexture(nil, "BACKGROUND")
+        bg:SetAtlas("common-stat-bar-BG")
+        bg:SetAllPoints()
+        -- a bright fill tinted with the row's color...
+        bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+        local fill = bar:GetStatusBarTexture()
+        fill:SetDrawLayer("BORDER")
+        -- ...with the skill bar's own fill, greyed, laid over it as a light
+        -- sheen so the game's shading shows through
+        local sheen = bar:CreateTexture(nil, "BORDER", nil, 1)
+        sheen:SetAtlas("common-stat-bar-blue")
+        sheen:SetDesaturated(true)
+        sheen:SetBlendMode("ADD")
+        sheen:SetAlpha(0.35)
+        sheen:SetAllPoints(fill)
+        if HasAtlasArt("common-stat-bar-Mask") and bar.CreateMaskTexture then
+            local mask = bar:CreateMaskTexture()
+            mask:SetAtlas("common-stat-bar-Mask", false)
+            mask:SetAllPoints()
+            fill:AddMaskTexture(mask)
+            sheen:AddMaskTexture(mask)
+        end
+        bar.Bar = bar -- the holder is the bar itself
+        return bar
+    end
+    -- plain bar
+    local bg = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    bg:SetHeight(height)
+    bg:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 8,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 } })
+    bg:SetBackdropColor(0, 0, 0, 0.6)
+    bg:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    local bar = CreateFrame("StatusBar", nil, bg)
+    bar:SetPoint("TOPLEFT", 2, -2)
+    bar:SetPoint("BOTTOMRIGHT", -2, 2)
+    bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    bar:SetMinMaxValues(0, 1)
+    bg.Bar = bar
+    return bg
+end
+
+-- The color menu for tags, kudos, polls and stats: the general colors, then
+-- the class colors in a submenu. getCurrent() returns the chosen number;
+-- onPick(number) runs on a pick.
+function W.ShowColorMenu(owner, getCurrent, onPick)
+    local items, classes = { { text = "Color", isTitle = true } }, {}
+    for i, c in ipairs(D.TAG_COLORS) do
+        local item = {
+            text = D:TagColorHex(i) .. c.name .. "|r",
+            radio = true,
+            checked = function() return getCurrent() == i end,
+            func = function() onPick(i) end,
+        }
+        if c.hidden then
+            -- not offered (a class this game doesn't have)
+        elseif c.class then
+            classes[#classes + 1] = item
+        else
+            items[#items + 1] = item
+        end
+    end
+    items[#items + 1] = { text = "Class Colors", submenu = classes }
+    W.ShowMenu(owner, items)
+end
+
+-- A dropdown-looking button for picking a color (text set by the caller).
+function W.ColorButton(parent, width)
+    local b = W.Button(parent, "", width or 140, 22)
+    b.Arrow = b:CreateTexture(nil, "OVERLAY")
+    b.Arrow:SetSize(18, 18)
+    b.Arrow:SetPoint("RIGHT", -4, 0)
+    b.Arrow:SetTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
+    function b:SetColor(index)
+        self:SetText(D:TagColorHex(index) .. D:ColorName(index) .. "|r")
+    end
+    return b
 end
 
 ------------------------------------------------------------------------

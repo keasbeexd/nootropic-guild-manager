@@ -5,12 +5,14 @@
 
     Search syntax (case-insensitive, all words must match):
       mage fire              free words match name, class, spec, tags, professions
-      tag:raiding            field filter (name, tag, prof, spec, class, rank, zone, note)
+      tag:raiding            field filter (name, tag, prof, spec, class, race, rank, zone, note, discord)
       tag:"world pvp"        quotes keep phrases together
       main:markpri           a main and all of their alts
       is:alt  is:main        only alts / only mains
       is:addon               only members running Nootropic Guild Manager
-      rating:4  rating<3     numeric filters (rating:N means N stars or more)
+      is:online              only members online now
+      role:tank              tank / healer / damage, as set on their profile
+      level>=50              numeric filter
       level:60  level>=50
       -raiding               a leading minus excludes matches
 ]]
@@ -79,6 +81,8 @@ end
 function R:Rebuild()
     wipe(self.members)
     wipe(self.byName)
+    self.byGuid = self.byGuid or {}
+    wipe(self.byGuid)
     self:BuildAltIndex()
 
     if IsInGuild() then
@@ -104,6 +108,13 @@ function R:Rebuild()
                     status = status or 0,
                     lastOnline = 0,
                 }
+                -- race isn't in the guild roster; the game knows it from their character id
+                local guid = select(17, GetGuildRosterInfo(i))
+                if guid then e.guid = guid; self.byGuid[guid] = e end
+                if guid and GetPlayerInfoByGUID then
+                    local ok, _, _, race, raceFile, sex = pcall(GetPlayerInfoByGUID, guid)
+                    if ok and race and race ~= "" then e.race, e.raceFile, e.sex = race, raceFile, sex end
+                end
                 if not e.online and GetGuildRosterLastOnline then
                     local y, mo, d, h = GetGuildRosterLastOnline(i)
                     e.lastOnline = (((y or 0) * 365 + (mo or 0) * 30 + (d or 0)) * 24) + (h or 0)
@@ -113,9 +124,37 @@ function R:Rebuild()
                 self.byName[full] = e
             end
         end
+        self:FindSelf(total)
     end
 
     ns:Fire("ROSTER_UPDATED")
+end
+
+-- Finds your own row (by character GUID, else by name) and makes sure the
+-- addon uses that exact spelling for you.
+function R:FindSelf(total)
+    local myGuid = UnitGUID and UnitGUID("player")
+    local myName = (UnitName("player") or ""):lower()
+    local found, byName
+    for i = 1, total do
+        local name = GetGuildRosterInfo(i)
+        if name then
+            local guid = select(17, GetGuildRosterInfo(i))
+            if myGuid and guid and guid == myGuid then
+                found = ns.NormalizeName(name)
+                break
+            end
+            if not byName and ns.ShortName(name):lower() == myName then byName = ns.NormalizeName(name) end
+        end
+    end
+    found = found or byName
+    self.selfRow = found
+    if found and found ~= ns.PlayerFullName() then
+        ns.selfName = found
+        ns:Fire("SELF_NAME_CHANGED", found)
+    end
+    local e = found and self.byName[found]
+    if e then self:Decorate(e) end
 end
 
 local function SortProfs(a, b)
@@ -141,6 +180,8 @@ function R:Decorate(e)
     end
     e.dist = auto and auto.dist ~= "" and auto.dist or nil
     e.version = m and m.version
+    e.isSelf = e.full == ns.PlayerFullName()
+    if e.isSelf then e.version = ns.version end -- you're running this copy right now
     e.hasAddon = auto ~= nil or e.version ~= nil
     e.syncedAt = auto and auto.ts
 
@@ -177,8 +218,17 @@ function R:Decorate(e)
         end
     end
     e.tagList, e.tagSet = tagList, set
-    e.rating = (ns.IsOfficer() and m and m.rating) or 0 -- ratings are officer-only
     e.note = m and m.note
+
+    -- Roles they play (set on their profile)
+    e.roles, e.roleList = {}, {}
+    for key in ((m and m.roles) or ""):gmatch("[^,]+") do
+        local r = D:Role(key)
+        if r then
+            e.roles[key] = true
+            e.roleList[#e.roleList + 1] = r.label
+        end
+    end
 
     -- Main / alt
     e.main = m and m.main
@@ -203,6 +253,8 @@ function R:Decorate(e)
     e.search = s
     s.name  = e.short:lower()
     s.class = (e.className .. " " .. e.classFile):lower()
+    s.race  = ((e.race or "") .. " " .. (e.raceFile or "")):lower()
+    s.role  = table.concat(e.roleList, "\n"):lower()
     s.spec  = (e.spec or ""):lower()
     s.tags  = table.concat(tagNames, "\n"):lower()
     s.profs = table.concat(profNames, "\n"):lower()
@@ -210,7 +262,10 @@ function R:Decorate(e)
     s.zone  = e.zone:lower()
     s.note  = ((e.note or "") .. "\n" .. e.publicNote .. "\n" .. e.officerNote .. "\n" .. logText):lower()
     s.main  = (e.mainShort or e.short):lower()
-    s.is    = (e.isAlt and "alt" or "main") .. (e.hasAddon and "\naddon" or "")
+    local discord, contactNote = ns.Profile:Contact(e.full)
+    e.discord = (discord and discord ~= "") and discord or nil
+    s.contact = ((discord or "") .. "\n" .. (contactNote or "")):lower()
+    s.is    = (e.isAlt and "alt" or "main") .. (e.hasAddon and "\naddon" or "") .. (e.online and "\nonline" or "")
 end
 
 ------------------------------------------------------------------------
@@ -222,15 +277,17 @@ local FIELDS = {
     prof = "profs", profs = "profs", profession = "profs", p = "profs",
     spec = "spec", s = "spec",
     class = "class", c = "class",
+    race = "race",
+    role = "role",
     rank = "rank",
     zone = "zone", z = "zone",
     note = "note", notes = "note",
-    rating = "rating", r = "rating", skill = "rating",
+    discord = "contact", contact = "contact", dc = "contact",
     level = "level", lvl = "level", l = "level",
     main = "main", m = "main",
     is = "is", type = "is",
 }
-local NUMERIC = { rating = true, level = true }
+local NUMERIC = { level = true }
 local DEFAULT_FIELDS = { "name", "class", "spec", "tags", "profs" }
 
 local function Tokenize(text)
@@ -274,7 +331,7 @@ function R:ParseQuery(text)
                 op = op:gsub(":", "")
                 if rest:sub(-1) == "+" then op = ">=" end
                 if op ~= ">" and op ~= "<" and op ~= ">=" and op ~= "<=" and op ~= "=" then
-                    op = (field == "rating") and ">=" or "="
+                    op = "="
                 end
                 t.op, t.num = op, tonumber(rest:match("%d+"))
             else
@@ -301,9 +358,7 @@ local function MatchToken(e, t)
     local hit
     if t.field and NUMERIC[t.field] then
         if not t.num then return true end -- incomplete filter, ignore
-        if t.field == "rating" and not ns.IsOfficer() then return true end
-        local v = (t.field == "rating") and e.rating or e.level
-        hit = Compare(v, t.op, t.num)
+        hit = Compare(e.level, t.op, t.num)
     elseif t.field then
         hit = t.value == "" or e.search[t.field]:find(t.value, 1, true) ~= nil
     else
@@ -319,18 +374,32 @@ local function MatchToken(e, t)
     return hit
 end
 
--- opts: { onlineOnly = bool, tagIds = { [id] = true } }
+-- opts: { onlineOnly = bool, tagIds = { [id] = true }, tagAny = bool (any ticked
+--         tag instead of all), kind = "main" | "alt", classFile, rank (name),
+--         addonOnly = bool }
 function R:Query(text, opts)
     opts = opts or EMPTY
     local tokens = self:ParseQuery(text)
     local out = {}
     for _, e in ipairs(self.members) do
         local ok = not (opts.onlineOnly and not e.online)
-        if ok and opts.tagIds then
-            for id in pairs(opts.tagIds) do
-                if not e.tagSet[id] then ok = false break end
+        if ok and opts.tagIds and next(opts.tagIds) then
+            if opts.tagAny then
+                ok = false
+                for id in pairs(opts.tagIds) do
+                    if e.tagSet[id] then ok = true break end
+                end
+            else
+                for id in pairs(opts.tagIds) do
+                    if not e.tagSet[id] then ok = false break end
+                end
             end
         end
+        if ok and opts.kind == "main" and e.isAlt then ok = false end
+        if ok and opts.kind == "alt" and not e.isAlt then ok = false end
+        if ok and opts.classFile and e.classFile ~= opts.classFile then ok = false end
+        if ok and opts.rank and e.rank ~= opts.rank then ok = false end
+        if ok and opts.addonOnly and not e.hasAddon then ok = false end
         if ok then
             for _, t in ipairs(tokens) do
                 if not MatchToken(e, t) then ok = false break end
@@ -386,9 +455,6 @@ local SORTERS = {
     tags = function(a, b)
         if #a.tagList ~= #b.tagList then return #a.tagList < #b.tagList end
     end,
-    rating = function(a, b)
-        if a.rating ~= b.rating then return a.rating < b.rating end
-    end,
     rank = function(a, b)
         if a.rankIndex ~= b.rankIndex then return a.rankIndex < b.rankIndex end
     end,
@@ -397,7 +463,7 @@ local SORTERS = {
         if c ~= 0 then return c < 0 end
     end,
 }
-R.DEFAULT_DESC = { level = true, rating = true, tags = true }
+R.DEFAULT_DESC = { level = true, tags = true }
 
 function R:Sort(list, key, asc)
     local cmp = SORTERS[key]
@@ -454,6 +520,19 @@ function R:IsOutdated(e)
     if not e.hasAddon then return false end
     if not e.version then return true end -- 1.10 or older never said
     return ns.CompareVersions(e.version, self:NewestVersion()) < 0
+end
+
+-- /ngm diag: how the addon sees you, and what version record it has for you.
+function R:Diagnose()
+    local me = ns.PlayerFullName()
+    local fromUnit = ns.NormalizeName(UnitName("player"))
+    local rec = ns.Sync:Get("AV:" .. me)
+    local m = ns.DB:GetMember(me)
+    local e = self.byName[me]
+    ns:Print(("Version: running %s. You are \"%s\"%s; roster row %s; shared version record %s; saved version %s."):format(
+        ns.version, me, fromUnit ~= me and (" (UnitName gives \"" .. fromUnit .. "\")") or "",
+        e and "found" or "|cffff5555not found|r", rec and ("\"" .. rec.v .. "\"") or "|cffff5555missing|r",
+        m and m.version or "none"))
 end
 
 -- Tells you (once per session) when a guildmate has a newer version.
