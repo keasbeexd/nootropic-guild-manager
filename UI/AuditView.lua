@@ -167,7 +167,7 @@ function AV:InitRow(row, e)
                 local who = (g.memberCount > 1 and en.member) and (ns.ShortName(en.member) .. ": ") or ""
                 GameTooltip:AddLine(who .. en.desc, 1, 1, 1, true)
             end
-            GameTooltip:AddDoubleLine("Changed by", ns.ShortName(g.author or "?"), 1, 0.82, 0, 1, 1, 1)
+            GameTooltip:AddDoubleLine("Changed by", ns.Audit.Who(g.author), 1, 0.82, 0, 1, 1, 1)
             GameTooltip:AddDoubleLine("When", ns.FormatDate(g.t), 1, 0.82, 0, 1, 1, 1)
             if g.memberCount == 1 then GameTooltip:AddLine("Click to open " .. ns.ShortName(g.member) .. "'s profile.", 0.5, 0.5, 0.5) end
             GameTooltip:Show()
@@ -188,7 +188,7 @@ function AV:InitRow(row, e)
     row.entry = e
     row.Stripe:SetShown(e._stripe)
     row.When:SetText(ns.FormatDate(e.t))
-    row.Who:SetText(ns.ShortName(e.author or "?"))
+    row.Who:SetText(ns.Audit.Who(e.author))
     if e.memberCount == 1 then
         local entry = ns.Roster.byName[e.member]
         row.Member:SetText(ns.ShortName(e.member))
@@ -250,7 +250,7 @@ function AV:Refresh()
     if not ns.IsOfficer() then
         self.empty:SetText("Only officers can view the audit.")
     elseif #list == 0 then
-        self.empty:SetText("No changes recorded yet. Changes to tags, mains and alts, specs, professions and the officer log appear here.")
+        self.empty:SetText("No changes recorded yet. Joins, leaves, promotions, level-ups, note changes, and changes to mains and alts, specs, roles, professions, contact info and the officer log appear here.")
     else
         self.empty:SetText("")
     end

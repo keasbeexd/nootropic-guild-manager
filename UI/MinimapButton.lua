@@ -81,7 +81,6 @@ function M:Run(action)
     local UI = ns.UI
     if action == "roster" then UI:OpenTab(UI.TAB_ROSTER, true)
     elseif action == "recruit" then UI:OpenTab(UI.TAB_RECRUIT, true)
-    elseif action == "tags" then UI:OpenTab(UI:IsTabAvailable(UI.TAB_TAGS) and UI.TAB_TAGS or UI.TAB_ROSTER, true)
     elseif action == "audit" then UI:OpenTab(ns.IsOfficer() and UI.TAB_AUDIT or UI.TAB_ROSTER, true)
     elseif action == "options" then ns.Options:Open()
     elseif action == "toggle" then UI:Toggle()

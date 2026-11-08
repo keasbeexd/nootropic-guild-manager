@@ -202,8 +202,8 @@ function O:BuildMain()
         end)
     self.communitiesCheck = L:Check("Shortcut on the Guild & Communities window",
         "A side tab with the addon icon.", function(on) ns.Communities:SetEnabled(on) end)
-    self.blizzRosterCheck = L:Check("Show tags and alts on the Guild roster",
-        "On the game's Guild & Communities roster: tag icons and an alt marker after names, this addon's details in the tooltip, and Profile, Tags and Main / Alt in the right-click menu. Alt+click a member for their profile.",
+    self.blizzRosterCheck = L:Check("Show alts and profiles on the Guild roster",
+        "On the game's Guild & Communities roster: an alt marker after names, this addon's details in the tooltip, and Profile and Main / Alt in the right-click menu. Alt+click a member for their profile.",
         function(on) ns.GuildRoster:SetEnabled(on) end)
 
     self.learnCheck = L:Check("Learn when I usually play",

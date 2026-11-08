@@ -1,6 +1,6 @@
 --[[
     Nootropic Guild Manager - Static data
-    Classes, specializations, professions, tag palette and defaults.
+    Classes, specializations, professions, roles and defaults.
 ]]
 local _, ns = ...
 local D = {}
@@ -81,7 +81,6 @@ end
 D.MINIMAP_ACTIONS = {
     { key = "roster",  tab = true },
     { key = "recruit", tab = true },
-    { key = "tags",    tab = true, suffix = " (officers)" },
     { key = "audit",   tab = true, suffix = " (officers)" },
     { key = "options", label = "Open Options" },
     { key = "toggle",  label = "Show / hide window" },
@@ -135,77 +134,6 @@ function D:ProfIcon(prof)
     return p and p.icon or D.UNKNOWN_ICON
 end
 
-------------------------------------------------------------------------
--- Content tags
-------------------------------------------------------------------------
--- Colors for tags. Saved by number, so new ones go
--- at the end. The first ten are the general colors new things cycle through;
--- the class colors follow.
-D.TAG_COLORS = {
-    { name = "Quest Gold",        1.00, 0.82, 0.00 },
-    { name = "Rare Blue",         0.25, 0.60, 1.00 },
-    { name = "Epic Purple",       0.64, 0.35, 1.00 },
-    { name = "Horde Red",         0.92, 0.22, 0.22 },
-    { name = "Legendary Orange",  1.00, 0.50, 0.10 },
-    { name = "Emerald Dream",     0.20, 0.80, 0.55 },
-    { name = "Murloc Green",      0.50, 0.78, 0.20 },
-    { name = "Northrend Ice",     0.40, 0.85, 0.95 },
-    { name = "Darnassus Rose",    1.00, 0.45, 0.70 },
-    { name = "Mithril Silver",    0.72, 0.72, 0.72 },
-    -- class colors
-    { name = "Warrior",      0.78, 0.61, 0.43, class = true },
-    { name = "Paladin",      0.96, 0.55, 0.73, class = true },
-    { name = "Hunter",       0.67, 0.83, 0.45, class = true },
-    { name = "Rogue",        1.00, 0.96, 0.41, class = true },
-    { name = "Priest",       1.00, 1.00, 1.00, class = true },
-    -- hidden: classes this game doesn't have. They stay in the list (colors
-    -- are saved by number) but aren't offered.
-    { name = "Death Knight", 0.77, 0.12, 0.23, class = true, hidden = true },
-    { name = "Shaman",       0.00, 0.44, 0.87, class = true },
-    { name = "Mage",         0.25, 0.78, 0.92, class = true },
-    { name = "Warlock",      0.53, 0.53, 0.93, class = true },
-    { name = "Monk",         0.00, 1.00, 0.60, class = true, hidden = true },
-    { name = "Druid",        1.00, 0.49, 0.04, class = true },
-    { name = "Demon Hunter", 0.64, 0.19, 0.79, class = true, hidden = true },
-    { name = "Evoker",       0.20, 0.58, 0.50, class = true, hidden = true },
-}
-D.BASE_COLORS = 10 -- new things cycle through the first ten
-
--- The color a new tag starts with (the nth made).
-function D:NextColor(n)
-    return (n % self.BASE_COLORS) + 1
-end
-
-function D:ColorName(index)
-    local c = self.TAG_COLORS[index or 1] or self.TAG_COLORS[1]
-    return c.name
-end
-
-function D:TagColor(index)
-    local c = self.TAG_COLORS[index or 1] or self.TAG_COLORS[1]
-    return c[1], c[2], c[3]
-end
-
--- "|cffrrggbb" for a tag color
-function D:TagColorHex(index)
-    local r, g, b = self:TagColor(index)
-    return ("|cff%02x%02x%02x"):format(r * 255, g * 255, b * 255)
-end
-
--- { name, colorIndex, icon }
-D.DEFAULT_TAGS = {
-    { "Questing",      1,  ICON .. "INV_Scroll_03" },
-    { "Dungeons",      2,  ICON .. "INV_Sword_04" },
-    { "Raiding",       3,  ICON .. "INV_Misc_Head_Dragon_01" },
-    { "World PvP",     4,  ICON .. "Ability_DualWield" },
-    { "Battlegrounds", 5,  ICON .. "INV_BannerPVP_02" },
-    { "Crafting",      6,  ICON .. "Trade_BlackSmithing" },
-    { "Gathering",     7,  ICON .. "Trade_Herbalism" },
-    { "Leveling",      8,  ICON .. "Ability_Mount_RidingHorse" },
-    { "Roleplay",      9,  ICON .. "Spell_Shadow_Charm" },
-    { "Social",        10, ICON .. "INV_Drink_05" },
-}
-
 -- Roles a character plays (set on their profile; any of them)
 D.ROLES = {
     { key = "tank",   label = "Tank",   icon = "Interface\\Icons\\Ability_Defend",      color = { 0.25, 0.60, 1.00 } },
@@ -217,33 +145,6 @@ function D:Role(key)
     for _, r in ipairs(self.ROLES) do if r.key == key then return r end end
 end
 
--- Tag icons are stored as a file id ("134400") or a texture path.
-function D:ParseIcon(v)
-    if not v or v == "" then return nil end
-    local id = tonumber(v)
-    if id then return id end
-    if not v:find("\\", 1, true) then return ICON .. v end
-    return v
-end
-
--- The icon to draw for a tag: its chosen icon, a default tag's own icon, or a question mark.
-function D:TagIcon(tag)
-    if tag.icon then return tag.icon end
-    local i = tag.id and tonumber(tag.id:match("^d(%d+)$"))
-    local def = i and self.DEFAULT_TAGS[i]
-    return def and def[3] or self.UNKNOWN_ICON
-end
-
--- "|T...|t" for a tag icon in text (menus, tooltips).
-function D:TagIconString(tag, size)
-    return ("|T%s:%d:%d:0:0:64:64:5:59:5:59|t"):format(tostring(self:TagIcon(tag)), size or 14, size or 14)
-end
-
--- Icon and colored name, for tooltips and menus.
-function D:TagLabel(tag, size)
-    return self:TagIconString(tag, size) .. " " .. self:TagColorHex(tag.color) .. tag.name .. "|r"
-end
-D.MAX_TAG_LENGTH = 24
 D.MAX_LOG_LENGTH = 140 -- fits one addon message
 
 ------------------------------------------------------------------------

@@ -4,9 +4,9 @@
     searching and sorting. Fires ROSTER_UPDATED when the list changes.
 
     Search syntax (case-insensitive, all words must match):
-      mage fire              free words match name, class, spec, tags, professions
-      tag:raiding            field filter (name, tag, prof, spec, class, race, rank, zone, note, discord)
-      tag:"world pvp"        quotes keep phrases together
+      mage fire              free words match name, class, spec, professions
+      prof:alchemy           field filter (name, prof, spec, class, race, rank, zone, note, discord)
+      zone:"elwynn forest"   quotes keep phrases together
       main:markpri           a main and all of their alts
       is:alt  is:main        only alts / only mains
       is:addon               only members running Nootropic Guild Manager
@@ -14,7 +14,7 @@
       role:tank              tank / healer / damage, as set on their profile
       level>=50              numeric filter
       level:60  level>=50
-      -raiding               a leading minus excludes matches
+      -alchemy               a leading minus excludes matches
 ]]
 local _, ns = ...
 local D = ns.Data
@@ -42,7 +42,6 @@ function R:Init()
         for _, e in ipairs(R.members) do R:Decorate(e) end
         ns:Fire("ROSTER_UPDATED")
     end
-    ns:On("TAGS_CHANGED", redecorate)
     ns:On("LINKS_CHANGED", redecorate)
     ns:On("OFFICER_CHANGED", redecorate) -- officer-only fields appear or disappear
 
@@ -125,6 +124,7 @@ function R:Rebuild()
             end
         end
         self:FindSelf(total)
+        ns.Safe(function() ns.RosterLog:OnRoster(self.members) end, "RosterLog")()
     end
 
     ns:Fire("ROSTER_UPDATED")
@@ -208,16 +208,6 @@ function R:Decorate(e)
     table.sort(profs, SortProfs)
     e.profs = profs
 
-    -- Tags, kept in the user's tag order.
-    local tagList, tagNames = {}, {}
-    local set = (m and m.tags) or EMPTY
-    for _, tag in ipairs(ns.DB:GetTags()) do
-        if set[tag.id] then
-            tagList[#tagList + 1] = tag
-            tagNames[#tagNames + 1] = tag.name
-        end
-    end
-    e.tagList, e.tagSet = tagList, set
     e.note = m and m.note
 
     -- Roles they play (set on their profile)
@@ -256,7 +246,6 @@ function R:Decorate(e)
     s.race  = ((e.race or "") .. " " .. (e.raceFile or "")):lower()
     s.role  = table.concat(e.roleList, "\n"):lower()
     s.spec  = (e.spec or ""):lower()
-    s.tags  = table.concat(tagNames, "\n"):lower()
     s.profs = table.concat(profNames, "\n"):lower()
     s.rank  = e.rank:lower()
     s.zone  = e.zone:lower()
@@ -273,7 +262,6 @@ end
 ------------------------------------------------------------------------
 local FIELDS = {
     name = "name", n = "name",
-    tag = "tags", tags = "tags", t = "tags", content = "tags",
     prof = "profs", profs = "profs", profession = "profs", p = "profs",
     spec = "spec", s = "spec",
     class = "class", c = "class",
@@ -288,7 +276,7 @@ local FIELDS = {
     is = "is", type = "is",
 }
 local NUMERIC = { level = true }
-local DEFAULT_FIELDS = { "name", "class", "spec", "tags", "profs" }
+local DEFAULT_FIELDS = { "name", "class", "spec", "profs" }
 
 local function Tokenize(text)
     local out, i, n = {}, 1, #text
@@ -374,8 +362,7 @@ local function MatchToken(e, t)
     return hit
 end
 
--- opts: { onlineOnly = bool, tagIds = { [id] = true }, tagAny = bool (any ticked
---         tag instead of all), kind = "main" | "alt", classFile, rank (name),
+-- opts: { onlineOnly = bool, kind = "main" | "alt", classFile, rank (name),
 --         addonOnly = bool }
 function R:Query(text, opts)
     opts = opts or EMPTY
@@ -383,18 +370,6 @@ function R:Query(text, opts)
     local out = {}
     for _, e in ipairs(self.members) do
         local ok = not (opts.onlineOnly and not e.online)
-        if ok and opts.tagIds and next(opts.tagIds) then
-            if opts.tagAny then
-                ok = false
-                for id in pairs(opts.tagIds) do
-                    if e.tagSet[id] then ok = true break end
-                end
-            else
-                for id in pairs(opts.tagIds) do
-                    if not e.tagSet[id] then ok = false break end
-                end
-            end
-        end
         if ok and opts.kind == "main" and e.isAlt then ok = false end
         if ok and opts.kind == "alt" and not e.isAlt then ok = false end
         if ok and opts.classFile and e.classFile ~= opts.classFile then ok = false end
@@ -452,9 +427,6 @@ local SORTERS = {
         local pb = b.profs[1] and b.profs[1].name or "~"
         if pa ~= pb then return pa < pb end
     end,
-    tags = function(a, b)
-        if #a.tagList ~= #b.tagList then return #a.tagList < #b.tagList end
-    end,
     rank = function(a, b)
         if a.rankIndex ~= b.rankIndex then return a.rankIndex < b.rankIndex end
     end,
@@ -463,7 +435,7 @@ local SORTERS = {
         if c ~= 0 then return c < 0 end
     end,
 }
-R.DEFAULT_DESC = { level = true, tags = true }
+R.DEFAULT_DESC = { level = true }
 
 function R:Sort(list, key, asc)
     local cmp = SORTERS[key]
@@ -492,14 +464,6 @@ function R:Stats()
         if e.hasAddon then withAddon = withAddon + 1 end
     end
     return total, online, withAddon
-end
-
-function R:TagCount(id)
-    local n = 0
-    for _, e in ipairs(self.members) do
-        if e.tagSet[id] then n = n + 1 end
-    end
-    return n
 end
 
 ------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 --[[
     Nootropic Guild Manager - Roster view
-    Search bar, tag quick filters, sortable and toggleable columns,
+    Search bar, filters, sortable and toggleable columns,
     and the member list.
 ]]
 local _, ns = ...
@@ -25,7 +25,6 @@ local COLUMNS = {
     { key = "main",   label = "Main / Alt",  width = 126, min = 80, hidePriority = 6 },
     { key = "zone",   label = "Location",    width = 130, min = 74, hidePriority = 3.5 },
     { key = "profs",  label = "Professions", width = 150, min = 56, hidePriority = 4 },
-    { key = "tags",   label = "Tags",        width = 160, min = 70, hidePriority = 8 },
     { key = "rank",   label = "Rank",        width = 96,  min = 56, hidePriority = 1 },
     { key = "version", label = "Version",    width = 62,  min = 50, hidePriority = 0.5 },
 }
@@ -95,7 +94,6 @@ local STATUS_ICONS = {
 }
 
 RV.query = ""
-RV.tagFilter = {}
 RV.selected = nil
 RV.layoutVersion = 0
 
@@ -364,24 +362,16 @@ function RV:Build(frame)
 
     self:ComputeLayout()
     self:BuildToolbar(page, frame)
-    self:BuildTagsPanel(page)
     self:BuildFilterPanel(page)
     self:BuildList(page, frame.Inset)
     self:ApplyHeaderLayout()
 
     ns:On("ROSTER_UPDATED", function() ns.Debounce("rosterview", 0.05, function() RV:Refresh() end) end)
-    ns:On("TAGS_CHANGED", function()
-        for id in pairs(RV.tagFilter) do
-            if not ns.DB:GetTag(id) then RV.tagFilter[id] = nil end
-        end
-        if RV.tagsPanel:IsShown() then RV:RefreshTagsPanel() end
-        RV:RefreshFilterInfo()
-    end)
 end
 
 ------------------------------------------------------------------------
--- Toolbar: search on the left, Tags and Filter on the right, and a
--- summary line underneath (counts, active tags and filters, Clear).
+-- Toolbar: search on the left, Filter on the right, and a
+-- summary line underneath (counts, active filters, Clear).
 -- Columns: right-click any column header.
 ------------------------------------------------------------------------
 local function Check(parent, text)
@@ -398,7 +388,7 @@ local function Check(parent, text)
     return cb
 end
 
--- Button with an arrow at its right edge ("Tags (2)  v", "Filter  >").
+-- Button with an arrow at its right edge ("Filter  >").
 local function MenuButton(parent, text, width, arrow)
     local b = W.Button(parent, text, width, 22)
     b.Arrow = b:CreateTexture(nil, "OVERLAY")
@@ -421,11 +411,11 @@ function RV:BuildToolbar(page, frame)
         ns.Debounce("search", 0.12, function() RV:Refresh() end)
     end)
     W.Tooltip(search, "Searching the roster",
-        "Words match names, classes, specs, professions and tags. Every word must match.",
-        "|cffffd100tag:|r |cffffd100prof:|r |cffffd100spec:|r |cffffd100class:|r |cffffd100race:|r |cffffd100role:|r |cffffd100name:|r |cffffd100rank:|r |cffffd100zone:|r |cffffd100note:|r |cffffd100discord:|r limit a word to one field.",
+        "Words match names, classes, specs and professions. Every word must match.",
+        "|cffffd100prof:|r |cffffd100spec:|r |cffffd100class:|r |cffffd100race:|r |cffffd100role:|r |cffffd100name:|r |cffffd100rank:|r |cffffd100zone:|r |cffffd100note:|r |cffffd100discord:|r limit a word to one field.",
         "|cffffd100main:markpri|r  a main and their alts    |cffffd100is:alt|r  |cffffd100is:main|r  |cffffd100is:addon|r  |cffffd100is:online|r",
         "|cffffd100level>=50|r  level filter",
-        "|cffffd100-raiding|r excludes, |cffffd100tag:\"world pvp\"|r matches a phrase.",
+        "|cffffd100-alchemy|r excludes, |cffffd100zone:\"elwynn forest\"|r matches a phrase.",
         "Right-click a column header to choose columns.")
     self.searchBox = search
 
@@ -434,12 +424,6 @@ function RV:BuildToolbar(page, frame)
     filter:SetScript("OnClick", function() RV:TogglePanel(RV.filterPanel) end)
     W.Tooltip(filter, "Filter", "Online only, mains or alts, class, rank, and guildmates using the addon.")
     self.filterBtn = filter
-
-    local tags = MenuButton(page, "Tags", 96, "down")
-    tags:SetPoint("RIGHT", filter, "LEFT", -6, 0)
-    tags:SetScript("OnClick", function() RV:TogglePanel(RV.tagsPanel) end)
-    W.Tooltip(tags, "Tags", "Show only members with the tags you tick.")
-    self.tagsBtn = tags
 
     -- summary line
     local clear = CreateFrame("Button", nil, page)
@@ -486,89 +470,13 @@ function RV:TogglePanel(p)
     local open = p:IsShown()
     self:ClosePanels()
     if not open then
-        if p == self.tagsPanel then self:RefreshTagsPanel() else self:RefreshFilterPanel() end
+        self:RefreshFilterPanel()
         p:Show()
     end
 end
 
 function RV:ClosePanels()
-    if self.tagsPanel then self.tagsPanel:Hide() end
     if self.filterPanel then self.filterPanel:Hide() end
-end
-
-------------------------------------------------------------------------
--- Tags menu: every tag (icon and color) in two columns, all/any, Clear
-------------------------------------------------------------------------
-RV.tagAny = false
-
-function RV:BuildTagsPanel(page)
-    local p = DropPanel(page, 330, 120)
-    p:SetPoint("TOPRIGHT", self.tagsBtn, "BOTTOMRIGHT", 0, -4)
-    p.checks = {}
-    self.tagsPanel = p
-
-    local matchLabel = p:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    matchLabel:SetPoint("BOTTOMLEFT", 14, 16)
-    matchLabel:SetText("Match")
-    local match = W.Button(p, "", 130, 20)
-    match:SetPoint("LEFT", matchLabel, "RIGHT", 8, 0)
-    match:SetScript("OnClick", function(btn)
-        W.ShowMenu(btn, {
-            { text = "Show members with", isTitle = true },
-            { text = "All ticked tags", radio = true, checked = function() return not RV.tagAny end,
-              func = function() RV.tagAny = false; RV:RefreshTagsPanel(); RV:Refresh() end },
-            { text = "Any ticked tag", radio = true, checked = function() return RV.tagAny end,
-              func = function() RV.tagAny = true; RV:RefreshTagsPanel(); RV:Refresh() end },
-        })
-    end)
-    p.Match = match
-    local clear = W.Button(p, "Clear", 70, 20)
-    clear:SetPoint("BOTTOMRIGHT", -12, 12)
-    clear:SetScript("OnClick", function()
-        wipe(RV.tagFilter)
-        RV:RefreshTagsPanel()
-        RV:Refresh()
-    end)
-end
-
-function RV:RefreshTagsPanel()
-    local p = self.tagsPanel
-    local tags = ns.DB:GetTags()
-    local COL_W, ROW = 152, 22
-    for i, tag in ipairs(tags) do
-        local cb = p.checks[i]
-        if not cb then
-            cb = Check(p, "")
-            cb.Icon = cb:CreateTexture(nil, "ARTWORK")
-            cb.Icon:SetSize(14, 14)
-            cb.Icon:SetPoint("LEFT", cb, "RIGHT", 2, 0)
-            cb.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-            cb.Label:ClearAllPoints()
-            cb.Label:SetPoint("LEFT", cb.Icon, "RIGHT", 4, 0)
-            cb.Label:SetWidth(COL_W - 44)
-            cb.Label:SetJustifyH("LEFT")
-            cb.Label:SetWordWrap(false)
-            cb:SetScript("OnClick", function(self)
-                if self.tagId then
-                    RV.tagFilter[self.tagId] = self:GetChecked() and true or nil
-                    RV:Refresh()
-                end
-            end)
-            p.checks[i] = cb
-        end
-        local col, row = (i - 1) % 2, math.floor((i - 1) / 2)
-        cb:ClearAllPoints()
-        cb:SetPoint("TOPLEFT", 10 + col * COL_W, -10 - row * ROW)
-        cb.tagId = tag.id
-        cb.Icon:SetTexture(D:TagIcon(tag))
-        cb.Label:SetText(D:TagColorHex(tag.color) .. tag.name .. "|r")
-        cb:SetChecked(self.tagFilter[tag.id] and true or false)
-        cb:Show()
-    end
-    for i = #tags + 1, #p.checks do p.checks[i]:Hide() end
-    local rows = math.max(1, math.ceil(#tags / 2))
-    p:SetHeight(20 + rows * ROW + 40)
-    p.Match:SetText(self.tagAny and "Any ticked tag" or "All ticked tags")
 end
 
 ------------------------------------------------------------------------
@@ -681,18 +589,16 @@ function RV:RefreshFilterPanel()
     p.Addon:SetChecked(f.addonOnly and true or false)
 end
 
--- Everything the Tags and Filter menus narrow the roster by, for Query.
+-- Everything the Filter menu narrows the roster by, for Query.
 function RV:QueryOptions()
     local f = self:Filters()
-    return { onlineOnly = ns.DB:Settings().onlineOnly, tagIds = self.tagFilter, tagAny = self.tagAny,
+    return { onlineOnly = ns.DB:Settings().onlineOnly,
         kind = f.kind, classFile = f.classFile, rank = f.rank, addonOnly = f.addonOnly }
 end
 
 function RV:ClearFilters()
-    wipe(self.tagFilter)
     ns.DB:Settings().onlineOnly = false
     wipe(self:Filters())
-    if self.tagsPanel:IsShown() then self:RefreshTagsPanel() end
     if self.filterPanel:IsShown() then self:RefreshFilterPanel() end
     self:Refresh()
 end
@@ -709,15 +615,7 @@ end
 function RV:RefreshFilterInfo()
     if not self.filterInfo then return end
     local f = self:Filters()
-    local tagParts, n = {}, 0
-    for _, tag in ipairs(ns.DB:GetTags()) do
-        if self.tagFilter[tag.id] then
-            n = n + 1
-            tagParts[#tagParts + 1] = D:TagIconString(tag, 12) .. " " .. D:TagColorHex(tag.color) .. tag.name .. "|r"
-        end
-    end
     local parts = {}
-    if n > 0 then parts[#parts + 1] = (self.tagAny and "Any of: " or "Tags: ") .. table.concat(tagParts, ", ") end
     local filterCount = 0
     local function add(text) filterCount = filterCount + 1; parts[#parts + 1] = text end
     if ns.DB:Settings().onlineOnly then add("online only") end
@@ -727,7 +625,6 @@ function RV:RefreshFilterInfo()
     if f.addonOnly then add("using the addon") end
     self.filterInfo:SetText(table.concat(parts, "  |cff6d6d6d-|r  "))
     self.clearBtn:SetShown(#parts > 0)
-    self.tagsBtn:SetText(n > 0 and ("Tags (%d)"):format(n) or "Tags")
     self.filterBtn:SetText(filterCount > 0 and ("Filter (%d)"):format(filterCount) or "Filter")
 end
 
@@ -912,11 +809,6 @@ local function BuildRow(row)
     row.NoProfs:SetPoint("LEFT", 6, 0)
     row.NoProfs:SetText("-")
 
-    -- Tags (icons only; the tooltip lists their names)
-    row.TagIcons = {}
-    row.MorePill = W.Pill(cells.tags, 16, 10)
-    row.MorePill:EnableMouse(false)
-
     -- Rank
     row.Rank = Text(cells.rank)
     row.Rank:SetPoint("LEFT", 6, 0)
@@ -956,18 +848,6 @@ local function LayoutRow(row)
     row.layoutVersion = RV.layoutVersion
 end
 
-local TAG_ICON = 18
-local TAG_STEP = TAG_ICON + 3
-
-local function RowTagIcon(row, i)
-    local t = row.TagIcons[i]
-    if not t then
-        t = W.TagIcon(row.cells.tags, TAG_ICON)
-        t:EnableMouse(false)
-        row.TagIcons[i] = t
-    end
-    return t
-end
 
 local function MainLabel(e)
     if not e.isAlt then return "|cffd0d0d0Main|r" end
@@ -1042,32 +922,6 @@ function RV:InitRow(row, e)
     end
     row.NoProfs:SetShown(#e.profs == 0)
 
-    -- Tags
-    if COL.tags.shown then
-        local maxW = COL.tags.w - 10
-        local x, shown = 0, 0
-        for i, tag in ipairs(e.tagList) do
-            local reserve = (i < #e.tagList) and 28 or 0
-            if x + TAG_ICON + reserve > maxW then break end
-            local t = RowTagIcon(row, i)
-            t:SetTag(tag)
-            t:ClearAllPoints()
-            t:SetPoint("LEFT", row.cells.tags, "LEFT", 6 + x, 0)
-            t:Show()
-            x = x + TAG_STEP
-            shown = i
-        end
-        for i = shown + 1, #row.TagIcons do row.TagIcons[i]:Hide() end
-        if shown < #e.tagList then
-            row.MorePill:SetLabel("+" .. (#e.tagList - shown))
-            row.MorePill:ClearAllPoints()
-            row.MorePill:SetPoint("LEFT", row.cells.tags, "LEFT", 6 + x, 0)
-            row.MorePill:Show()
-        else
-            row.MorePill:Hide()
-        end
-    end
-
     row.Rank:SetText(e.rank)
     if row.cells.version:IsShown() then
         if not e.hasAddon then
@@ -1110,6 +964,11 @@ function RV:ShowRowTooltip(row, e, hint)
         Pair("Alts", table.concat(names, ", "))
     end
     Pair("Rank", e.rank)
+    local j, r = ns.RosterLog:Joined(e.full), ns.RosterLog:RankSince(e.full)
+    if ns.IsOfficer() then
+        if j then Pair("Joined", date("%b %d, %Y", j.t)) end
+        if r and r.rank == e.rank then Pair("Rank since", date("%b %d, %Y", r.t)) end
+    end
     if e.online then
         Pair("Zone", e.zone)
     else
@@ -1118,16 +977,6 @@ function RV:ShowRowTooltip(row, e, hint)
     for _, p in ipairs(e.profs) do
         local rank = (p.rank and p.rank > 0) and (p.max and p.max > 0 and (p.rank .. " / " .. p.max) or tostring(p.rank)) or "-"
         GameTooltip:AddDoubleLine("|T" .. D:ProfIcon(p) .. ":14:14:0:0:64:64:5:59:5:59|t " .. p.name, rank, 1, 1, 1, 0.8, 0.8, 0.8)
-    end
-    if #e.tagList > 0 then
-        local names = {}
-        for i, tag in ipairs(e.tagList) do names[i] = D:TagLabel(tag, 14) end
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddLine("Tags", GOLD[1], GOLD[2], GOLD[3])
-        -- two per line so long lists stay readable
-        for i = 1, #names, 2 do
-            GameTooltip:AddLine(names[i] .. (names[i + 1] and ("     " .. names[i + 1]) or ""), 1, 1, 1)
-        end
     end
     if e.discord then Pair("Discord", e.discord) end
     if e.hasAddon then
@@ -1147,15 +996,6 @@ end
 
 function RV:ShowRowMenu(row, e)
     local full = e.full
-    local tagItems = {}
-    for _, tag in ipairs(ns.DB:GetTags()) do
-        tagItems[#tagItems + 1] = {
-            text = D:TagLabel(tag, 14),
-            checked = function() local m = ns.DB:GetMember(full); return m and m.tags and m.tags[tag.id] end,
-            func = function() ns.DB:SetTag(full, tag.id) end,
-        }
-    end
-
     local altItems
     if e.isAlt then
         altItems = {
@@ -1171,7 +1011,6 @@ function RV:ShowRowMenu(row, e)
     end
 
     local items = { { text = e.short, isTitle = true } }
-    if ns.DB:CanEditTags(full) and #tagItems > 0 then items[#items + 1] = { text = "Tags", submenu = tagItems } end
     if ns.DB:CanEditLinks() then items[#items + 1] = { text = "Main / Alt", submenu = altItems } end
     for _, it in ipairs({
         { divider = true },

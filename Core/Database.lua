@@ -12,7 +12,7 @@
           recruit = { ... },                                           -- see Services/Recruit.lua
       }
 
-    Shared data (tags, links, specs, professions, officer log) is
+    Shared data (links, specs, professions, officer log) is
     written through ns.Sync, which checks permissions, versions, broadcasts
     and audits each change. Setters return true, or nil plus an error.
 ]]
@@ -26,7 +26,7 @@ local DEFAULTS = {
         minimap = { angle = 200, hide = false, left = "roster", right = "options", shift = "recruit" },
         iconStyle = "mug",           -- "mug" | "stein" | "emblem"
         communitiesButton = true,    -- shortcut on the Guild & Communities window
-        blizzRoster = true,          -- tags, alts and tooltips on the game's guild roster
+        blizzRoster = true,          -- alts and tooltips on the game's guild roster
         titleUseGuild = false,       -- window title: "<Guild> Guild Manager"
         showAddonCount = true,       -- "x using ... Guild Manager" at the bottom of the window
         whoWhisperButton = true,     -- recruitment whisper button on the game's /who results
@@ -98,156 +98,8 @@ function DB:Guild()
     if not g then
         g = { members = {}, syncVersion = 2, sync = { guild = {}, officer = {} } }
         self.sv.guilds[key] = g
-        self.tagCache = nil
-        ns.Sync:SeedDefaults()
     end
     return g
-end
-
-------------------------------------------------------------------------
--- Tags (shared; officers manage them)
-------------------------------------------------------------------------
-local EMPTY = {}
-
-function DB:InvalidateTags()
-    self.tagCache = nil
-end
-
--- Active tags in display order.
-function DB:GetTags()
-    local g = self:Guild()
-    if not g then return EMPTY end
-    if self.tagCache and self.tagCacheFor == g then return self.tagCache end
-    local list = {}
-    for key, rec in pairs(ns.Sync:Store("guild")) do
-        if key:sub(1, 2) == "T:" then
-            local def = ns.Sync.Codec.ParseTagDef(rec.v)
-            if def and not def.deleted then
-                def.id = key:sub(3)
-                def.icon = ns.Data:ParseIcon(ns.Sync:Value("TI:" .. def.id))
-                list[#list + 1] = def
-            end
-        end
-    end
-    table.sort(list, function(a, b)
-        if a.order ~= b.order then return a.order < b.order end
-        return a.name:lower() < b.name:lower()
-    end)
-    self.tagCache, self.tagCacheFor = list, g
-    return list
-end
-
-function DB:GetTag(id)
-    for _, tag in ipairs(self:GetTags()) do
-        if tag.id == id then return tag end
-    end
-end
-
-function DB:FindTagByName(name)
-    local lower = name:lower()
-    for _, tag in ipairs(self:GetTags()) do
-        if tag.name:lower() == lower then return tag end
-    end
-end
-
-function DB:CanManageTags()
-    return self:HasPerm("tags")
-end
-
-local function ValidateTagName(name)
-    name = ns.Trim(name):gsub("[|\n\t;]", "")
-    if name == "" then return nil, "Tag name cannot be empty." end
-    if #name > ns.Data.MAX_TAG_LENGTH then
-        return nil, ("Tag names are limited to %d characters."):format(ns.Data.MAX_TAG_LENGTH)
-    end
-    return name
-end
-
-local function SaveTag(id, color, order, deleted, name)
-    return ns.Sync:Set("T:" .. id, ns.Sync.Codec.TagDef(color, order, deleted, name))
-end
-
-function DB:CreateTag(name, color, icon)
-    if not self:Guild() then return nil, "You are not in a guild." end
-    if not self:CanManageTags() then return nil, "Your rank can't manage tags." end
-    local clean, err = ValidateTagName(name)
-    if not clean then return nil, err end
-    if self:FindTagByName(clean) then
-        return nil, ("A tag named \"%s\" already exists."):format(clean)
-    end
-    local tags = self:GetTags()
-    local order = (#tags > 0 and tags[#tags].order or 0) + 10
-    local id = "c" .. ns.Sync.Base36(self:Now()) .. ns.Sync.Base36(math.random(0, 1295))
-    color = color or ns.Data:NextColor(#tags)
-    local ok, serr = SaveTag(id, color, order, false, clean)
-    if not ok then return nil, serr end
-    if icon then self:SetTagIcon(id, icon) end
-    return self:GetTag(id)
-end
-
-function DB:SetTagIcon(id, icon)
-    if not self:GetTag(id) then return nil, "Tag not found." end
-    return ns.Sync:Set("TI:" .. id, tostring(icon or ""))
-end
-
--- Saves the tag editor: name, color and icon in one go.
-function DB:UpdateTag(id, name, color, icon)
-    local tag = self:GetTag(id)
-    if not tag then return nil, "Tag not found." end
-    if name ~= tag.name then
-        local ok, err = self:RenameTag(id, name)
-        if not ok then return nil, err end
-    end
-    if color and color ~= tag.color then
-        local ok, err = self:SetTagColor(id, color)
-        if not ok then return nil, err end
-    end
-    if icon and icon ~= tag.icon then
-        local ok, err = self:SetTagIcon(id, icon)
-        if not ok then return nil, err end
-    end
-    return self:GetTag(id)
-end
-
-function DB:RenameTag(id, name)
-    local tag = self:GetTag(id)
-    if not tag then return nil, "Tag not found." end
-    local clean, err = ValidateTagName(name)
-    if not clean then return nil, err end
-    local existing = self:FindTagByName(clean)
-    if existing and existing.id ~= id then
-        return nil, ("A tag named \"%s\" already exists."):format(clean)
-    end
-    local ok, serr = SaveTag(id, tag.color, tag.order, false, clean)
-    if not ok then return nil, serr end
-    return self:GetTag(id)
-end
-
-function DB:SetTagColor(id, color)
-    local tag = self:GetTag(id)
-    if not tag then return nil, "Tag not found." end
-    return SaveTag(id, color, tag.order, false, tag.name)
-end
-
-function DB:MoveTag(id, delta)
-    local tags = self:GetTags()
-    for i, tag in ipairs(tags) do
-        if tag.id == id then
-            local other = tags[i + delta]
-            if not other then return end
-            local a, b = tag.order, other.order
-            if a == b then b = a + delta end
-            local ok, err = SaveTag(tag.id, tag.color, b, false, tag.name)
-            if not ok then return nil, err end
-            return SaveTag(other.id, other.color, a, false, other.name)
-        end
-    end
-end
-
-function DB:DeleteTag(id)
-    local tag = self:GetTag(id)
-    if not tag then return nil, "Tag not found." end
-    return SaveTag(id, tag.color, tag.order, true, tag.name)
 end
 
 ------------------------------------------------------------------------
@@ -262,14 +114,12 @@ end
 -- handed out: the game only delivers it to officer ranks.
 ------------------------------------------------------------------------
 DB.PERMS = {
-    { key = "tags",      label = "Manage the tag list",               hint = "Create, rename, recolor, reorder and delete tags (Tags tab)." },
-    { key = "tagothers", label = "Tag other guildmates",              hint = "Everyone can always tag themselves." },
     { key = "links",     label = "Link mains and alts",               hint = "Mark alts, change mains, unlink." },
     { key = "recruit",   label = "Recruit",                           everyone = true,
       hint = "The Recruitment tab and the /who whisper button: search, whisper and invite." },
     { key = "profiles",  label = "Edit other guildmates' profiles",   hint = "Spec, roles, professions and contact info. Everyone can always edit their own." },
 }
-DB.PERM_BY_TYPE = { T = "tags", TI = "tags", MT = "tagothers", M = "links",
+DB.PERM_BY_TYPE = { M = "links",
     MS = "profiles", RL = "profiles", MP = "profiles", CN = "profiles" }
 
 -- { [rankIndex] = true }, or nil for the default (officers).
@@ -361,27 +211,15 @@ function DB:EnsureMember(full)
     if not g or not full then return nil end
     local m = g.members[full]
     if not m then
-        m = { tags = {} }
+        m = {}
         g.members[full] = m
     end
-    m.tags = m.tags or {}
     return m
 end
 
 -- Who may edit what on a character's profile.
-function DB:CanEditTags(full) return ns.Sync:CanWrite("MT:" .. full) end
 function DB:CanEditProfile(full) return ns.Sync:CanWrite("MS:" .. full) end
 function DB:CanEditLinks() return self:HasPerm("links") end
-
-function DB:SetTag(full, id, state)
-    local m = self:EnsureMember(full)
-    if not m then return nil, "You are not in a guild." end
-    local set = {}
-    for tagId in pairs(m.tags or {}) do set[tagId] = true end
-    if state == nil then state = not set[id] end
-    set[id] = state and true or nil
-    return ns.Sync:Set("MT:" .. full, ns.Sync.Codec.Set(set))
-end
 
 -- Private notes never leave this computer.
 function DB:SetNote(full, text)

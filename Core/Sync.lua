@@ -7,7 +7,7 @@
     on the same data no matter what order messages arrive in.
 
     Scopes
-      guild    tags, tag assignments, main/alt links, specs and professions.
+      guild    main/alt links, specs, roles, professions and contact info.
                Sent on the GUILD addon channel.
       officer  officer log and audit trail. Sent only on the OFFICER
                addon channel (the game delivers it only to ranks that can read
@@ -26,8 +26,6 @@
          game reports throttling or combat lockdown, and splits long messages.
 
     Record keys
-      T:<tagId>            tag definition          officers
-      MT:<member>          member's tags           officers, or the member
       M:<member>           member's main ("" = main) officers
       MS:<member>          spec override           officers, or the member
       RL:<member>          roles: "tank,healer,damage" (any of them)   officers, or the member
@@ -39,10 +37,11 @@
       RS:<player>          recruitment status      anyone in the guild (kept 14 days;
                                                    blocks new whispers to them meanwhile)
       AV:<member>          addon version in use    the member only
-      TI:<tagId>           tag icon (file id or texture path)   officers
       GS:<name>            guild-wide setting, e.g. GS:perm_links = "1,3" (who may link mains)   officers
       CN:<member>          contact: "discord;note" (Discord name, then
                            anything else: BattleTag, timezone...)   officers, or the member
+      JN:<member>          when they joined: "time;inviter"   officers (officer scope)
+      RK:<member>          their current rank since: "time;rank;by"   officers (officer scope)
       SC:<member>          usual online hours: 168 bits (Monday 00:00 UTC
                            onward) as 42 hex digits   the member only
 
@@ -54,7 +53,7 @@ local S = {}
 ns.Sync = S
 
 local PREFIX = "NootropicGM"
-local PROTO = "4" -- 4: 2.0 (reviews, ratings and map positions removed); 3: batches, channel-only repair
+local PROTO = "5" -- 5: 2.1 (tags removed); 4: 2.0 (reviews, ratings and map positions removed); 3: batches, channel-only repair
 S.PROTO = PROTO
 S.FS = "\t"
 local FS = "\t"
@@ -72,8 +71,6 @@ S.CHUNK = 200
 S.MAX_MSG = 250
 
 S.TYPES = {
-    T  = { scope = "guild",   officer = true, label = "Tag" },
-    MT = { scope = "guild",   officer = true, self = true, label = "Tags" },
     M  = { scope = "guild",   officer = true, label = "Main / Alt" },
     MS = { scope = "guild",   officer = true, self = true, label = "Spec" },
     RL = { scope = "guild",   officer = true, self = true, label = "Role" },
@@ -84,14 +81,28 @@ S.TYPES = {
     DN = { scope = "guild",   anyone = true, label = "Do Not Whisper" },
     RS = { scope = "guild",   anyone = true, noAudit = true, ttl = 14 * 86400, label = "Recruitment status" },
     AV = { scope = "guild",   selfOnly = true, noAudit = true, label = "Addon version" },
-    TI = { scope = "guild",   officer = true, label = "Tag icon" },
     GS = { scope = "guild",   officer = true, label = "Guild setting" },
     CN = { scope = "guild",   officer = true, self = true, label = "Contact" },
     SC = { scope = "guild",   selfOnly = true, noAudit = true, label = "Usually online" },
+    JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
+    RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
 }
+-- Audit entry kinds that aren't records: changes to the guild roster itself
+-- (Services/RosterLog.lua). GM joined/left, GK promoted/demoted, LV level,
+-- GN public/officer note, NC name change.
+S.ROSTER_EVENTS = { GM = true, GK = true, LV = true, GN = true, NC = true }
+S.EVENT_DEDUPE = 6 * 3600 -- event-log times are only known to the hour
+
+-- Same event seen by two officers: same signature. nil for kinds that
+-- don't need it (their ids already match).
+function S.EventSig(typ, member, new)
+    if typ ~= "GM" and typ ~= "GK" then return nil end
+    if new == "rejoin" then new = "join" end
+    return typ .. "|" .. (member or "") .. "|" .. (new or "")
+end
 local CHANNEL = { guild = "GUILD", officer = "OFFICER" }
 -- Types whose key is not about one member.
-local NO_MEMBER = { T = true, A = true, TI = true, GS = true }
+local NO_MEMBER = { A = true, GS = true }
 
 S.officers = {} -- players seen sending on the officer channel this session
 S.stats = { sent = 0, received = 0, applied = 0, retries = 0, dropped = 0 }
@@ -340,21 +351,6 @@ end
 local Codec = {}
 S.Codec = Codec
 
-function Codec.TagDef(color, order, deleted, name)
-    return ("%d;%s;%d;%s"):format(color or 1, tostring(order or 0), deleted and 1 or 0, Clean(name))
-end
-function Codec.ParseTagDef(v)
-    local color, order, del, name = (v or ""):match("^(%d+);([%d%.%-]+);(%d);(.*)$")
-    if not color then return nil end
-    return { color = tonumber(color), order = tonumber(order) or 0, deleted = del == "1", name = name }
-end
-
-function Codec.Set(set)
-    local ids = {}
-    for id in pairs(set) do ids[#ids + 1] = tostring(id) end
-    table.sort(ids)
-    return table.concat(ids, ",")
-end
 function Codec.ParseSet(v)
     local set = {}
     for id in (v or ""):gmatch("[^,]+") do set[id] = true end
@@ -409,7 +405,7 @@ function Codec.ParseLog(v)
     return { ts = tonumber(created), author = creator, text = text }
 end
 
-local pending = { members = {}, tags = false, links = false, audit = false }
+local pending = { members = {}, links = false, audit = false }
 
 function S:Notify(kind, member)
     if kind == "member" then
@@ -425,16 +421,10 @@ end
 
 function S:FlushNotify()
     self.notifyQueued = false
-    local p = { members = pending.members, tags = pending.tags, links = pending.links, audit = pending.audit }
-    pending.members, pending.tags, pending.links, pending.audit = {}, false, false, false
-    if p.tags then
-        ns.DB:InvalidateTags()
-        ns:Fire("TAGS_CHANGED") -- redecorates everyone
-    end
+    local p = { members = pending.members, links = pending.links, audit = pending.audit }
+    pending.members, pending.links, pending.audit = {}, false, false
     if p.links then ns:Fire("LINKS_CHANGED") end
-    if not p.tags then
-        for member in pairs(p.members) do ns:Fire("MEMBER_CHANGED", member) end
-    end
+    for member in pairs(p.members) do ns:Fire("MEMBER_CHANGED", member) end
     if p.audit then
         self.auditCache = nil
         ns:Fire("AUDIT_CHANGED")
@@ -443,10 +433,7 @@ end
 
 function S:Materialize(typ, key, member, rec)
     local v = rec.v
-    if typ == "T" or typ == "TI" then
-        self:Notify("tags")
-        return
-    elseif typ == "GS" then
+    if typ == "GS" then
         ns.Debounce("guildsettings", 0.1, function() ns:Fire("GUILD_SETTINGS_CHANGED") end)
         return
     elseif typ == "DN" or typ == "RS" then
@@ -460,9 +447,7 @@ function S:Materialize(typ, key, member, rec)
     end
     local m = ns.DB:EnsureMember(member)
     if not m then return end
-    if typ == "MT" then
-        m.tags = Codec.ParseSet(v)
-    elseif typ == "M" then
+    if typ == "M" then
         m.main = (v ~= "" and v ~= member) and v or nil
         self:Notify("links")
     elseif typ == "MS" then
@@ -485,6 +470,12 @@ function S:Materialize(typ, key, member, rec)
     elseif typ == "AV" then
         m.version = v ~= "" and v or nil
         ns.Debounce("versioncheck", 1, function() if ns.Roster.CheckVersion then ns.Roster:CheckVersion() end end)
+    elseif typ == "JN" then
+        local t, by = v:match("^(%d+);(.*)$")
+        m.joined = t and { t = tonumber(t), by = by ~= "" and by or nil } or nil
+    elseif typ == "RK" then
+        local t, rank, by = v:match("^(%d+);([^;]*);(.*)$")
+        m.rankSince = t and { t = tonumber(t), rank = rank ~= "" and rank or nil, by = by ~= "" and by or nil } or nil
     elseif typ == "L" then
         local id = key:match("^L:[^:]+:(.+)$")
         m.log = m.log or {}
@@ -504,9 +495,10 @@ function S:RebuildAll()
     local g = ns.DB:Guild()
     if not g then return end
     for _, m in pairs(g.members) do
-        m.tags, m.main, m.spec, m.profs, m.auto, m.log, m.version = {}, nil, nil, nil, nil, nil, nil
+        m.tags, m.main, m.spec, m.profs, m.auto, m.log, m.version = nil, nil, nil, nil, nil, nil, nil
         m.rating = nil
         m.schedule, m.contact = nil, nil
+        m.joined, m.rankSince = nil, nil
         m.about, m.status, m.statusAt, m.pronouns = nil, nil, nil, nil
     end
     for _, scope in ipairs({ "guild", "officer" }) do
@@ -556,6 +548,24 @@ function S:Audit(typ, key, member, cur, rec)
     self:Notify("audit")
 end
 
+-- Adds an audit entry that isn't about a record (a roster change), and
+-- sends it to the other officers. False when it's already there.
+function S:AddAuditEntry(id, t, author, member, typ, old, new, ref, batch)
+    if not ns.IsOfficer() then return false end
+    local store = self:Store("officer")
+    if not store then return false end
+    local akey = "A:" .. id
+    if store[akey] then return false end
+    store[akey] = {
+        v = table.concat({ member or "", typ, Clean(old), Clean(new), Clean(ref or ""), batch or "" }, US),
+        t = math.floor(t), a = author or "",
+    }
+    self.auditCache = nil
+    self:Notify("audit")
+    self:QueueOutgoing(akey)
+    return true
+end
+
 -- Decoded audit entries, newest first: { id, t, author, member, typ, old, new, ref }
 function S:AuditEntries()
     if self.auditCache then return self.auditCache end
@@ -580,8 +590,17 @@ function S:AuditEntries()
         if a.t ~= b.t then return a.t > b.t end
         return a.id > b.id
     end)
-    self.auditCache = out
-    return out
+    -- one event-log event noticed an hour apart by two officers: keep one
+    local kept, last = {}, {}
+    for _, e in ipairs(out) do
+        local sig = S.EventSig(e.typ, e.member, e.new)
+        if not (sig and last[sig] and last[sig] - e.t <= S.EVENT_DEDUPE) then
+            kept[#kept + 1] = e
+            if sig then last[sig] = e.t end
+        end
+    end
+    self.auditCache = kept
+    return kept
 end
 
 function S:PruneAudit()
@@ -852,24 +871,6 @@ end
 ------------------------------------------------------------------------
 -- Migration from the old (protocol 1) data
 ------------------------------------------------------------------------
-local function TagIdFor(name)
-    for i, def in ipairs(ns.Data.DEFAULT_TAGS) do
-        if def[1]:lower() == name:lower() then return "d" .. i end
-    end
-    return "c" .. Base36(Hash(name:lower())) -- stable for the same name on every client
-end
-
--- Default tag records are identical on every client (time 1, no author).
-function S:SeedDefaults()
-    local store = self:Store("guild")
-    for i, def in ipairs(ns.Data.DEFAULT_TAGS) do
-        local key = "T:d" .. i
-        if not store[key] then
-            store[key] = { v = Codec.TagDef(def[2], i * 10, false, def[1]), t = 1, a = "" }
-        end
-    end
-end
-
 function S:Migrate()
     local g = ns.DB:Guild()
     if not g or g.syncVersion == 2 then return end
@@ -877,27 +878,8 @@ function S:Migrate()
     local store = self:Store("guild")
     local officerStore = self:Store("officer")
 
-    -- Tags: old numeric ids -> stable string ids
-    local idMap = {}
-    for i, tag in ipairs(g.tags or {}) do
-        if type(tag) == "table" and tag.name then
-            local newId = TagIdFor(tag.name)
-            idMap[tag.id] = newId
-            local key = "T:" .. newId
-            if not store[key] then
-                store[key] = { v = Codec.TagDef(tag.color, i * 10, false, tag.name), t = 1, a = me }
-            end
-        end
-    end
-    self:SeedDefaults()
-
     for full, m in pairs(g.members or {}) do
         if type(m) == "table" then
-            local set = {}
-            for oldId, on in pairs(m.tags or {}) do
-                if on and idMap[oldId] then set[idMap[oldId]] = true end
-            end
-            if next(set) then store["MT:" .. full] = { v = Codec.Set(set), t = 1, a = me } end
             if m.main then store["M:" .. full] = { v = m.main, t = 1, a = me } end
             if m.spec then store["MS:" .. full] = { v = Clean(m.spec), t = 1, a = me } end
             if m.profs and #m.profs > 0 then store["MP:" .. full] = { v = Codec.Profs(m.profs), t = 1, a = me } end
@@ -928,12 +910,13 @@ function S:PurgeUnknown()
         if store then
             local dead = {}
             for key, rec in pairs(store) do
-                if not S.ParseKey(key) or key:match("^GS:tab_") or key == "GS:pronouns" or key == "GS:reviews" then
+                if not S.ParseKey(key) or key:match("^GS:tab_") or key == "GS:pronouns" or key == "GS:reviews"
+                    or key == "GS:perm_tags" or key == "GS:perm_tagothers" then
                     dead[#dead + 1] = key
                 elseif key:sub(1, 2) == "A:" then
                     -- audit entries about removed types
                     local typ = ns.Split(rec.v or "", US)[2]
-                    if typ and typ ~= "" and not S.TYPES[typ] then dead[#dead + 1] = key end
+                    if typ and typ ~= "" and not S.TYPES[typ] and not S.ROSTER_EVENTS[typ] then dead[#dead + 1] = key end
                 end
             end
             for _, key in ipairs(dead) do store[key] = nil end
@@ -964,7 +947,6 @@ function S:Init()
         S.readyFor = key
         S:Migrate()
         S:PurgeUnknown()
-        S:SeedDefaults()
         S:PruneAudit()
         S:PruneExpired()
         S:RebuildAll()

@@ -20,9 +20,9 @@ ns.version = Meta("Version") or "dev"
 
 ------------------------------------------------------------------------
 -- Tab names in text ("Open the Recruitment tab"). key: "roster",
--- "recruit", "tags" or "audit".
+-- "recruit" or "audit".
 ------------------------------------------------------------------------
-local TAB_NAMES = { roster = "Find", recruit = "Recruitment", tags = "Tags", audit = "Audit" }
+local TAB_NAMES = { roster = "Find", recruit = "Recruitment", audit = "Audit" }
 
 function ns.TabName(key)
     return TAB_NAMES[key] or key
@@ -296,6 +296,7 @@ ns:RegisterEvent("PLAYER_GUILD_UPDATE", function() ns.Debounce("officercheck", 0
 ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.Roster:Init()
     ns.Sync:Init()
+    ns.RosterLog:Init()
     ns.Comm:Init()
     ns.Recruit:Init()
     ns.Profile:Init()
