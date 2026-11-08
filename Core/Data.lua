@@ -80,6 +80,7 @@ end
 -- Tab actions are named after the tab's title (officers can rename tabs).
 D.MINIMAP_ACTIONS = {
     { key = "roster",  tab = true },
+    { key = "together", tab = true },
     { key = "recruit", tab = true },
     { key = "audit",   tab = true, suffix = " (officers)" },
     { key = "options", label = "Open Options" },
