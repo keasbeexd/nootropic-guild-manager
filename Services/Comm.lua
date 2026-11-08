@@ -107,16 +107,6 @@ function C:Broadcast()
     ns.Sync:Exchange(true)
 end
 
-function C:RequestLog()
-    ns.Sync:Exchange(true)
-end
-
-function C:MaybeRequest()
-    ns.Sync:Exchange(false)
-end
-
-function C:SendLog() end -- officer log entries sync through Core/Sync.lua
-
 function C:Init()
     local function changed()
         ns.Debounce("selfreport", 10, function() C:Report() end)
