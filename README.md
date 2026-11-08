@@ -6,6 +6,8 @@ A guild manager for **World of Warcraft: Forever**: a searchable roster with pro
 
 **Version 2.1** adds a roster change log to the Audit tab (joins, leaves, kicks, promotions, level-ups, note and name changes) with join dates and rank-since dates on profiles. It removes tags (the Tags tab, column, filter, profile section and menus, and the two tag permissions). It syncs on protocol 5, so 2.0 and 2.1 don't sync with each other; everyone should update.
 
+**Version 2.1.2** fixes text on the options pages that overlapped or ran off the edge, and clears settings left over from tags (a minimap click set to "Open Tags" now opens Find). **Version 2.1.1** brought the new default recruitment message.
+
 ## Install
 
 **With WowUp:** Get Addons > **Install from URL**, paste `https://github.com/keasbeexd/nootropic-guild-manager`, with your WoW: Forever installation selected. WowUp then offers each new release as an update.
@@ -133,13 +135,13 @@ Messages and keywords are saved per guild.
 
 ## Options
 
-Open from **Options > AddOns > Nootropic Guild Manager**, `/ngm options`, shift-clicking the minimap button, or right-clicking the addon compartment entry.
+Open from **Options > AddOns > Nootropic Guild Manager**, `/ngm options`, right-clicking the minimap button (by default), or right-clicking the addon compartment entry.
 
 Options has three pages in the game's AddOns list:
 
 - **Nootropic Guild Manager** (main page)
   - **Appearance**: the **addon icon** (Ale Mug, Brewfest Stein or your **Guild Emblem**, shown on the window, the minimap button and the Guild & Communities shortcut; the emblem falls back to the mug outside a guild or without a tabard), **use my guild's name in the window title** (also in the "x using ... Guild Manager" text), **show how many guildmates use the addon** (on by default), the **shortcut on the Guild & Communities window**, **Show alts and profiles on the Guild roster** (on by default), and **Learn when I usually play** (on by default).
-  - **Minimap Button**: show/hide it, and choose what left-click, right-click and shift-click do (Find, Recruitment, Audit, Options, show/hide window, or nothing).
+  - **Minimap Button**: show/hide it (also `/ngm minimap`), and choose what left-click, right-click and shift-click do (Find, Recruitment, Audit, Options, show/hide window, or nothing). Drag the button to move it around the edge of the minimap; the spot is saved. The game's own AddOns menu button on the minimap (where this addon is also listed) is Blizzard's and can't be moved.
   - **Reset**: window size and position, and list columns (roster and recruitment list).
   - **About**: sync stats with a **Sync Now** button, **Open Guild Manager**, and the most useful commands.
 - **Recruiting** (saved per guild): the **recruitment whisper button on /who results** (on by default), **Auto-Invite** (invite on a keyword reply, ask me first, up to 5 keywords) and **Do Not Whisper** (on/off, up to 5 words, and the shared list). The Recruitment tab shows how these are set under **Replies**, with a **Reply Settings...** button that opens this page.

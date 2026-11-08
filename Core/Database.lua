@@ -64,6 +64,17 @@ function DB:Init()
     st.shareLocation, st.showOnMap, st.customDots = nil, nil, nil
     st.reviewed, st.kudosGiven = nil, nil
     sv.inspectLog = nil
+    -- 2.1: tags
+    for _, k in ipairs({ "left", "right", "shift" }) do
+        if st.minimap[k] == "tags" then st.minimap[k] = "roster" end
+    end
+    st.hiddenColumns.tags, st.columnWidths.tags = nil, nil
+    if st.sortKey == "tags" then st.sortKey, st.sortAsc = "rank", true end
+    if type(st.columnOrder) == "table" then
+        for i = #st.columnOrder, 1, -1 do
+            if st.columnOrder[i] == "tags" then table.remove(st.columnOrder, i) end
+        end
+    end
     for _, mine in pairs(st.schedules or {}) do mine.days = nil end
     for _, g in pairs(sv.guilds) do
         g.myGoals, g.myStats, g.goalHistory, g.pollsSeen = nil, nil, nil, nil
