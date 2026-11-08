@@ -236,3 +236,11 @@ UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPick
 ## Names in WoW: Forever
 
 Forever characters have a first and second name (e.g. "Audrey Pichhale") and no realms. The addon whispers and invites by the plain name, never "Name-Realm", and shows the two names in separate roster columns.
+
+## Credits
+
+Nootropic Guild Manager was created by [aigoodandy](https://github.com/aigoodandy), who wrote the 1.x addon this fork is built on ([aigoodandy/nootropic-guild-manager](https://github.com/aigoodandy/nootropic-guild-manager)). Version 2.0 is maintained by [keasbeexd](https://github.com/keasbeexd) with Andy's permission.
+
+## Licence
+
+MIT, see [LICENSE](LICENSE).
