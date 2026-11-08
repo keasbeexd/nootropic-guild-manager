@@ -313,6 +313,41 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     return true
 end
 
+-- Limits on what one guildmate can add (not who may write what, which is
+-- SenderAllowed): a hand-made client could otherwise flood everyone's saved
+-- data with records it's allowed to write (its own recipe lists under
+-- made-up professions, Do Not Whisper entries...).
+S.MAX_VALUE = 4000            -- bytes in one value (ours are far smaller)
+S.MAX_PROFESSIONS = 12        -- recipe lists (RP) per member
+S.NEW_KEYS_PER_WINDOW = 500   -- new records one non-officer may add...
+S.NEW_KEYS_WINDOW = 600       -- ...per 10 minutes
+local newKeys = {}            -- sender -> { count, since }
+
+function S:WithinLimits(typ, member, rest, rec, ctx, store)
+    if #(rec.v or "") > self.MAX_VALUE then return false end
+    if typ == "RP" then
+        if not rest:match("^[^:]+:%d+$") then return false end
+        if not store[ctx.key] then
+            local prefix, n = "RP:" .. member .. ":", 0
+            for key in pairs(store) do
+                if key:sub(1, #prefix) == prefix then n = n + 1 end
+            end
+            if n >= self.MAX_PROFESSIONS then return false end
+        end
+    end
+    if not store[ctx.key] and not self:KnownOfficer(ctx.sender) then
+        local now = GetTime()
+        local c = newKeys[ctx.sender]
+        if not c or now - c.since > self.NEW_KEYS_WINDOW then
+            c = { count = 0, since = now }
+            newKeys[ctx.sender] = c
+        end
+        if c.count >= self.NEW_KEYS_PER_WINDOW then return false end
+        c.count = c.count + 1
+    end
+    return true
+end
+
 -- Should we accept this record from someone else?
 function S:Accept(typ, member, def, rec, ctx)
     if def.scope == "officer" then
@@ -330,6 +365,10 @@ function S:Accept(typ, member, def, rec, ctx)
     if typ == "A" and rec.t < Now() - self:RetentionSeconds() then return false end
     local expires = self:ExpiresAt(ctx.key, rec)
     if expires and expires < Now() then return false end
+    if not self:WithinLimits(typ, member, select(3, S.ParseKey(ctx.key)) or "", rec, ctx, self:Store(def.scope) or {}) then
+        self.stats.refused = (self.stats.refused or 0) + 1
+        return false
+    end
     return true
 end
 

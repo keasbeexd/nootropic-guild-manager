@@ -1,0 +1,15 @@
+# BigWigs packager settings (.github/workflows/release.yml).
+package-as: NootropicGuildManager
+
+# Only the addon goes to players.
+ignore:
+  - docs
+  - tests
+  - preview.png
+  - CHANGELOG.md
+  - .github
+  - .gitattributes
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown

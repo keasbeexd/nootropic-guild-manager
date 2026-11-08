@@ -77,6 +77,8 @@ A record's author is only what the sender claims; the sender is the one name the
 - Records on the officer channel come only from officers, by the game's rules.
 - Keys or authors containing `|` are dropped and `|` in values is replaced, so shared text can't inject textures, colors or links. Chunked messages are capped (16 parts, 8 unfinished per sender, no chunks inside chunks).
 
+- Limits on what one guildmate can add (`S:WithinLimits`): values up to 4,000 bytes; recipe lists only under numeric profession IDs and at most 12 per member; and at most 500 new records per 10 minutes from any non-officer sender, so a modified client can't flood everyone's saved data with records it's allowed to write. Officers are exempt, since their repairs legitimately carry hundreds of records.
+
 Your private notes never leave your computer. Officer data goes only over the officer channel.
 
 ## WoW: Forever restrictions worth knowing
@@ -102,5 +104,4 @@ Your private notes never leave your computer. Officer data goes only over the of
 
 ## Releasing
 
-1. Bump `## Version:` in the TOC and add the release to `CHANGELOG.md`.
-2. Tag `vX.Y.Z` and attach a zip named `NootropicGuildManager-vX.Y.Z-forever.zip` (`git archive --prefix=NootropicGuildManager/`; `.gitattributes` keeps `docs/`, `tests/` and repo files out of it). WowUp only picks up assets ending in `-forever.zip` for the Forever client, and looks at the 5 newest releases.
+Push a version tag; the Release workflow tests, packages and uploads it to GitHub (and CurseForge and Wago once they're set up). The steps and the one-time site setup are in [PUBLISHING.md](PUBLISHING.md).

@@ -44,8 +44,9 @@ the more of your guild runs it, the more it knows. It was made for the
   forge someone's profile or the Guild Master's settings. Your private notes
   never leave your computer.
 
-Release history is in [CHANGELOG.md](CHANGELOG.md), and how it works inside
-is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Release history is in [CHANGELOG.md](CHANGELOG.md), how it works inside
+is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and how releases are
+published is in [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Install
 
@@ -296,7 +297,7 @@ Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs,
 Services/  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)
 Media/     Logo.tga (the addon's icon, from docs/logo.svg)
 UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
-docs/      ARCHITECTURE.md (how it works inside)  logo.svg  preview/ (source of preview.png)
+docs/      ARCHITECTURE.md (how it works inside)  PUBLISHING.md (releases and addon sites)  logo.svg  preview/ (source of preview.png)
 tests/     run.sh and offline tests (not in the release zip)
 ```
 

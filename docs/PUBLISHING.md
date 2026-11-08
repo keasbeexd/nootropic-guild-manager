@@ -1,0 +1,62 @@
+# Publishing releases
+
+Releases are automatic: push a version tag and the [Release workflow](../.github/workflows/release.yml) runs the offline tests, packages the addon with the [BigWigs packager](https://github.com/BigWigsMods/packager) and uploads it everywhere it's set up for.
+
+| Where | How players get it | Set up |
+| --- | --- | --- |
+| **GitHub** releases | WowUp's "Install from URL", or by hand | Works now: nothing to set up |
+| **CurseForge** | the CurseForge app, WowUp (CurseForge source) | Needs a project, its ID in the TOC and a token (below) |
+| **Wago Addons** | the Wago app, WowUp (Wago source) | Needs a project, its ID in the TOC and a token (below) |
+| **WowUp** | installs from GitHub, CurseForge and Wago | Nothing extra: it reads the other three |
+| WoWInterface | — | Has no WoW: Forever category, so the packager skips it |
+
+The zip is named `NootropicGuildManager-v1.2.3-forever.zip` and comes with a `release.json` saying it's for WoW: Forever. WowUp uses either one to pick the right file. Only the addon goes in the zip; `.pkgmeta` leaves out the docs, tests, preview and changelog.
+
+## Making a release
+
+1. Bump `## Version:` in `NootropicGuildManager.toc`.
+2. Add the release at the top of `CHANGELOG.md` (it becomes the release notes on every site).
+3. Merge to `master`, then tag and push:
+   ```bash
+   git tag -a v1.2.3 -m "Nootropic Guild Manager 1.2.3"
+   git push origin v1.2.3
+   ```
+4. Watch it under the repository's **Actions** tab. If the tests fail, nothing is published: fix, delete the tag (`git push origin :refs/tags/v1.2.3`), and tag again.
+
+Tags with `alpha` or `beta` in them (`v1.3.0-beta1`) are published as test versions, which most players don't get by default.
+
+## One-time setup for CurseForge and Wago
+
+Nothing is published to a site until both of its pieces are in place, so these can be done one at a time.
+
+### CurseForge
+
+1. Create the project at [authors.curseforge.com](https://authors.curseforge.com) (World of Warcraft, category Guild). New projects are reviewed by CurseForge before they're public.
+2. Copy the **Project ID** from the project's "About Project" box into the TOC:
+   ```toc
+   ## X-Curse-Project-ID: 123456
+   ```
+3. Create an API token at [CurseForge > API tokens](https://authors.curseforge.com/#/settings/api-tokens).
+4. In the GitHub repository: **Settings > Secrets and variables > Actions > New repository secret**, name `CF_API_KEY`, value the token.
+
+### Wago Addons
+
+1. Create the project at [addons.wago.io](https://addons.wago.io) (sign in, then the developer dashboard).
+2. Copy its **project ID** from the dashboard into the TOC:
+   ```toc
+   ## X-Wago-ID: aBcD1234
+   ```
+3. Create an API token at [Wago > API keys](https://addons.wago.io/account/apikeys).
+4. Add it as a repository secret named `WAGO_API_TOKEN`.
+
+## Rules the sites share
+
+- Blizzard's [UI Add-On Development Policy](https://us.forums.blizzard.com/en/wow/t/ui-add-on-development-policy/24534) applies: the addon is free, has no ads, and doesn't ask for donations in game. Donation links (GitHub Sponsors, Ko-fi) belong on the project pages and the repository, never inside the addon.
+- Use the same name, description and logo (`docs/logo.svg`; most sites want a square PNG: render it with `rsvg-convert -w 400 -h 400 docs/logo.svg -o logo.png`) and screenshots on every site.
+
+## Security of the workflow
+
+- It runs only when you push a tag, never for pull requests, so code from forks can't reach the tokens.
+- Actions are pinned to exact commits (`actions/checkout` v4.2.2, `BigWigsMods/packager` v2.6.1). To update one, check the new release's notes, wait until it's been out a couple of weeks, and pin its commit.
+- The job can only write releases (`permissions: contents: write`), and the checkout doesn't keep the GitHub token.
+- Tokens are repository secrets: GitHub hides them in logs. If one leaks, revoke it on its site and add a new one.
