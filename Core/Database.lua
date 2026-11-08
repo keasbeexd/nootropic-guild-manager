@@ -30,6 +30,7 @@ local DEFAULTS = {
         titleUseGuild = false,       -- window title: "<Guild> Guild Manager"
         showAddonCount = true,       -- "x using ... Guild Manager" at the bottom of the window
         whoWhisperButton = true,     -- recruitment whisper button on the game's /who results
+        whisperPerHour = 40,         -- whisper queue cap per rolling hour (0 = only the 12-second spacing)
         auditDays = 30,              -- audit history kept: 30, 60 or 90 days
         onlineOnly = false,
         sortKey = "rank",

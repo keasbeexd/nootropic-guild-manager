@@ -306,6 +306,29 @@ function O:BuildRecruiting()
         function(on) ns.WhoWhisper:SetEnabled(on) end)
     L:Space(4)
 
+    L:Header("Sending Whispers")
+    L:Text("The Recruitment tab sends whispers one at a time, at least 12 seconds apart. Blizzard doesn't publish a whisper limit: silences come from players reporting spam, so a friendly message matters more than the pace.")
+    local hy = L:Row(30)
+    local hourLabel = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    hourLabel:SetPoint("TOPLEFT", 20, hy - 4)
+    hourLabel:SetText("Whispers per hour")
+    local hourBtn = W.Button(L.panel, "", 160, 22)
+    hourBtn:SetPoint("TOPLEFT", 170, hy)
+    local function HourText(n) return n == 0 and "No hourly cap (300 max)" or (n .. " per hour") end
+    hourBtn:SetScript("OnClick", function(btn)
+        local items = { { text = "Whispers per hour", isTitle = true } }
+        for _, n in ipairs(ns.Recruit.HOURLY_CHOICES) do
+            items[#items + 1] = { text = HourText(n) .. (n == 40 and "  |cff9d9d9d(default)|r" or ""), radio = true,
+                checked = function() return (ns.DB:Settings().whisperPerHour or 40) == n end,
+                func = function() ns.DB:Settings().whisperPerHour = n; O:Refresh(); RecruitChanged() end }
+        end
+        W.ShowMenu(btn, items)
+    end)
+    W.Tooltip(hourBtn, "Whispers per hour", "How many whispers the queue sends in any hour. Saved for all your characters.")
+    hourBtn.HourText = HourText
+    self.hourButton = hourBtn
+    L:Space(4)
+
     L:Header("Auto-Invite")
     self.autoCheck = L:Check("Invite when they reply with a keyword",
         "Only replies from players you whispered from the addon are checked.", function(on)
@@ -346,8 +369,8 @@ function O:BuildRecruiting()
     self.dnwCount:SetPoint("TOPLEFT", 26, y - 5)
     local view = W.Button(L.panel, "View List", 100, 22)
     view:SetPoint("TOPLEFT", 290, y)
-    view:SetScript("OnClick", function(btn) ns.RecruitView:ShowDNWMenu(btn) end)
-    W.Tooltip(view, "Do Not Whisper list", "Shared with everyone in the guild using the addon. Click a name to take them off it.")
+    view:SetScript("OnClick", function() ns.DNWView:Open() end)
+    W.Tooltip(view, "Do Not Whisper list", "Who is on it for good, and who was whispered in the last 14 days (with the time left). Shared with everyone in the guild using the addon.")
     self.dnwView = view
     L:Finish()
     return outer
@@ -523,6 +546,7 @@ end
 function O:RefreshRecruiting()
     local s = ns.DB:Settings()
     self.whoWhisperCheck:SetChecked(s.whoWhisperButton ~= false)
+    self.hourButton:SetText(self.hourButton.HourText(s.whisperPerHour or 40))
     local r = ns.Recruit:Settings()
     self.recruitNoGuild:SetShown(r == nil)
     for _, w in ipairs({ self.autoCheck, self.confirmCheck, self.dnwCheck, self.dnwView }) do SetUsable(w, r ~= nil) end

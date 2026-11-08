@@ -373,7 +373,7 @@ function RCV:BuildFooter(page, inset)
     send:SetPoint("RIGHT", 0, 0)
     send:SetScript("OnClick", function() RCV:OnSendClicked() end)
     W.Tooltip(send, "Send whispers",
-        ("Whispers the ticked players one at a time, %d seconds apart and at most %d per hour, so the game's spam detection is never triggered."):format(ns.Recruit.WHISPER_INTERVAL, ns.Recruit.WHISPER_MAX),
+        ("Whispers the ticked players one at a time, at least %d seconds apart, up to your hourly cap (Options > Recruiting)."):format(ns.Recruit.WHISPER_INTERVAL),
         "Hover a row to read the message that player will get.")
     self.sendBtn = send
     self.sendInfo:SetPoint("RIGHT", send, "LEFT", -8, 0)
@@ -415,7 +415,8 @@ function RCV:SendState(short)
     end
     local label = short and "Send" or "Send Whispers"
     local text = selected > 0 and ("%s (%d)"):format(label, selected) or label
-    if wait > 0 and #RC.sentTimes >= RC.WHISPER_MAX then
+    local max = RC:HourlyMax()
+    if wait > 0 and max and #RC.sentTimes >= max then
         return text, selected > 0, ("Hourly limit reached - %d min"):format(math.ceil(wait / 60))
     end
     return text, selected > 0, selected > 0 and (selected .. " selected") or "Tick players to whisper"
@@ -700,8 +701,8 @@ function RCV:BuildPanel(page, inset)
     W.Tooltip(replyBtn, "Reply settings", "Auto-invite keywords and the Do Not Whisper list, in Options > Recruiting.")
     local view = W.Button(panel, "Do Not Whisper List", 150, 22)
     view:SetPoint("LEFT", replyBtn, "RIGHT", 6, 0)
-    view:SetScript("OnClick", function(btn) RCV:ShowDNWMenu(btn) end)
-    W.Tooltip(view, "Do Not Whisper list", "Shared with everyone in the guild using the addon. Click a name to take them off it.")
+    view:SetScript("OnClick", function() ns.DNWView:Open() end)
+    W.Tooltip(view, "Do Not Whisper list", "Who is on it for good, and who was whispered in the last 14 days (with the time left). Shared with everyone in the guild using the addon.")
     self.panelLast = replyBtn
 
     -- Grow the scroll area to fit (the preview's height changes with the text).
@@ -729,26 +730,6 @@ function RCV:FitPanel()
     if not (content and last) then return end
     local top, bottom = content:GetTop(), last:GetBottom()
     if top and bottom and top > bottom then content:SetHeight(math.ceil(top - bottom) + 16) end
-end
-
-function RCV:ShowDNWMenu(owner)
-    local list = ns.Recruit:DNWList()
-    local items = { { text = ("Do Not Whisper (%d)"):format(#list), isTitle = true } }
-    for i, d in ipairs(list) do
-        if i > 40 then
-            items[#items + 1] = { text = ("...and %d more"):format(#list - 40), disabled = true }
-            break
-        end
-        items[#items + 1] = {
-            text = ("%s  |cff9d9d9d%s, by %s|r"):format(ns.ShortName(d.full), date("%b %d", d.at), ns.ShortName(d.by or "?")),
-            func = function()
-                W.Confirm(("Take %s off the Do Not Whisper list?\nThey said: \"%s\""):format(ns.ShortName(d.full), d.reply or "?"),
-                    function() ns.Recruit:RemoveDNW(d.full) end)
-            end,
-        }
-    end
-    if #list == 0 then items[2] = { text = "Nobody yet", disabled = true } end
-    W.ShowMenu(owner, items)
 end
 
 function RCV:RefreshPreview()
