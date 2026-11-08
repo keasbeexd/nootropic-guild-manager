@@ -1,7 +1,7 @@
 --[[
     Nootropic Guild Manager - Main window
     Blizzard portrait frame with icon tabs down the right side (Find,
-    Recruitment, Audit),
+    Play Together, Recruitment, Audit),
     a status line, and the member detail flyout.
 ]]
 local _, ns = ...
@@ -11,9 +11,9 @@ ns.UI = UI
 
 local FRAME_W, FRAME_H = 1000, 580
 local MIN_W, MIN_H, MAX_W, MAX_H = 640, 520, 1800, 1100
-local TAB_LABELS = { "Find", "Recruitment", "Audit" }
-UI.TAB_ROSTER, UI.TAB_RECRUIT, UI.TAB_AUDIT = 1, 2, 3
-local OFFICER_TABS = { [3] = true } -- Audit
+local TAB_LABELS = { "Find", "Play Together", "Recruitment", "Audit" }
+UI.TAB_ROSTER, UI.TAB_TOGETHER, UI.TAB_RECRUIT, UI.TAB_AUDIT = 1, 2, 3, 4
+local OFFICER_TABS = { [4] = true } -- Audit
 
 ------------------------------------------------------------------------
 -- Creation
@@ -53,6 +53,7 @@ function UI:Create()
 
     ns.RosterView.LIST_WIDTH = math.floor(f:GetWidth() - ns.RosterView.LIST_INSET)
     ns.RosterView:Build(f)
+    ns.TogetherView:Build(f)
     ns.RecruitView:Build(f)
     ns.AuditView:Build(f)
     ns.DetailPanel:Build()
@@ -167,6 +168,7 @@ end
 UI.DEFAULT_TAB_ICONS = {
     -- a group of people, as on the Guild & Communities window's roster tab
     IconIfPresent("Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend", "Interface\\Icons\\Spell_Holy_PrayerOfFortitude"), -- Roster
+    "Interface\\Icons\\Ability_Mount_RidingHorse",    -- Play Together
     "Interface\\Icons\\Ability_Warrior_BattleShout",  -- Recruitment
     "Interface\\Icons\\INV_Misc_Spyglass_02",         -- Audit
 }
@@ -389,6 +391,7 @@ function UI:SelectTab(id)
     f.Inset:SetPoint("BOTTOMRIGHT", -6, 26)
 
     ns.RosterView.page:SetShown(id == UI.TAB_ROSTER)
+    ns.TogetherView.page:SetShown(id == UI.TAB_TOGETHER)
     ns.RecruitView.page:SetShown(id == UI.TAB_RECRUIT)
     ns.AuditView.page:SetShown(id == UI.TAB_AUDIT)
     if id ~= UI.TAB_ROSTER and ns.DetailPanel.host == f then ns.DetailPanel:Hide() end

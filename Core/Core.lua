@@ -20,9 +20,9 @@ ns.version = Meta("Version") or "dev"
 
 ------------------------------------------------------------------------
 -- Tab names in text ("Open the Recruitment tab"). key: "roster",
--- "recruit" or "audit".
+-- "together", "recruit" or "audit".
 ------------------------------------------------------------------------
-local TAB_NAMES = { roster = "Find", recruit = "Recruitment", audit = "Audit" }
+local TAB_NAMES = { roster = "Find", together = "Play Together", recruit = "Recruitment", audit = "Audit" }
 
 function ns.TabName(key)
     return TAB_NAMES[key] or key
@@ -319,6 +319,7 @@ local function PrintHelp()
     ns:Print("  |cffffffff/ngm find <text>|r  - open with a search")
     ns:Print("  |cffffffff/ngm sync|r  - sync with guildmates now and show sync stats")
     ns:Print(("  |cffffffff/ngm audit|r  - open the %s tab (officers)"):format(ns.TabName("audit")))
+    ns:Print(("  |cffffffff/ngm play|r  - the %s tab: who's around near your level"):format(ns.TabName("together")))
     ns:Print("  |cffffffff/ngm dnw|r  - the Do Not Whisper list and who was whispered recently")
     ns:Print("  |cffffffff/ngm minimap|r  - show or hide the minimap button")
     ns:Print(("  |cffffffff/ngm recruit|r  - open the %s tab"):format(ns.TabName("recruit")))
@@ -359,6 +360,8 @@ SlashCmdList.NOOTROPICGM = function(msg)
     elseif cmd == "audit" then
         ns.UI:Show()
         ns.UI:SelectTab(ns.UI.TAB_AUDIT)
+    elseif cmd == "play" or cmd == "together" then
+        ns.UI:OpenTab(ns.UI.TAB_TOGETHER)
     elseif cmd == "dnw" then
         ns.DNWView:Toggle()
     elseif cmd == "minimap" then

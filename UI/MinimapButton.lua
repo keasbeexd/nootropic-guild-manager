@@ -80,6 +80,7 @@ end
 function M:Run(action)
     local UI = ns.UI
     if action == "roster" then UI:OpenTab(UI.TAB_ROSTER, true)
+    elseif action == "together" then UI:OpenTab(UI.TAB_TOGETHER, true)
     elseif action == "recruit" then UI:OpenTab(UI.TAB_RECRUIT, true)
     elseif action == "audit" then UI:OpenTab(ns.IsOfficer() and UI.TAB_AUDIT or UI.TAB_ROSTER, true)
     elseif action == "options" then ns.Options:Open()
