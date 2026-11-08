@@ -6,7 +6,7 @@ A guild manager for **World of Warcraft: Forever**: a searchable roster with pro
 
 **Version 2.1** adds a roster change log to the Audit tab (joins, leaves, kicks, promotions, level-ups, note and name changes) with join dates and rank-since dates on profiles. It removes tags (the Tags tab, column, filter, profile section and menus, and the two tag permissions). It syncs on protocol 5, so 2.0 and 2.1 don't sync with each other; everyone should update.
 
-**Version 2.1.2** fixes text on the options pages that overlapped or ran off the edge, and clears settings left over from tags (a minimap click set to "Open Tags" now opens Find). **Version 2.1.1** brought the new default recruitment message.
+**Version 2.1.3** makes sure whispers fit WoW's 255-character limit with Forever's two-part names (a shorter default message, first name only when needed, never cut mid-word), adds `no` to the Do Not Whisper words, and only lets answers to the addon's own whisper put someone on that list. **Version 2.1.2** fixes text on the options pages that overlapped or ran off the edge, and clears settings left over from tags (a minimap click set to "Open Tags" now opens Find). **Version 2.1.1** brought the new default recruitment message.
 
 ## Install
 
@@ -77,14 +77,14 @@ A guild manager for **World of Warcraft: Forever**: a searchable roster with pro
 
 | Token | Becomes |
 | --- | --- |
-| `$name` | their character name |
+| `$name` | their full character name, first and second (e.g. "Audrey Pichhale") |
 | `$class` | their class |
 | `$level` | their level |
 | `$race` | their race |
 | `$zone` | the zone they're in |
 | `$guild` | your guild's name in angle brackets, e.g. `<Knights of Azeroth>` |
 
-A live preview shows the result. Whispers are limited to 255 characters.
+A live preview shows the result. Whispers are limited to 255 characters (bytes: accented letters count twice). The counter shows the **longest** a message can get once filled in, using a 25-letter name (Forever allows 12 letters for each name) and your guild's name; it turns red when long names won't fit. When a whisper would be too long, it uses the player's first name only, and if it still doesn't fit it's cut at the last whole word, so it's never cut mid-word. The default message and the built-in class messages always fit.
 
 **Custom messages**: tick **Use custom messages** and click **Custom Messages...** to open the editor. Each message has filters, and a player gets the first enabled message (top to bottom) whose filters all match them; anyone left over gets the Default message. Filters left empty match everyone:
 
@@ -110,9 +110,9 @@ text: Hi $name! $guild would love a Druid from $zone. Reply "invite" to join.
 
 Each message starts with `message:`. Lines you leave out mean "any"; `#` lines are ignored (older exports' `guild:` lines are accepted and ignored). Anything the importer can't read is reported, and the rest still imports.
 
-**Auto-invite** (set up in **Options > Recruiting**): when a player you whispered from this tab replies with one of your up to 5 keywords, Nootropic Guild Manager sends them a guild invite. Keywords match whole words in any case (`join` matches "Join pls" but not "joining"), and can be phrases like `sign me up`. Replies from anyone you didn't whisper here are ignored. Because WoW: Forever only allows guild invites from a click, this shows a one-click **Invite** popup by default (**Ask me first** is on). Untick it on clients that allow fully automatic invites.
+**Auto-invite** (set up in **Options > Recruiting**): when a player you whispered from this tab replies with one of your up to 6 keywords, Nootropic Guild Manager sends them a guild invite. Keywords match whole words in any case (`join` matches "Join pls" but not "joining"), and can be phrases like `sign me up`. Replies from anyone you didn't whisper here are ignored. Because WoW: Forever only allows guild invites from a click, this shows a one-click **Invite** popup by default (**Ask me first** is on). Untick it on clients that allow fully automatic invites.
 
-**Do Not Whisper list** (on by default, **shared with the guild**, set up in **Options > Recruiting**): when someone you whispered replies with one of up to 5 words or phrases (defaults: `dnw`, `leave me alone`, `do not whisper`, `stop whispering`, `not interested`; whole words, any case), they're added to the list. The list syncs to everyone in the guild running the addon, so once one recruiter is told to stop, nobody in the guild bothers that player again. People on it show "Do not whisper", can't be ticked, whispered or invited, and are skipped by future searches. This check runs before the invite keywords, so "yes, but leave me alone" never invites. **View List** shows who's on it, when and by whom (click a name to take them off for everyone), and right-clicking a player adds or removes them by hand. Additions and removals appear in the Audit tab. Unticking the box stops adding people; anyone already listed stays protected.
+**Do Not Whisper list** (on by default, **shared with the guild**, set up in **Options > Recruiting**): when someone replies to the addon's whisper with one of up to 6 words or phrases (defaults: `dnw`, `leave me alone`, `do not whisper`, `stop whispering`, `not interested`, `no`; whole words, any case), they're added to the list. Only answers to the addon's whisper count: once you've whispered them yourself, or a day after the addon's whisper, their replies are just conversation and never add them. A reply with both a Do Not Whisper word and an invite keyword ("no guild yet, inv pls") doesn't add them either; you get the one-click Invite popup and decide. The list syncs to everyone in the guild running the addon, so once one recruiter is told to stop, nobody in the guild bothers that player again. People on it show "Do not whisper", can't be ticked, whispered or invited, and are skipped by future searches. Such a reply never auto-invites, so "yes, but leave me alone" doesn't get an invite. **View List** shows who's on it, when and by whom (click a name to take them off for everyone), and right-clicking a player adds or removes them by hand. Additions and removals appear in the Audit tab. Unticking the box stops adding people; anyone already listed stays protected.
 
 Messages and keywords are saved per guild.
 
@@ -144,7 +144,7 @@ Options has three pages in the game's AddOns list:
   - **Minimap Button**: show/hide it (also `/ngm minimap`), and choose what left-click, right-click and shift-click do (Find, Recruitment, Audit, Options, show/hide window, or nothing). Drag the button to move it around the edge of the minimap; the spot is saved. The game's own AddOns menu button on the minimap (where this addon is also listed) is Blizzard's and can't be moved.
   - **Reset**: window size and position, and list columns (roster and recruitment list).
   - **About**: sync stats with a **Sync Now** button, **Open Guild Manager**, and the most useful commands.
-- **Recruiting** (saved per guild): the **recruitment whisper button on /who results** (on by default), **Auto-Invite** (invite on a keyword reply, ask me first, up to 5 keywords) and **Do Not Whisper** (on/off, up to 5 words, and the shared list). The Recruitment tab shows how these are set under **Replies**, with a **Reply Settings...** button that opens this page.
+- **Recruiting** (saved per guild): the **recruitment whisper button on /who results** (on by default), **Auto-Invite** (invite on a keyword reply, ask me first, up to 6 keywords) and **Do Not Whisper** (on/off, up to 6 words, and the shared list). The Recruitment tab shows how these are set under **Replies**, with a **Reply Settings...** button that opens this page.
 - **Officers**: **Permissions** (Guild Master, whole guild) and **Audit History** (keep 30, 60 or 90 days on your copy). Members see this page but can't change it.
 
 The window's tabs run down its right side like the character panel's; hover one for its name. Tabs you can't use (Recruitment without the recruit permission, Audit for non-officers) are hidden.

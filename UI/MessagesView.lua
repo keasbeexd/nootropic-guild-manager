@@ -458,7 +458,7 @@ function MV:RefreshEditorInfo()
     local rule = self.selected and ns.Messages:Get(self.selected)
     if not rule or not self.preview then return end
     local text = rule.text or ""
-    self.count:SetText(("%d / %d"):format(#text, D.WHISPER_MAX))
+    self.count:SetText(ns.Recruit:LengthText(text))
 
     local list = ns.Recruit:List()
     local matches, wins, example = 0, 0, nil

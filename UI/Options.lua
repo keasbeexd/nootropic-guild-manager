@@ -164,7 +164,7 @@ local function ActionPicker(L, label, key)
     return b
 end
 
--- Five small word boxes (keywords, Do Not Whisper words), three per row.
+-- Six small word boxes (keywords, Do Not Whisper words), three per row.
 local function WordBoxes(L, maxLetters, onChange)
     local boxes = {}
     local top = L:Row(54)
@@ -329,7 +329,7 @@ function O:BuildRecruiting()
 
     L:Header("Do Not Whisper")
     self.dnwCheck = L:Check("Add people to the Do Not Whisper list",
-        "When someone you whispered replies with one of these words, nobody in the guild whispers or invites them again.",
+        "When someone answers the addon's whisper with one of these words, nobody in the guild whispers or invites them again. Replies after you've whispered them yourself don't count.",
         function(on)
             local r = ns.Recruit:Settings()
             if r then r.dnwEnabled = on end

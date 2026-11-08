@@ -758,7 +758,7 @@ function RCV:RefreshPreview()
         race = "Orc", zone = "Durotar" }
     local text = ns.Recruit:Format(r and r.default or "", sample)
     self.preview:SetText("|cffffd100Preview:|r " .. (text ~= "" and ("|cffff80ff" .. text .. "|r") or "|cff9d9d9d(empty)|r")
-        .. ("  |cff6d6d6d%d/%d|r"):format(#text, D.WHISPER_MAX))
+        .. "  |cff6d6d6d" .. ns.Recruit:LengthText(r and r.default or "") .. "|r")
     self:FitPanel()
 end
 
