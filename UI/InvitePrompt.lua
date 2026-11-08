@@ -1,10 +1,10 @@
 --[[
     Nootropic Guild Manager - Invite prompt
-    WoW: Forever only lets Blizzard's own code send guild invites
-    (C_GuildInfo.Invite is "allowed when untainted"): an addon calling it is
-    blocked, even after a click. So the Invite button here is a secure macro
-    button that runs "/ginvite <name>" on your click, exactly as if you had
-    typed it, the same way the Recruitment tab's Search runs /who.
+    WoW: Forever blocks guild invites that come from an addon: calling
+    C_GuildInfo.Invite is blocked, and so is /ginvite run by a secure macro
+    button (2.1.6/2.1.7). /ginvite typed in the chat box works. So Invite
+    puts "/ginvite <name>" in your chat box and you press Enter; the game's
+    "You have invited ..." message marks them invited and shows the next one.
 
     Shown when someone replies with an invite keyword, and from "Invite to
     Guild" on the Recruitment list. Several waiting invites queue up.
@@ -43,28 +43,20 @@ function IP:Build()
     self.text = text
 
     self.more = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    self.more:SetPoint("BOTTOM", 0, 44)
+    self.more:SetPoint("TOPRIGHT", -30, -6)
+
+    -- the game confirms a sent invite in a system message
+    f:RegisterEvent("CHAT_MSG_SYSTEM")
+    f:SetScript("OnEvent", function(_, _, msg) IP:OnSystemMessage(msg) end)
 
     local invite = W.Button(f, "Invite", 130, 24)
     invite:SetPoint("BOTTOMRIGHT", f, "BOTTOM", -6, 14)
-    -- Only reached when the secure button isn't over it (in combat, or a
-    -- client without secure buttons): say why nothing happened.
-    invite:SetScript("OnClick", function(btn)
-        if InCombatLockdown() then
-            ns:Print("You can't send guild invites in combat. Click Invite again once the fight is over.")
-        elseif btn.secure then
-            -- the secure button wasn't on top for that click; put it back
-            btn.secure.Update()
-            ns:Print("Click Invite once more to send the invite.")
-        else
-            ns:Print(("This game client has no secure buttons for addons. Type |cffffffff/ginvite %s|r to invite them."):format(IP.full and ns.ChatName(IP.full) or "<name>"))
-        end
-    end)
+    invite:SetScript("OnClick", function() IP:OpenInvite() end)
+    W.Tooltip(invite, "Invite", "Puts /ginvite and their name in your chat box. Press Enter to send it.")
     self.inviteButton = invite
-    W.SecureOverlay(invite, {
-        macro = function() return IP:Macro() end,
-        post = function() IP:AfterInvite() end,
-    })
+
+    self.hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    self.hint:SetPoint("BOTTOM", 0, 44)
 
     local later = W.Button(f, "Not now", 110, 24)
     later:SetPoint("BOTTOMLEFT", f, "BOTTOM", 6, 14)
@@ -74,38 +66,48 @@ function IP:Build()
     if f.CloseButton then f.CloseButton:HookScript("OnClick", function() wipe(IP.queue); IP.full = nil end) end
 end
 
--- The macro the secure button runs, or nil (nothing happens) when this
--- invite isn't allowed right now. A click reaches the secure button twice
--- (mouse down and up) and the game runs the macro on one of them, so the
--- macro must name the same person both times: the prompt only moves on to
--- the next invite after a short pause (AfterInvite).
-IP.SETTLE = 0.6
-
-function IP:Macro()
+-- "/ginvite First Last" into the chat box, ready for you to press Enter.
+function IP:OpenInvite()
     local full = self.full
-    if not full then return nil end
-    if self.armed == full then return "/ginvite " .. ns.ChatName(full) end -- second half of the same click
+    if not full then return end
     local ok, err = ns.Recruit:CanInviteNow(full)
     if not ok then
-        self.armed = nil
         if err then ns:Print("|cffff5555" .. err .. "|r") end
-        return nil
+        return
     end
-    self.armed = full
-    return "/ginvite " .. ns.ChatName(full)
+    local text = "/ginvite " .. ns.ChatName(full)
+    if ChatFrameUtil and ChatFrameUtil.OpenChat then
+        ChatFrameUtil.OpenChat(text)
+    elseif ChatFrame_OpenChat then
+        ChatFrame_OpenChat(text)
+    else
+        ns:Print(("Type |cffffffff%s|r to invite them."):format(text))
+        return
+    end
+    self.opened = full
+    self:Render()
 end
 
-function IP:AfterInvite()
-    local full = self.armed
-    if not full or self.settling then return end
-    self.settling = true
-    C_Timer.After(self.SETTLE, function()
-        self.settling = nil
-        self.armed = nil
-        ns.Recruit:MarkInvited(full)
-        ns:Print(("Guild invite sent to %s."):format(ns.ShortName(full)))
-        if self.full == full then self:Next() end
-    end)
+-- "You have invited Audrey Pichhale to join your guild."
+local INVITED = (ERR_GUILD_INVITE_S or "You have invited %s to join your guild.")
+    :gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"):gsub("%%%%s", "(.+)")
+INVITED = "^" .. INVITED .. "$"
+
+function IP:OnSystemMessage(msg)
+    local who = msg and msg:match(INVITED)
+    if not who then return end
+    local function same(full) return full and ns.ChatName(full):lower() == who:lower() end
+    local hit
+    if same(self.full) then
+        hit = self.full
+    else
+        for i, q in ipairs(self.queue) do
+            if same(q.full) then hit = q.full; table.remove(self.queue, i); break end
+        end
+    end
+    if not hit then return end
+    ns.Recruit:MarkInvited(hit)
+    if hit == self.full then self:Next() else self:Render() end
 end
 
 function IP:Render()
@@ -117,6 +119,9 @@ function IP:Render()
     end
     local n = #self.queue
     self.more:SetText(n > 0 and (n == 1 and "1 more waiting" or (n .. " more waiting")) or "")
+    local opened = self.opened and self.opened == self.full
+    self.hint:SetText(opened and "Press |cffffffffEnter|r in your chat box to send the invite." or "")
+    self.inviteButton:SetText(opened and "Put it in chat again" or "Invite")
 end
 
 function IP:Show(full, reply)
@@ -151,18 +156,13 @@ function IP:Next()
         self.full, self.reply = nil, nil
         if self.frame then self.frame:Hide() end
     end
+    self.opened = nil
 end
 
--- /ngm diag: is the secure Invite button there and on top?
+-- /ngm diag
 function IP:Diagnose()
-    if not self.frame then self:Build() end
-    local host, b = self.inviteButton, self.inviteButton.secure
-    if not b then
-        ns:Print("Invite prompt: no secure button (this client doesn't offer SecureActionButtonTemplate to addons).")
-        return
-    end
-    ns:Print(("Invite prompt: secure button %s, prompt %s, layer %s/%d over %s/%d, combat=%s, macro=%q"):format(
-        b:IsShown() and "shown" or "hidden", self.frame:IsShown() and "open" or "closed",
-        b:GetFrameStrata(), b:GetFrameLevel(), host:GetFrameStrata(), host:GetFrameLevel(),
-        tostring(InCombatLockdown()), tostring(b:GetAttribute("macrotext") or "")))
+    ns:Print(("Invite prompt: %s, %d waiting, chat box %s, invite message pattern %s"):format(
+        self.frame and self.frame:IsShown() and ("showing " .. ns.ShortName(self.full or "?")) or "closed",
+        #self.queue, (ChatFrameUtil and ChatFrameUtil.OpenChat) and "ChatFrameUtil.OpenChat" or (ChatFrame_OpenChat and "ChatFrame_OpenChat" or "none"),
+        ERR_GUILD_INVITE_S and "from the game" or "built in"))
 end
