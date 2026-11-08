@@ -591,11 +591,20 @@ end
 
 ------------------------------------------------------------------------
 -- Whisper queue: tick players, then send. Whispers go out one at a time,
--- spaced out so the game's spam detection is never triggered.
+-- spaced out. Blizzard publishes no whisper limit; silences come from
+-- players reporting spam, so the hourly cap is the user's choice
+-- (Options > Recruiting), 40 by default.
 ------------------------------------------------------------------------
-RC.WHISPER_INTERVAL = 12    -- seconds between whispers
-RC.WHISPER_WINDOW = 3600    -- rolling hour...
-RC.WHISPER_MAX = 40         -- ...and how many whispers it allows
+RC.WHISPER_INTERVAL = 12    -- seconds between whispers (at most 300 an hour)
+RC.WHISPER_WINDOW = 3600    -- rolling hour for the cap
+RC.HOURLY_CHOICES = { 40, 60, 90, 120, 0 } -- 0 = no hourly cap
+
+-- Whispers allowed per rolling hour, or nil for no cap.
+function RC:HourlyMax()
+    local n = ns.DB:Settings().whisperPerHour
+    if n == 0 then return nil end
+    return n or 40
+end
 RC.selected = {}            -- full -> true (this session)
 RC.queue = {}               -- fulls waiting to be whispered
 RC.sentTimes = {}           -- GetTime() of recent whispers from the queue
@@ -652,7 +661,8 @@ function RC:WhisperWait()
     local wait = 0
     local last = self.sentTimes[#self.sentTimes]
     if last then wait = self.WHISPER_INTERVAL - (now - last) end
-    if #self.sentTimes >= self.WHISPER_MAX then
+    local max = self:HourlyMax()
+    if max and #self.sentTimes >= max then
         wait = math.max(wait, self.WHISPER_WINDOW - (now - self.sentTimes[1]))
     end
     return math.max(0, wait)
@@ -884,6 +894,33 @@ function RC:DNWList()
     end
     table.sort(out, function(a, b)
         if a.at ~= b.at then return a.at > b.at end
+        return a.full < b.full
+    end)
+    return out
+end
+
+-- People someone in the guild whispered in the last RECONTACT_DAYS (and
+-- who aren't on the Do Not Whisper list), most recent first:
+-- { { full, whispered, untilT, by, replied, invited, reply }, ... }
+-- Built from the shared RS records, so every recruiter sees the same list.
+function RC:LockedList()
+    local out = {}
+    local store = ns.Sync:Store("guild")
+    if not store then return out end
+    local now = ns.DB:Now()
+    local span = self.RECONTACT_DAYS * 86400
+    for key, rec in pairs(store) do
+        if key:sub(1, 3) == "RS:" and rec.v ~= "" then
+            local full = key:sub(4)
+            local sh = self:Shared(full)
+            if sh and sh.w and sh.w + span > now and not self:IsDNW(full) then
+                out[#out + 1] = { full = full, whispered = sh.w, untilT = sh.w + span, by = sh.by,
+                    replied = sh.r, invited = sh.i, reply = sh.reply }
+            end
+        end
+    end
+    table.sort(out, function(a, b)
+        if a.whispered ~= b.whispered then return a.whispered > b.whispered end
         return a.full < b.full
     end)
     return out
