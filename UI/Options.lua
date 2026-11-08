@@ -3,11 +3,12 @@
     Pages in the game's Options > AddOns list (also opened by /ngm options,
     or right-clicking the minimap button):
 
-      Nootropic Guild Manager   appearance, minimap button, reset, about
-        Recruiting              /who whisper button, auto-invite, Do Not Whisper
+      Nootropic Guild Manager   appearance, minimap button, reset, sync and commands
+        Recruiting              /who whisper button, sending, auto-invite, Do Not Whisper
         Officers                permissions (Guild Master), audit history
+        About                   what the addon does, credits, links
 
-    O:Open(key) opens one: nil (main), "recruiting" or "officers".
+    O:Open(key) opens one: nil (main), "recruiting", "officers" or "about".
 ]]
 local _, ns = ...
 local W, D = ns.Widgets, ns.Data
@@ -194,6 +195,11 @@ function O:BuildMain()
         ("Version %s  -  /ngm to open  -  more settings on the Recruiting and Officers pages below this one"):format(ns.version))
     self.panel = outer
 
+    L:Header("How It Works")
+    L:Text("Open the window with |cffffffff/ngm|r or the minimap button. Its tabs: |cffffd100Find|r (search the guild), |cffffd100Play Together|r (who's around near your level), |cffffd100Recruitment|r and, for officers, |cffffd100Audit|r. Click anyone for their profile: spec, professions and recipes, raid readiness, contact info and your private notes.")
+    L:Text("Everyone running the addon shares what their own copy knows: spec, professions, recipes (when they open a profession window), raid attunements and when they usually play. The more of the guild uses it, the more it knows. Private notes never leave your computer. The |cffffd100About|r page below has links and credits.", "GameFontDisableSmall")
+    L:Space(4)
+
     L:Header("Appearance")
     local y = L:Row(34)
     local iconLabel = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -207,7 +213,7 @@ function O:BuildMain()
         for _, style in ipairs(D.ICON_STYLES) do
             items[#items + 1] = {
                 text = style.label, radio = true,
-                checked = function() return (ns.DB:Settings().iconStyle or "mug") == style.key end,
+                checked = function() return (ns.DB:Settings().iconStyle or "nootropic") == style.key end,
                 func = function()
                     ns.Brand:SetStyle(style.key)
                     if style.key == "emblem" and not ns.Brand:CanShowEmblem() then
@@ -272,7 +278,7 @@ function O:BuildMain()
     W.Tooltip(resetCols, "Reset list columns", "Default column order, widths and which columns are shown, on the roster and the recruitment list.")
     L:Space(6)
 
-    L:Header("About")
+    L:Header("Sync and Commands")
     self.syncStatus = L:Text("", "GameFontHighlightSmall", 6)
     y = L:Row(32)
     local syncNow = W.Button(L.panel, "Sync Now", 110, 24)
@@ -479,11 +485,94 @@ function O:BuildOfficers()
     return outer
 end
 
+------------------------------------------------------------------------
+-- About page
+------------------------------------------------------------------------
+-- A read-only box holding a link: click to select it, Ctrl+C to copy.
+local function LinkRow(L, link)
+    local y = L:Row(46)
+    local icon = L.panel:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(34, 34)
+    icon:SetPoint("TOPLEFT", 18, y - 4)
+    icon:SetTexture(link.icon)
+    icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    local label = L.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    label:SetPoint("TOPLEFT", icon, "TOPRIGHT", 10, -1)
+    label:SetText(link.label)
+    local hint = L.panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    hint:SetPoint("LEFT", label, "RIGHT", 8, 0)
+    hint:SetText(link.hint or "")
+    local box = CreateFrame("EditBox", nil, L.panel, "InputBoxTemplate")
+    box:SetSize(360, 20)
+    box:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 4, -3)
+    box:SetAutoFocus(false)
+    box:SetText(link.url)
+    box:SetCursorPosition(0)
+    box:SetScript("OnTextChanged", function(eb, user) if user then eb:SetText(link.url); eb:HighlightText() end end)
+    box:SetScript("OnEditFocusGained", function(eb) eb:HighlightText() end)
+    box:SetScript("OnEditFocusLost", function(eb) eb:HighlightText(0, 0) end)
+    box:SetScript("OnEscapePressed", function(eb) eb:ClearFocus() end)
+    box:SetScript("OnEnterPressed", function(eb) eb:ClearFocus() end)
+    box:SetScript("OnKeyDown", function(eb, key)
+        if key == "C" and IsControlKeyDown() then C_Timer.After(0.05, function() eb:ClearFocus() end) end
+    end)
+    W.Tooltip(box, link.label, "Click, then Ctrl+C to copy. Paste it into your browser: the game can't open web links itself.")
+    return box
+end
+
+function O:BuildAbout()
+    local outer, L = NewPage("about", "About", "Who made it, what it does, and where to find more.")
+
+    -- a big banner: the guild's mug, the name, a tagline
+    local y = L:Row(92)
+    local banner = CreateFrame("Frame", nil, L.panel, "BackdropTemplate")
+    banner:SetPoint("TOPLEFT", 14, y)
+    banner:SetPoint("RIGHT", L.panel, "RIGHT", -16, 0)
+    banner:SetHeight(84)
+    banner:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+    banner:SetBackdropColor(0.10, 0.07, 0.03, 0.9)
+    banner:SetBackdropBorderColor(0.85, 0.65, 0.25, 1)
+    local logo = ns.Brand:Attach(banner, 64, { "LEFT", banner, "LEFT", 12, 0 })
+    O.logos[#O.logos + 1] = logo
+    local name = banner:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    name:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 14, -6)
+    name:SetText("|cffffd100Nootropic|r Guild Manager")
+    local tag = banner:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    tag:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -6)
+    tag:SetText("Your whole guild, in one window. Built for WoW: Forever.")
+    local ver = banner:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    ver:SetPoint("TOPLEFT", tag, "BOTTOMLEFT", 0, -5)
+    ver:SetText(("Version %s  -  free and open source (MIT)"):format(ns.version))
+
+    L:Space(6)
+    L:Header("What's Inside")
+    L:Text("|cffffd100Find|r  search the whole guild by name, class, spec, profession or Discord, with mains and alts grouped together.\n"
+        .. "|cffffd100Play Together|r  who's online near your level right now, and who usually plays at this hour.\n"
+        .. "|cffffd100Who Can Craft?|r  every recipe your guildmates know, searchable, with online crafters first.\n"
+        .. "|cffffd100Profiles|r  specs, roles, professions, Discord, usual play hours, raid readiness and your private notes.\n"
+        .. "|cffffd100Recruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n"
+        .. "|cffffd100For officers|r  an audit of every change (joins, leaves, promotions, level-ups), an officer log, and Guild Master permissions.")
+    L:Text("Everything is shared with guildmates running the addon, so the more of the guild uses it, the more it knows.", "GameFontDisableSmall")
+
+    L:Header("Links")
+    L:Text("Click a link, press |cffffffffCtrl+C|r, and paste it into your browser.", "GameFontDisableSmall", 4)
+    for _, link in ipairs(D.LINKS) do LinkRow(L, link) end
+
+    L:Header("Credits")
+    L:Text("Maintained by |cffffd100Keasbeexd|r for |cffffd100<Nootropic>|r.\n"
+        .. "Built on the original Nootropic Guild Manager by |cffffd100aigoodandy|r, with permission.\n"
+        .. "Bug reports and ideas are welcome on the GitHub page or in the guild Discord.")
+    L:Finish()
+    return outer
+end
+
 function O:Build()
     self:BuildMain()
     self.subPages = {
         { key = "recruiting", frame = self:BuildRecruiting() },
         { key = "officers", frame = self:BuildOfficers() },
+        { key = "about", frame = self:BuildAbout() },
     }
     ns:On("SETTINGS_CHANGED", function() if O:AnyShown() then O:Refresh() end end)
     ns:On("BRAND_CHANGED", function() if O:AnyShown() then O:Refresh() end end)

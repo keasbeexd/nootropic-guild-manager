@@ -2,12 +2,12 @@
 ## Title: |cffffd100Nootropic|r Guild Manager
 ## Notes: Guild roster for WoW: Forever with mains and alts, professions, specs, contact info, an officer log, a roster change log and recruiting tools. Synced between guildmates.
 ## Author: Nootropic
-## Version: 2.3.0
+## Version: 2.4.0
 ## X-Website: https://github.com/keasbeexd/nootropic-guild-manager
 ## X-License: MIT
 ## SavedVariables: NootropicGuildManagerDB
 ## Category: Guild
-## IconTexture: Interface\Icons\INV_Drink_13
+## IconTexture: Interface\AddOns\NootropicGuildManager\Media\Logo
 ## AddonCompartmentFunc: NootropicGuildManager_OnCompartmentClick
 ## AddonCompartmentFuncOnEnter: NootropicGuildManager_OnCompartmentEnter
 ## AddonCompartmentFuncOnLeave: NootropicGuildManager_OnCompartmentLeave
@@ -26,6 +26,8 @@ Services\Recruit.lua
 Services\Profile.lua
 Services\Audit.lua
 Services\RosterLog.lua
+Services\Recipes.lua
+Services\Readiness.lua
 
 # Interface
 UI\Widgets.lua
@@ -39,6 +41,7 @@ UI\GuildRoster.lua
 UI\TogetherView.lua
 UI\RecruitView.lua
 UI\DNWView.lua
+UI\RecipesView.lua
 UI\InvitePrompt.lua
 UI\MessagesView.lua
 UI\AuditView.lua

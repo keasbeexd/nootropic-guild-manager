@@ -42,6 +42,10 @@
                            anything else: BattleTag, timezone...)   officers, or the member
       JN:<member>          when they joined: "time;inviter"   officers (officer scope)
       RK:<member>          their current rank since: "time;rank;by"   officers (officer scope)
+      RP:<member>:<prof>   recipes they know in one profession: "name;id,id"
+                           (base-36 spell IDs; Services/Recipes.lua)   the member only
+      RR:<member>          raid readiness: attunements and keys
+                           (Services/Readiness.lua)   the member only
       SC:<member>          usual online hours: 168 bits (Monday 00:00 UTC
                            onward) as 42 hex digits   the member only
 
@@ -84,6 +88,8 @@ S.TYPES = {
     GS = { scope = "guild",   officer = true, label = "Guild setting" },
     CN = { scope = "guild",   officer = true, self = true, label = "Contact" },
     SC = { scope = "guild",   selfOnly = true, noAudit = true, label = "Usually online" },
+    RP = { scope = "guild",   selfOnly = true, noAudit = true, low = true, label = "Recipes" },
+    RR = { scope = "guild",   selfOnly = true, noAudit = true, label = "Raid readiness" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
 }
@@ -146,7 +152,7 @@ function S.ParseKey(key)
     local typ, rest = key:match("^(%u+):(.*)$")
     if not typ or not S.TYPES[typ] then return nil end
     local member
-    if typ == "L" then
+    if typ == "L" or typ == "RP" then
         member = rest:match("^([^:]+):")
     elseif not NO_MEMBER[typ] then
         member = rest
@@ -528,6 +534,9 @@ function S:Materialize(typ, key, member, rec)
     local v = rec.v
     if typ == "GS" then
         ns.Debounce("guildsettings", 0.1, function() ns:Fire("GUILD_SETTINGS_CHANGED") end)
+        return
+    elseif typ == "RP" then
+        ns.Debounce("recipeschanged", 0.3, function() ns:Fire("RECIPES_CHANGED") end)
         return
     elseif typ == "DN" or typ == "RS" then
         -- Do Not Whisper entries are about people outside the guild: no member record

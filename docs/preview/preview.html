@@ -1,0 +1,182 @@
+<!doctype html>
+<!--
+  Source of ../../preview.png: an illustration of the addon (not a screenshot),
+  drawn in the style of WoW's UI with original artwork only. Regenerate with:
+    chromium --headless --hide-scrollbars --window-size=1600,1000 \
+      --screenshot=preview.png docs/preview/preview.html
+  Characters and names are made up.
+-->
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Alegreya+Sans:wght@400;500;700&display=block" rel="stylesheet">
+<style>
+:root{
+  --gold:#f2c14e; --gold-hi:#fff1b8; --gold-lo:#7a5214; --ink:#120c07; --panel:#17100a;
+  --text:#ecdfc4; --dim:#8f8270; --green:#4fe26a; --red:#ff5a4f;
+  --warrior:#c69b6d; --paladin:#f48cba; --hunter:#aad372; --rogue:#fff468; --priest:#ffffff;
+  --shaman:#0070dd; --mage:#3fc7eb; --warlock:#8788ee; --druid:#ff7c0a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1600px;height:1000px;overflow:hidden;font-family:"Alegreya Sans",Georgia,serif;color:var(--text);
+  background:
+    radial-gradient(ellipse at 50% 120%, rgba(0,0,0,.9), transparent 60%),
+    radial-gradient(ellipse at 80% -10%, #3a2a5c 0%, transparent 55%),
+    radial-gradient(ellipse at 10% 0%, #23325a 0%, transparent 50%),
+    linear-gradient(180deg,#141a33 0%,#1d1630 45%,#120b0a 100%);}
+.mountains{position:absolute;left:0;right:0;bottom:0;height:420px}
+.stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.6}
+/* frames */
+.frame{position:absolute;border-radius:10px;padding:5px;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 18%,var(--gold-lo) 55%,#3b2508 100%);
+  box-shadow:0 18px 50px rgba(0,0,0,.75),0 0 0 2px #0b0703, inset 0 0 0 1px rgba(255,255,255,.25)}
+.inner{height:100%;border-radius:6px;position:relative;overflow:hidden;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 2px,transparent 2px 7px),
+    radial-gradient(ellipse at 30% 0%,#2c1d10 0%,transparent 60%),
+    linear-gradient(180deg,#1d140b,#120c06);
+  box-shadow:inset 0 0 0 2px #050302, inset 0 0 40px rgba(0,0,0,.8)}
+.titlebar{height:46px;display:flex;align-items:center;padding-left:96px;
+  background:linear-gradient(180deg,#3a2612,#1b1109);border-bottom:2px solid #4a3314}
+.title{font-family:Cinzel,serif;font-weight:700;font-size:21px;letter-spacing:.5px;color:var(--gold);
+  text-shadow:0 2px 0 #000,0 0 12px rgba(242,193,78,.35)}
+.title b{color:var(--gold-hi)}
+.close{position:absolute;right:10px;top:9px;width:26px;height:26px;border-radius:5px;
+  background:radial-gradient(circle at 35% 30%,#ff8a6a,#a3160d 60%,#4d0705);border:2px solid #d9a441;
+  color:#ffe2c2;font:700 15px/22px Arial;text-align:center}
+.portrait{position:absolute;left:-26px;top:-30px;width:118px;height:118px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.8))}
+/* side tabs */
+.tabs{position:absolute;right:-60px;top:62px;display:flex;flex-direction:column;gap:8px}
+.tab{width:56px;height:56px;border-radius:8px;padding:3px;background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));
+  box-shadow:0 6px 14px rgba(0,0,0,.7)}
+.tab div{width:100%;height:100%;border-radius:6px;background:radial-gradient(circle at 40% 30%,#4a3218,#140c06);display:flex;align-items:center;justify-content:center}
+.tab.on{background:linear-gradient(180deg,#fff,#ffd75a)} .tab.on div{background:radial-gradient(circle at 40% 30%,#6b4a1c,#1d1208)}
+/* toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px 4px 96px}
+.search{flex:0 0 330px;height:28px;border-radius:14px;border:1px solid #6b5228;background:#0b0704;
+  display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--dim);font-size:15px}
+.btn{height:28px;padding:0 14px;border-radius:5px;border:1px solid #c79a3a;
+  background:linear-gradient(180deg,#a3170f,#5e0a07);color:#ffd96a;font-weight:700;font-size:14px;
+  display:flex;align-items:center;gap:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 2px 4px rgba(0,0,0,.6)}
+.spacer{flex:1}
+.summary{padding:2px 16px 8px 98px;font-size:14px;color:var(--dim)} .summary b{color:var(--green);font-weight:500}
+/* table */
+table{width:calc(100% - 24px);margin:0 12px;border-collapse:collapse;font-size:15px}
+th{font-family:Cinzel,serif;font-size:12px;letter-spacing:.6px;color:var(--gold);text-align:left;padding:7px 8px;
+  background:linear-gradient(180deg,#3a2612,#22160a);border-bottom:1px solid #6b5228}
+td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap}
+tr:nth-child(even) td{background:rgba(255,255,255,.025)}
+tr.sel td{background:rgba(242,193,78,.14);box-shadow:inset 0 1px 0 rgba(242,193,78,.35),inset 0 -1px 0 rgba(242,193,78,.35)}
+tr.off td{opacity:.45}
+.dot{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:8px;vertical-align:-2px;border:1px solid rgba(0,0,0,.6);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.on-ico{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:6px;box-shadow:0 0 6px var(--green)}
+.off-ico{display:inline-block;width:8px;height:8px;border-radius:50%;background:#555;margin-right:6px}
+.prof{display:inline-flex;align-items:center;gap:4px;margin-right:10px;color:var(--text)}
+.prof i{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid #000}
+.dimtxt{color:var(--dim)}
+/* profile */
+.pname{font-family:Cinzel,serif;font-weight:700;font-size:22px;color:var(--druid);text-shadow:0 2px 0 #000;margin:14px 18px 2px}
+.psub{margin:0 18px;color:var(--text);font-size:15px} .psub span{color:var(--dim)}
+.ptabs{display:flex;gap:4px;margin:16px 18px 0;border-bottom:1px solid #8a6a2c}
+.ptab{padding:4px 12px;font-size:13px;font-weight:700;color:var(--gold);background:#0d0905;border:1px solid #3a2a12;border-bottom:none;border-radius:4px 4px 0 0}
+.ptab.on{background:linear-gradient(180deg,#3a2612,#1f140a);border-color:#c79a3a;color:var(--gold-hi)}
+.sect{margin:14px 18px 0;font-family:Cinzel,serif;font-size:13px;color:var(--gold);display:flex;align-items:center;gap:8px}
+.sect:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#8a6a2c,transparent)}
+.raid{margin:12px 18px 0} .raid h4{font-size:13px;color:var(--gold);font-weight:700;margin-bottom:5px}
+.check{display:flex;align-items:center;gap:8px;font-size:15px;margin:3px 0}
+.ok,.no,.wait{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 12px Arial;color:#071;border:1px solid #000}
+.ok{background:radial-gradient(circle at 35% 30%,#b9ffb0,#2fae38)} .ok:after{content:"\2713";color:#052}
+.no{background:radial-gradient(circle at 35% 30%,#ffb3a6,#b82115)} .no:after{content:"\2715";color:#3a0400}
+.bar{height:16px;border-radius:3px;background:#0b0704;border:1px solid #4a3a20;position:relative;overflow:hidden;margin-top:3px}
+.bar span{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(180deg,#5fd35b,#1f7a1d)}
+.bar em{position:absolute;right:6px;top:-1px;font-style:normal;font-size:12px;color:#fff;text-shadow:0 1px 0 #000}
+.pline{display:flex;align-items:center;gap:8px;margin:8px 18px 0;font-size:15px}
+.pline .bar{flex:1}
+/* crafting window */
+.res{display:flex;align-items:center;gap:10px;padding:7px 14px;font-size:15px;border-bottom:1px solid rgba(255,255,255,.04)}
+.res:nth-child(even){background:rgba(255,255,255,.025)}
+.res .ico{width:20px;height:20px;border-radius:4px;border:1px solid #000;flex:0 0 auto}
+.res .nm{flex:0 0 230px;color:var(--text)}
+.g{color:var(--green)} .d{color:var(--dim)}
+.ribbon{position:absolute;right:46px;top:30px;text-align:right}
+.ribbon .big{font-family:Cinzel,serif;font-weight:700;font-size:30px;color:var(--gold);text-shadow:0 3px 0 #000,0 0 18px rgba(242,193,78,.4)}
+.ribbon .small{font-size:17px;color:#d9ccb0;margin-top:4px;text-shadow:0 2px 0 #000}
+</style></head><body>
+
+<div class="stars">
+  <i style="left:120px;top:60px"></i><i style="left:340px;top:30px;opacity:.4"></i><i style="left:520px;top:90px"></i>
+  <i style="left:760px;top:40px;opacity:.3"></i><i style="left:980px;top:110px"></i><i style="left:1180px;top:24px;opacity:.5"></i>
+  <i style="left:1500px;top:150px"></i><i style="left:1320px;top:200px;opacity:.4"></i><i style="left:60px;top:200px;opacity:.3"></i>
+</div>
+<svg class="mountains" viewBox="0 0 1600 420" preserveAspectRatio="none">
+  <path d="M0 260 L140 170 L240 230 L380 120 L520 240 L640 180 L780 260 L900 150 L1040 250 L1180 160 L1320 240 L1460 140 L1600 220 V420 H0Z" fill="#1b1426"/>
+  <path d="M0 320 L180 240 L320 300 L460 220 L620 320 L780 250 L940 330 L1100 240 L1260 320 L1420 250 L1600 310 V420 H0Z" fill="#120d14"/>
+  <path d="M0 380 L200 330 L420 370 L640 320 L880 375 L1120 330 L1360 372 L1600 340 V420 H0Z" fill="#0a0708"/>
+</svg>
+
+<div class="ribbon">
+  <div class="big">Your whole guild, in one window</div>
+  <div class="small">Profiles, crafters, raid readiness and recruiting for WoW: Forever</div>
+</div>
+
+<!-- main window -->
+<div class="frame" style="left:64px;top:120px;width:960px;height:610px">
+  <div class="inner">
+    <div class="titlebar"><div class="title"><b>Nootropic</b> Guild Manager</div><div class="close">x</div></div>
+    <div class="toolbar">
+      <div class="search"><svg width="15" height="15" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="5" fill="none" stroke="#8f8270" stroke-width="2"/><path d="M10 10l5 5" stroke="#8f8270" stroke-width="2"/></svg>Search name, profession, spec, class...</div>
+      <div class="spacer"></div>
+      <div class="btn">Who Can Craft?</div>
+      <div class="btn">Filter &#9656;</div>
+    </div>
+    <div class="summary">42 members &nbsp;-&nbsp; <b>15 online</b> &nbsp;-&nbsp; 27 using the addon</div>
+    <table>
+      <tr><th style="width:190px">First Name</th><th>Lvl</th><th>Spec</th><th>Main / Alt</th><th>Professions</th><th>Location</th></tr>
+      <tr class="sel"><td><span class="on-ico"></span><span class="dot" style="background:var(--druid)"></span><span style="color:var(--druid)">Thessaly</span></td><td>60</td><td>Restoration</td><td>Main</td><td><span class="prof"><i style="background:#3a9a4a"></i>300</span><span class="prof"><i style="background:#8a6a3a"></i>300</span></td><td>Orgrimmar</td></tr>
+      <tr><td><span class="on-ico"></span><span class="dot" style="background:var(--mage)"></span><span style="color:var(--mage)">Corvane</span></td><td>58</td><td>Frost</td><td>Main</td><td><span class="prof"><i style="background:#3a9a4a"></i>285</span><span class="prof"><i style="background:#c9a"></i>270</span></td><td>Winterspring</td></tr>
+      <tr><td><span class="on-ico"></span><span class="dot" style="background:var(--warlock)"></span><span style="color:var(--warlock)">Morwenna</span></td><td>60</td><td>Affliction</td><td class="dimtxt">Alt of Corvane</td><td><span class="prof"><i style="background:#3a9a4a"></i>300</span></td><td>Barrow Deeps</td></tr>
+      <tr><td><span class="on-ico"></span><span class="dot" style="background:var(--shaman)"></span><span style="color:var(--shaman)">Brunok</span></td><td>44</td><td>Enhancement</td><td>Main</td><td><span class="prof"><i style="background:#3a9a4a"></i>230</span><span class="prof"><i style="background:#9b7b4b"></i>225</span></td><td>Tanaris</td></tr>
+      <tr><td><span class="on-ico"></span><span class="dot" style="background:var(--priest)"></span><span style="color:var(--priest)">Ilvaine</span></td><td>37</td><td>Holy</td><td>Main</td><td><span class="prof"><i style="background:#3a9a4a"></i>195</span></td><td>Stranglethorn</td></tr>
+      <tr class="off"><td><span class="off-ico"></span><span class="dot" style="background:var(--warrior)"></span><span style="color:var(--warrior)">Garrowmund</span></td><td>60</td><td>Protection</td><td>Main</td><td><span class="prof"><i style="background:#3a9a4a"></i>300</span><span class="prof"><i style="background:#777"></i>300</span></td><td class="dimtxt">2 hours ago</td></tr>
+      <tr class="off"><td><span class="off-ico"></span><span class="dot" style="background:var(--rogue)"></span><span style="color:var(--rogue)">Sable</span></td><td>52</td><td>Combat</td><td>Main</td><td><span class="prof"><i style="background:#3a9a4a"></i>265</span></td><td class="dimtxt">yesterday</td></tr>
+      <tr class="off"><td><span class="off-ico"></span><span class="dot" style="background:var(--paladin)"></span><span style="color:var(--paladin)">Aldric</span></td><td>29</td><td>Retribution</td><td class="dimtxt">Alt of Garrowmund</td><td><span class="prof"><i style="background:#3a9a4a"></i>150</span></td><td class="dimtxt">3 days ago</td></tr>
+      <tr class="off"><td><span class="off-ico"></span><span class="dot" style="background:var(--hunter)"></span><span style="color:var(--hunter)">Fennick</span></td><td>48</td><td>Marksmanship</td><td>Main</td><td><span class="prof"><i style="background:#3a9a4a"></i>240</span></td><td class="dimtxt">4 days ago</td></tr>
+    </table>
+  </div>
+  <img class="portrait" src="../logo.svg" alt="">
+  <div class="tabs">
+    <div class="tab on"><div><svg width="32" height="32" viewBox="0 0 32 32"><g fill="#f2c14e"><circle cx="11" cy="11" r="5"/><circle cx="22" cy="12" r="4"/><path d="M2 27c0-6 4-10 9-10s9 4 9 10z"/><path d="M17 27c1-5 3-8 6-8s6 3 7 8z" opacity=".8"/></g></svg></div></div>
+    <div class="tab"><div><svg width="32" height="32" viewBox="0 0 32 32"><g fill="none" stroke="#f2c14e" stroke-width="2.4" stroke-linecap="round"><circle cx="10" cy="12" r="5"/><circle cx="22" cy="12" r="5"/><path d="M4 27c1-5 4-8 6-8m12 0c2 0 5 3 6 8M13 25l3-4 3 4"/></g></svg></div></div>
+    <div class="tab"><div><svg width="32" height="32" viewBox="0 0 32 32"><path d="M5 13h5l11-7v20l-11-7H5z" fill="#f2c14e"/><path d="M25 10c3 3 3 9 0 12" fill="none" stroke="#f2c14e" stroke-width="2.4" stroke-linecap="round"/></svg></div></div>
+    <div class="tab"><div><svg width="32" height="32" viewBox="0 0 32 32"><circle cx="13" cy="13" r="8" fill="none" stroke="#f2c14e" stroke-width="3"/><path d="M19 19l9 9" stroke="#f2c14e" stroke-width="4" stroke-linecap="round"/></svg></div></div>
+  </div>
+</div>
+
+<!-- profile flyout -->
+<div class="frame" style="left:1096px;top:150px;width:420px;height:560px">
+  <div class="inner">
+    <div class="titlebar" style="padding-left:18px"><div class="title" style="font-size:17px">Character Profile</div><div class="close">x</div></div>
+    <div class="pname">Thessaly Brightwind</div>
+    <div class="psub">Level 60 Restoration Druid <span>- Officer</span></div>
+    <div class="psub" style="margin-top:6px"><span>Discord</span> thessaly &nbsp; <span>Usually online</span> Tue-Thu 8 pm-12 am</div>
+    <div class="ptabs"><div class="ptab">Profile</div><div class="ptab on">Raids</div><div class="ptab">Notes</div><div class="ptab">Officer</div></div>
+    <div class="sect">Raid Readiness</div>
+    <div class="raid"><h4>Onyxia's Lair</h4><div class="check"><span class="ok"></span>Onyxia attunement</div></div>
+    <div class="raid"><h4>The Barrow Deeps</h4><div class="check"><span class="no"></span>Brooch of the Wardens</div><div class="check"><span class="ok"></span>No attunement needed</div></div>
+    <div class="raid"><h4>Hyjal Summit</h4><div class="check"><span class="ok"></span>No attunement needed</div></div>
+    <div class="sect" style="margin-top:20px">Professions <span style="margin-left:auto;font-family:'Alegreya Sans';font-size:12px;color:#ffd96a;border:1px solid #c79a3a;border-radius:4px;padding:1px 8px;background:#5e0a07">Recipes (143)</span></div>
+    <div class="pline"><i class="dot" style="background:#3a9a4a;margin:0"></i>Herbalism<div class="bar"><span style="width:100%"></span><em>300 / 300</em></div></div>
+    <div class="pline"><i class="dot" style="background:#8a6a3a;margin:0"></i>Alchemy<div class="bar"><span style="width:100%"></span><em>300 / 300</em></div></div>
+  </div>
+</div>
+
+<!-- who can craft -->
+<div class="frame" style="left:470px;top:640px;width:600px;height:300px">
+  <div class="inner">
+    <div class="titlebar" style="padding-left:18px"><div class="title" style="font-size:17px">Who Can Craft It?</div><div class="close">x</div></div>
+    <div class="toolbar" style="padding:10px 14px 8px"><div class="search" style="flex-basis:260px"><svg width="15" height="15" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="5" fill="none" stroke="#8f8270" stroke-width="2"/><path d="M10 10l5 5" stroke="#8f8270" stroke-width="2"/></svg><span style="color:var(--text)">flask</span></div><span class="d" style="font-size:14px">4 recipes - green: online now</span></div>
+    <div class="res"><i class="ico" style="background:linear-gradient(135deg,#c33,#611)"></i><span class="nm">Flask of the Titans</span><span><span class="g">Thessaly</span>, <span class="d">Garrowmund</span></span></div>
+    <div class="res"><i class="ico" style="background:linear-gradient(135deg,#36c,#114)"></i><span class="nm">Flask of Distilled Wisdom</span><span><span class="g">Thessaly</span>, <span class="g">Morwenna</span>, <span class="d">Sable</span></span></div>
+    <div class="res"><i class="ico" style="background:linear-gradient(135deg,#a3c,#317)"></i><span class="nm">Flask of Supreme Power</span><span><span class="g">Morwenna</span></span></div>
+    <div class="res"><i class="ico" style="background:linear-gradient(135deg,#aaa,#333)"></i><span class="nm">Flask of Petrification</span><span><span class="d">Garrowmund</span> <span class="d">+1</span></span></div>
+  </div>
+</div>
+</body></html>

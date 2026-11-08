@@ -1,0 +1,6 @@
+# Kept out of the release zip (git archive): only the addon goes to players.
+docs/ export-ignore
+tests/ export-ignore
+CHANGELOG.md export-ignore
+.gitattributes export-ignore
+preview.png export-ignore
