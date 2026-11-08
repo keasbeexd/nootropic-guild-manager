@@ -150,16 +150,18 @@ D.MAX_LOG_LENGTH = 140 -- fits one addon message
 ------------------------------------------------------------------------
 -- Recruitment defaults
 ------------------------------------------------------------------------
--- $name is a Forever character's first and second name (12 letters each,
--- so 25 with the space). Filled in with the longest name and a 24-letter
--- guild name this stays within D.WHISPER_MAX (250 of 255).
-D.DEFAULT_WHISPER = "Hi $name! $guild is looking for friendly players to quest, run dungeons and raid with. We're a social guild where real life comes first, building our core to raid eventually. Want an invite? Just reply \"invite\""
+-- Written to read like a person typed it: first name only ($first) and a
+-- question to answer instead of a command word. Filled in with a 12-letter
+-- accented first name and a 24-letter <guild name> it stays well within
+-- D.WHISPER_MAX (219 of 255).
+D.DEFAULT_WHISPER = "Hey $first! I'm recruiting for $guild, a laid-back social guild where real life comes first. We quest, run dungeons and we're building a core to raid. Would you be up for an invite?"
 -- Earlier defaults: a guild still using one of these unchanged gets the new one.
 D.OLD_DEFAULT_WHISPERS = {
+    "Hi $name! $guild is looking for friendly players to quest, run dungeons and raid with. We're a social guild where real life comes first, building our core to raid eventually. Want an invite? Just reply \"invite\"",
     "Hi $name! $guild is looking for friendly players to quest, run dungeons and raid with. We're a social guild that understands real life comes first. Looking to eventually raid and currently building our core. Want an invite? Just reply \"invite\"",
     "Hi $name! $guild is looking for friendly players to quest, run dungeons and raid with. Want an invite? Just reply \"invite\".",
 }
-D.DEFAULT_KEYWORDS = { "invite", "inv", "yes", "sure", "interested" }
+D.DEFAULT_KEYWORDS = { "invite", "inv", "yes", "sure", "interested", "yeah" }
 D.MAX_KEYWORDS = 6 -- keyword and Do Not Whisper word boxes (two rows of three)
 -- Replies that put someone on the Do Not Whisper list (whole words, any case)
 D.DEFAULT_DNW_WORDS = { "dnw", "leave me alone", "do not whisper", "stop whispering", "not interested", "no" }

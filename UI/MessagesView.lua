@@ -367,7 +367,7 @@ function MV:BuildEditor(f)
 
     local tokens = e:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     tokens:SetPoint("TOPLEFT", 0, y)
-    tokens:SetText("|cffffd100$name  $class  $level  $race  $zone  $guild|r are filled in for each player")
+    tokens:SetText("|cffffd100$first  $name  $class  $level  $race  $zone  $guild|r are filled in for each player")
     y = y - 18
 
     self.preview = e:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")

@@ -58,6 +58,7 @@ function RC:Settings()
     if not r.keywords then
         r.keywords = {}
         for i, k in ipairs(D.DEFAULT_KEYWORDS) do r.keywords[i] = k end
+        r.keywordsYeahAdded = true
     end
     if r.autoInvite == nil then r.autoInvite = true end
     r.inviteMode = "confirm" -- WoW: Forever blocks addon invites; the Invite prompt runs /ginvite on your click
@@ -72,6 +73,18 @@ function RC:Settings()
         r.dnwWords = {}
         for i, w in ipairs(D.DEFAULT_DNW_WORDS) do r.dnwWords[i] = w end
         r.dnwNoAdded = true
+    end
+    -- 2.1.9: "yeah" joined the invite keywords (the built-in messages ask a
+    -- question now); add it once, in a free box
+    if not r.keywordsYeahAdded then
+        r.keywordsYeahAdded = true
+        local has, free = false, nil
+        for i = 1, D.MAX_KEYWORDS do
+            local w = ns.Trim(r.keywords[i] or ""):lower()
+            if w == "yeah" then has = true end
+            if w == "" and not free then free = i end
+        end
+        if not has and free then r.keywords[free] = "yeah" end
     end
     -- 2.1.3: "no" joined the defaults; add it once (in a free box), so
     -- removing it later sticks
@@ -449,6 +462,7 @@ local function Fill(template, p, name, guild)
     local out = (template or ""):gsub("%$(%a+)", function(key)
         key = key:lower()
         if key == "name" then return name
+        elseif key == "first" then return (ns.SplitName(name))
         elseif key == "class" then return p.className or D:ClassName(p.classFile)
         elseif key == "level" then return tostring(p.level or "")
         elseif key == "guild" then return guild
@@ -474,8 +488,9 @@ local function CutAtWord(text, max)
     return ns.Trim(cut)
 end
 
--- $name, $class, $level, $race, $zone and $guild (as <Guild Name>) are replaced.
--- $name is the full Forever name ("Audrey Pichhale"); when that makes the
+-- $name, $first, $class, $level, $race, $zone and $guild (as <Guild Name>)
+-- are replaced. $name is the full Forever name ("Audrey Pichhale"), $first
+-- just "Audrey". When the full name makes the
 -- whisper too long, the first name alone is used, and as a last resort the
 -- message is cut at the last whole word.
 function RC:Format(template, p)

@@ -663,7 +663,7 @@ function RCV:BuildPanel(page, inset)
     self.tokens:SetPoint("TOPLEFT", editorFrame, "BOTTOMLEFT", -2, -6)
     self.tokens:SetWidth(IW)
     self.tokens:SetJustifyH("LEFT")
-    self.tokens:SetText("|cffffd100$name $class $level $race $zone $guild|r are filled in")
+    self.tokens:SetText("|cffffd100$first $name $class $level $race $zone $guild|r are filled in")
 
     self.preview = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     self.preview:SetPoint("TOPLEFT", self.tokens, "BOTTOMLEFT", 0, -6)
