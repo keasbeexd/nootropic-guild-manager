@@ -217,7 +217,7 @@ A note on trust: the addon checks permissions before sending anything, and offic
 | `/ngm find <text>` | open with a search |
 | `/ngm recruit` | open the Recruitment tab |
 | `/ngm options` | open the options |
-| `/ngm diag` | report what the Guild & Communities shortcut, the guild roster hooks and the /who whisper buttons can see, and which name and version the addon uses for you |
+| `/ngm diag` | report what the Guild & Communities shortcut, the guild roster hooks and the /who whisper buttons and the Invite prompt's secure button can see, and which name and version the addon uses for you |
 | `/ngm sync` | sync now and show sync stats |
 | `/ngm audit` | open the Audit tab (officers) |
 | `/ngm dnw` | the Do Not Whisper window (the list, and who was whispered in the last 14 days) |
