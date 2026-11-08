@@ -120,16 +120,18 @@ end
 ------------------------------------------------------------------------
 -- Permissions: the Guild Master picks which ranks may do each of these
 -- (Options > Officers > Permissions). GS:perm_<key> = "" (the default:
--- officers, i.e. ranks that can read officer notes; everyone for recruit)
+-- officers, i.e. ranks that can read officer notes; everyone for ownprofile)
 -- or rank numbers "1,3,4" ("-" = nobody but the Guild Master). The Guild Master (rank 0) always may, and only they change
 -- these. Officer-only data (officer log, audit, officer stats) can't be
 -- handed out: the game only delivers it to officer ranks.
 ------------------------------------------------------------------------
 DB.PERMS = {
     { key = "links",     label = "Link mains and alts",               hint = "Mark alts, change mains, unlink." },
-    { key = "recruit",   label = "Recruit",                           everyone = true,
+    { key = "recruit",   label = "Recruit",
       hint = "The Recruitment tab and the /who whisper button: search, whisper and invite, and taking people off the Do Not Whisper list (anyone can add to it)." },
-    { key = "profiles",  label = "Edit other guildmates' profiles",   hint = "Spec, roles, professions and contact info. Everyone can always edit their own." },
+    { key = "ownprofile", label = "Edit their own profile",           everyone = true,
+      hint = "Spec, roles, professions and contact info on their own characters. What their addon reports by itself (version, professions it reads, usual play hours) isn't affected." },
+    { key = "profiles",  label = "Edit other guildmates' profiles",   hint = "Spec, roles, professions and contact info on anyone's profile (their own included)." },
 }
 DB.PERM_BY_TYPE = { M = "links",
     MS = "profiles", RL = "profiles", MP = "profiles", CN = "profiles" }
