@@ -68,11 +68,6 @@ local function Check(parent, text)
     return cb
 end
 
-local function ClassHexOrGray(classFile)
-    if classFile and classFile ~= "" then return ns.ClassHex(classFile) end
-    return "ffbbbbbb"
-end
-
 ------------------------------------------------------------------------
 -- Build
 ------------------------------------------------------------------------

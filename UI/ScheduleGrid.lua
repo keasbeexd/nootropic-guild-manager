@@ -147,16 +147,3 @@ function SG:CopyDay(d)
     self:Redraw()
     if self.opts.onChange then self.opts.onChange(self.bits) end
 end
-
--- Presets: "evenings" (weekdays 6 pm-12 am), "weekends" (Sat-Sun noon-12 am), "clear".
-function SG:Preset(kind)
-    if kind == "clear" then
-        self.bits = {}
-    elseif kind == "evenings" then
-        for d = 0, 4 do for h = 18, 23 do self.bits[d * 24 + h] = true end end
-    elseif kind == "weekends" then
-        for d = 5, 6 do for h = 12, 23 do self.bits[d * 24 + h] = true end end
-    end
-    self:Redraw()
-    if self.opts.onChange then self.opts.onChange(self.bits) end
-end

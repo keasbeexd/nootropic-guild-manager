@@ -182,10 +182,6 @@ function UI:TabSide()
     return "right"
 end
 
-function UI:TabsOnLeft()
-    return self:TabSide() == "left"
-end
-
 local function CreateSideTab(f, i)
     local tab = CreateFrame("CheckButton", "NootropicGMFrameTab" .. i, f)
     if HasAtlas("common-sidetab") then
@@ -543,9 +539,4 @@ function UI:SetSearch(text)
     self:Create()
     self:SelectTab(1)
     ns.RosterView:SetSearch(text)
-end
-
-function UI:ShowRosterWithSearch(text)
-    self:Show()
-    self:SetSearch(text)
 end

@@ -261,11 +261,11 @@ function RC:BuildQuery(q)
     local lo = math.max(1, tonumber(q.min) or 1)
     local hi = math.max(lo, tonumber(q.max) or lo)
     local name = ns.Trim(q.name)
-    if name ~= "" then parts[#parts + 1] = ('n-"%s"'):format((name:gsub('"', ""))) end
+    if name ~= "" then parts[#parts + 1] = ('n-"%s"'):format((name:gsub('[%c"]', ""))) end
     parts[#parts + 1] = ("%d-%d"):format(lo, hi)
     if q.class then parts[#parts + 1] = ('c-"%s"'):format(D:ClassName(q.class)) end
     local zone = ns.Trim(q.zone)
-    if zone ~= "" then parts[#parts + 1] = ('z-"%s"'):format((zone:gsub('"', ""))) end
+    if zone ~= "" then parts[#parts + 1] = ('z-"%s"'):format((zone:gsub('[%c"]', ""))) end
     return table.concat(parts, " ")
 end
 
@@ -885,6 +885,10 @@ function RC:AddDNW(full, reply)
 end
 
 function RC:RemoveDNW(full)
+    if not self:MayRecruit() then
+        ns:Print("|cffff5555Only ranks the Guild Master lets recruit can take people off the Do Not Whisper list.|r")
+        return
+    end
     if self:IsDNW(full) then
         ns.Sync:Set(DNKey(full), "")
         Changed()

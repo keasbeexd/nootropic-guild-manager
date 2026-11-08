@@ -105,7 +105,7 @@ local CHANNEL = { guild = "GUILD", officer = "OFFICER" }
 local NO_MEMBER = { A = true, GS = true }
 
 S.officers = {} -- players seen sending on the officer channel this session
-S.stats = { sent = 0, received = 0, applied = 0, retries = 0, dropped = 0 }
+S.stats = { sent = 0, received = 0, applied = 0, retries = 0, dropped = 0, refused = 0 }
 
 ------------------------------------------------------------------------
 -- Helpers
@@ -198,7 +198,7 @@ function S:CanWrite(key)
     if not typ then return false end
     local def = S.TYPES[typ]
     if def.selfOnly then return member == Me() end
-    if def.anyone then return IsInGuild() end
+    if def.anyone then return IsInGuild() end -- (DN removal is checked in RC:RemoveDNW)
     if def.self and member == Me() then return true end
     -- permissions only the Guild Master changes
     if typ == "GS" and rest:sub(1, 5) == "perm_" then return ns.DB:IsGuildMaster() end
@@ -207,6 +207,100 @@ function S:CanWrite(key)
     if perm then return ns.DB:HasPerm(perm) end
     if def.officer and ns.IsOfficer() then return true end
     return false
+end
+
+------------------------------------------------------------------------
+-- Who may send a record. A record's author (rec.a) is only what the sender
+-- claims; the sender is the one name the game vouches for. So:
+--   * the author must be allowed to write the record (rank, permissions,
+--     their own profile), checked against the guild roster
+--   * a record someone else wrote may only be passed on (repair) by an
+--     officer; the game only lets officer ranks send on the officer channel,
+--     so S.officers can't be faked
+--   * Guild Master permission settings must name the current Guild Master
+--     as author, whoever passes them on
+-- Without this any guildmate could forge permission changes or anyone's
+-- profile with one hand-made addon message.
+------------------------------------------------------------------------
+local function Same(a, b) return a and b and a:lower() == b:lower() end
+
+local function RosterEntry(name)
+    if not name then return nil end
+    local e = ns.Roster.byName[name]
+    if e then return e end
+    local lower = name:lower()
+    for full, entry in pairs(ns.Roster.byName) do
+        if full:lower() == lower then return entry end
+    end
+end
+
+-- A player we know to be an officer: seen on the officer channel this
+-- session, or you (when you are one).
+function S:KnownOfficer(name)
+    if not name then return false end
+    if Same(name, Me()) then return ns.IsOfficer() end
+    for who in pairs(self.officers) do
+        if Same(who, name) then return true end
+    end
+    return false
+end
+
+local function IsGuildMaster(name)
+    local e = RosterEntry(name)
+    return e ~= nil and e.rankIndex == 0
+end
+
+-- Would `name` be allowed to write this record themselves?
+function S:MayAuthor(name, typ, member, rest)
+    local def = S.TYPES[typ]
+    if not (def and name and name ~= "") then return false end
+    if def.anyone then return RosterEntry(name) ~= nil end
+    if def.selfOnly then return Same(name, member) end
+    if typ == "GS" and rest:sub(1, 5) == "perm_" then return IsGuildMaster(name) end
+    if def.self and Same(name, member) then return true end
+    local e = RosterEntry(name)
+    if e and e.rankIndex == 0 then return true end
+    local perm = def.scope == "guild" and ns.DB.PERM_BY_TYPE[typ]
+    if perm then
+        local set = ns.DB:PermRanks(perm)
+        if set then return e ~= nil and set[e.rankIndex] == true end
+        local pdef = ns.DB:PermDef(perm)
+        if pdef and pdef.everyone then return e ~= nil end
+    end
+    if def.officer then return self:KnownOfficer(name) end
+    return false
+end
+
+-- May `name` (a guildmate) do what the Guild Master allows for `perm`?
+function S:RankMay(name, perm)
+    local e = RosterEntry(name)
+    if not e then return false end
+    if e.rankIndex == 0 then return true end
+    local set = ns.DB:PermRanks(perm)
+    if set then return set[e.rankIndex] == true end
+    local pdef = ns.DB:PermDef(perm)
+    if pdef and pdef.everyone then return true end
+    return self:KnownOfficer(name)
+end
+
+function S:SenderAllowed(typ, member, rest, def, rec, ctx)
+    if def.scope == "officer" then return true end -- officer channel: officers only, by the game
+    local sender, author = ctx.sender, rec.a
+    -- anyone may put someone on the Do Not Whisper list; taking them off
+    -- needs the recruit permission
+    if typ == "DN" and (rec.v or "") == "" then
+        return self:RankMay(author, "recruit") and (Same(sender, author) or self:KnownOfficer(sender))
+    end
+    if def.anyone then return true end
+    if typ == "GS" and rest:sub(1, 5) == "perm_" then
+        return IsGuildMaster(author) and (Same(sender, author) or self:KnownOfficer(sender))
+    end
+    if Same(sender, author) then return self:MayAuthor(author, typ, member, rest) end
+    -- passing on someone else's record: officers only, and self-only
+    -- records must still be the member's own
+    if not self:KnownOfficer(sender) then return false end
+    if def.selfOnly and not Same(author, member) then return false end
+    return true
 end
 
 -- Should we accept this record from someone else?
@@ -218,6 +312,10 @@ function S:Accept(typ, member, def, rec, ctx)
         return false
     end
     if def.selfOnly and rec.a ~= member then return false end
+    if not self:SenderAllowed(typ, member, select(3, S.ParseKey(ctx.key)) or "", def, rec, ctx) then
+        self.stats.refused = (self.stats.refused or 0) + 1
+        return false
+    end
     if rec.t > Now() + 300 then return false end -- refuse timestamps from the future
     if typ == "A" and rec.t < Now() - self:RetentionSeconds() then return false end
     local expires = self:ExpiresAt(ctx.key, rec)
@@ -315,12 +413,6 @@ function S:FlushOutgoing()
         if rec then self:Broadcast(key, rec) end
     end
     return #keys
-end
-
-function S:PendingCount()
-    local n = 0
-    for _ in pairs(self.outbox) do n = n + 1 end
-    return n
 end
 
 -- Stores a record if it's newer than ours. Returns true when applied.
@@ -722,9 +814,16 @@ function S:SendBuckets(scope, buckets)
         self:Send(table.concat({ PROTO, "B", scope, tostring(b) }, FS), channel, nil, "bulk")
     end
     local now = Now()
+    -- officers pass on everything; others only what guildmates will take
+    -- from them (their own records, and lists anyone may write)
+    local relayAll = scope == "officer" or ns.IsOfficer()
+    local me = Me()
     for key, rec in pairs(store) do
         if want[Bucket(key)] and not self:Excluded(key, rec, now) then
-            self:Send(self:EncodeRecord(key, rec), channel, nil, "bulk")
+            local typ = S.ParseKey(key)
+            if relayAll or Same(rec.a, me) or (typ and S.TYPES[typ].anyone) then
+                self:Send(self:EncodeRecord(key, rec), channel, nil, "bulk")
+            end
         end
     end
 end
@@ -745,6 +844,9 @@ function S:Broadcast(key, rec)
 end
 
 local partials = {}
+local reassembling = false
+local MAX_PARTS = 16   -- a 250-byte message per part: far more than any record needs
+local MAX_PENDING = 8  -- unfinished chunked messages kept per sender
 
 function S:OnMessage(msg, channel, sender)
     local who = ns.NormalizeName(sender)
@@ -757,32 +859,49 @@ function S:OnMessage(msg, channel, sender)
     if kind == "R" then
         local key, t, author, batch = f[3], tonumber(f[4]), f[5], f[6]
         if not key or not t then return end
-        local value = table.concat(f, FS, 7)
+        -- our own values never contain "|" (Clean); one arriving would be a
+        -- hand-made escape code (textures, colors, links) for our tooltips
+        if key:find("[|%c]") or (author or ""):find("[|%c]") then return end
+        local value = table.concat(f, FS, 7):gsub("|", "/")
         local rec = { v = value, t = t, a = author, b = (batch ~= "" and batch) or nil }
         self:Apply(key, rec, { origin = "remote", channel = channel, sender = who })
         self:Notify("member") -- schedule a flush
     elseif kind == "D" then
         self:OnDigest(f[3], f[4], who, channel)
     elseif kind == "B" then
+        -- "I'm re-sending bucket b": skip ours only if theirs will be
+        -- accepted in full, i.e. an officer is sending it (SenderAllowed)
         local scope, b = f[3], tonumber(f[4])
-        if b and self.dumped[scope] then self.dumped[scope][b] = GetTime() end
+        if b and self.dumped[scope] and (scope == "officer" or self:KnownOfficer(who)) then
+            self.dumped[scope][b] = GetTime()
+        end
     elseif kind == "C" then
+        if reassembling then return end -- a chunk can't contain chunks
         -- chunk: id, index, total, data
         local id, i, n = f[3], tonumber(f[4]), tonumber(f[5])
         if not (id and i and n) then return end
+        -- ours are a few parts at most; bound what one sender can pile up
+        if n < 1 or n > MAX_PARTS or i < 1 or i > n or i % 1 ~= 0 then return end
         local pkey = who .. ":" .. id
         local p = partials[pkey]
         if not p then
+            local pending = 0
+            for k in pairs(partials) do if k:sub(1, #who + 1) == who .. ":" then pending = pending + 1 end end
+            if pending >= MAX_PENDING then return end
             p = { parts = {}, count = 0, n = n, at = GetTime() }
             partials[pkey] = p
         end
+        if n ~= p.n then return end
         if not p.parts[i] then
             p.parts[i] = table.concat(f, FS, 6)
             p.count = p.count + 1
         end
         if p.count == p.n then
             partials[pkey] = nil
-            self:OnMessage(table.concat(p.parts), channel, sender)
+            reassembling = true
+            local ok, err = pcall(self.OnMessage, self, table.concat(p.parts), channel, sender)
+            reassembling = false
+            if not ok then error(err, 0) end
         end
         -- forget stale partial messages
         for k, v in pairs(partials) do

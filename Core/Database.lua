@@ -128,7 +128,7 @@ end
 DB.PERMS = {
     { key = "links",     label = "Link mains and alts",               hint = "Mark alts, change mains, unlink." },
     { key = "recruit",   label = "Recruit",                           everyone = true,
-      hint = "The Recruitment tab and the /who whisper button: search, whisper and invite." },
+      hint = "The Recruitment tab and the /who whisper button: search, whisper and invite, and taking people off the Do Not Whisper list (anyone can add to it)." },
     { key = "profiles",  label = "Edit other guildmates' profiles",   hint = "Spec, roles, professions and contact info. Everyone can always edit their own." },
 }
 DB.PERM_BY_TYPE = { M = "links",

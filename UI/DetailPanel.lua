@@ -1268,18 +1268,6 @@ function DP:Hide()
     if self.frame then self.frame:Hide() end
 end
 
--- Opens your own profile in Edit mode.
-function DP:EditSelf()
-    local me = ns.PlayerFullName()
-    if not ns.Roster.byName[me] then
-        ns:Print("Your profile appears once the guild roster has loaded.")
-        return
-    end
-    ns.UI:OpenTab(ns.UI.TAB_ROSTER)
-    ns.RosterView:Select(me)
-    self:SetEditing(true)
-end
-
 -- May you edit anything on this profile?
 function DP:CanEdit(e)
     if not e then return false end
