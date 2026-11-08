@@ -607,10 +607,14 @@ local function Place(b)
         b:ClearAllPoints()
         b:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", x, y)
         b:SetSize(w, h)
-        b:SetFrameStrata(host:GetFrameStrata())
-        b:SetFrameLevel(host:GetFrameLevel() + 10)
         b.placed = { x, y, w, h }
     end
+    -- Stay above the host every time, not just when it moves: clicking a
+    -- top-level window raises it (and its buttons), which would otherwise
+    -- leave the host on top, catching the click instead of us.
+    local strata, level = host:GetFrameStrata(), host:GetFrameLevel() + 10
+    if b:GetFrameStrata() ~= strata then b:SetFrameStrata(strata) end
+    if b:GetFrameLevel() ~= level then b:SetFrameLevel(level) end
     if not b:IsShown() then b:Show() end
 end
 
