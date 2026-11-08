@@ -1,10 +1,13 @@
 --[[
     Nootropic Guild Manager - Invite prompt
-    WoW: Forever blocks guild invites that come from an addon: calling
-    C_GuildInfo.Invite is blocked, and so is /ginvite run by a secure macro
-    button (2.1.6/2.1.7). /ginvite typed in the chat box works. So Invite
-    puts "/ginvite <name>" in your chat box and you press Enter; the game's
-    "You have invited ..." message marks them invited and shows the next one.
+    WoW: Forever blocks guild invites that come from an addon in any way:
+    calling C_GuildInfo.Invite (2.1.5), /ginvite from a secure macro button
+    (2.1.6/2.1.7), and /ginvite put in the chat box by the addon (2.1.8; the
+    addon opening the chat box taints it). Only /ginvite you type yourself
+    works. So the prompt shows the command, selected, for you to copy: Ctrl+C,
+    then Enter (you open chat), Ctrl+V, Enter. The addon never touches the
+    chat box. The game's "You have invited ..." message then marks them
+    invited and shows the next one.
 
     Shown when someone replies with an invite keyword, and from "Invite to
     Guild" on the Recruitment list. Several waiting invites queue up.
@@ -20,7 +23,7 @@ IP.queue = {} -- { { full, reply }, ... } waiting behind the one shown
 
 function IP:Build()
     local f = CreateFrame("Frame", "NootropicGMInvitePrompt", UIParent, "BasicFrameTemplateWithInset")
-    f:SetSize(360, 170)
+    f:SetSize(380, 214)
     f:SetPoint("TOP", 0, -160)
     f:SetFrameStrata("DIALOG")
     -- not a top-level frame: raising itself on click would lift the Invite
@@ -49,14 +52,35 @@ function IP:Build()
     f:RegisterEvent("CHAT_MSG_SYSTEM")
     f:SetScript("OnEvent", function(_, _, msg) IP:OnSystemMessage(msg) end)
 
-    local invite = W.Button(f, "Invite", 130, 24)
+    -- the command to copy: read-only, selected when you click Copy
+    local box = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+    box:SetSize(300, 22)
+    box:SetPoint("BOTTOM", 0, 74)
+    box:SetAutoFocus(false)
+    box:SetJustifyH("CENTER")
+    box:SetScript("OnTextChanged", function(eb, user) if user then eb:SetText(IP.command or ""); eb:HighlightText() end end)
+    box:SetScript("OnEditFocusGained", function(eb) eb:HighlightText() end)
+    box:SetScript("OnEscapePressed", function(eb) eb:ClearFocus() end)
+    box:SetScript("OnEnterPressed", function(eb) eb:ClearFocus() end)
+    box:SetScript("OnKeyDown", function(eb, key)
+        if key == "C" and IsControlKeyDown() then
+            -- let the copy happen, then step out of the way so Enter opens chat
+            C_Timer.After(0.05, function() eb:ClearFocus() end)
+            IP.copied = IP.full
+            IP:Render()
+        end
+    end)
+    self.box = box
+
+    local invite = W.Button(f, "Copy Invite", 130, 24)
     invite:SetPoint("BOTTOMRIGHT", f, "BOTTOM", -6, 14)
-    invite:SetScript("OnClick", function() IP:OpenInvite() end)
-    W.Tooltip(invite, "Invite", "Puts /ginvite and their name in your chat box. Press Enter to send it.")
+    invite:SetScript("OnClick", function() IP:SelectCommand() end)
+    W.Tooltip(invite, "Copy the invite", "Selects the /ginvite command so you can copy it (Ctrl+C), then press Enter, paste it (Ctrl+V) and press Enter. WoW: Forever only accepts guild invites you type yourself.")
     self.inviteButton = invite
 
     self.hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    self.hint:SetPoint("BOTTOM", 0, 44)
+    self.hint:SetPoint("BOTTOM", 0, 48)
+    self.hint:SetWidth(350)
 
     local later = W.Button(f, "Not now", 110, 24)
     later:SetPoint("BOTTOMLEFT", f, "BOTTOM", 6, 14)
@@ -66,8 +90,8 @@ function IP:Build()
     if f.CloseButton then f.CloseButton:HookScript("OnClick", function() wipe(IP.queue); IP.full = nil end) end
 end
 
--- "/ginvite First Last" into the chat box, ready for you to press Enter.
-function IP:OpenInvite()
+-- Selects the command in the box so Ctrl+C copies it.
+function IP:SelectCommand()
     local full = self.full
     if not full then return end
     local ok, err = ns.Recruit:CanInviteNow(full)
@@ -75,17 +99,9 @@ function IP:OpenInvite()
         if err then ns:Print("|cffff5555" .. err .. "|r") end
         return
     end
-    local text = "/ginvite " .. ns.ChatName(full)
-    if ChatFrameUtil and ChatFrameUtil.OpenChat then
-        ChatFrameUtil.OpenChat(text)
-    elseif ChatFrame_OpenChat then
-        ChatFrame_OpenChat(text)
-    else
-        ns:Print(("Type |cffffffff%s|r to invite them."):format(text))
-        return
-    end
-    self.opened = full
-    self:Render()
+    self.box:SetText(self.command or "")
+    self.box:SetFocus()
+    self.box:HighlightText()
 end
 
 -- "You have invited Audrey Pichhale to join your guild."
@@ -119,9 +135,12 @@ function IP:Render()
     end
     local n = #self.queue
     self.more:SetText(n > 0 and (n == 1 and "1 more waiting" or (n .. " more waiting")) or "")
-    local opened = self.opened and self.opened == self.full
-    self.hint:SetText(opened and "Press |cffffffffEnter|r in your chat box to send the invite." or "")
-    self.inviteButton:SetText(opened and "Put it in chat again" or "Invite")
+    self.command = "/ginvite " .. ns.ChatName(self.full)
+    if self.box and not self.box:HasFocus() then self.box:SetText(self.command) end
+    local copied = self.copied and self.copied == self.full
+    self.hint:SetText(copied
+        and "Copied. Now press |cffffffffEnter|r, |cffffffffCtrl+V|r, |cffffffffEnter|r."
+        or "Click Copy Invite, press |cffffffffCtrl+C|r, then |cffffffffEnter|r, |cffffffffCtrl+V|r, |cffffffffEnter|r.")
 end
 
 function IP:Show(full, reply)
@@ -148,6 +167,10 @@ end
 
 -- Shows the next waiting invite, or closes.
 function IP:Next()
+    -- let go of the box first, so the next person's command replaces the
+    -- old one (a focused box keeps its text)
+    self.copied = nil
+    if self.box then self.box:ClearFocus() end
     local q = table.remove(self.queue, 1)
     if q then
         self.full, self.reply = q.full, q.reply
@@ -156,13 +179,11 @@ function IP:Next()
         self.full, self.reply = nil, nil
         if self.frame then self.frame:Hide() end
     end
-    self.opened = nil
 end
 
 -- /ngm diag
 function IP:Diagnose()
-    ns:Print(("Invite prompt: %s, %d waiting, chat box %s, invite message pattern %s"):format(
+    ns:Print(("Invite prompt: %s, %d waiting, invite message pattern %s"):format(
         self.frame and self.frame:IsShown() and ("showing " .. ns.ShortName(self.full or "?")) or "closed",
-        #self.queue, (ChatFrameUtil and ChatFrameUtil.OpenChat) and "ChatFrameUtil.OpenChat" or (ChatFrame_OpenChat and "ChatFrame_OpenChat" or "none"),
-        ERR_GUILD_INVITE_S and "from the game" or "built in"))
+        #self.queue, ERR_GUILD_INVITE_S and "from the game" or "built in"))
 end
