@@ -35,8 +35,23 @@ MS.FACTION_RACES = {
 local FACTION_CLASS = {}
 local ONCE_FACTION_ONLY = { "PALADIN", "SHAMAN" } -- skipped by 1.12 and older
 
--- Built-in message for each class.
+-- Built-in message for each class, in the same voice as D.DEFAULT_WHISPER.
+-- Each stays within D.WHISPER_MAX filled in with a 25-letter name and a
+-- 24-letter guild name (253 at most).
 MS.CLASS_DEFAULTS = {
+    WARRIOR = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and a Warrior holding the front line fits right in. Want an invite? Just reply \"invite\"",
+    PALADIN = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and a Paladin who heals, tanks or smites fits right in. Want an invite? Just reply \"invite\"",
+    HUNTER = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and there's always room for a Hunter and their pet. Want an invite? Just reply \"invite\"",
+    ROGUE = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and a Rogue's stuns and lockpicking are always welcome. Want an invite? Just reply \"invite\"",
+    PRIEST = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and a Priest keeping everyone alive is always welcome. Want an invite? Just reply \"invite\"",
+    SHAMAN = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and a Shaman's totems make every group better. Want an invite? Just reply \"invite\"",
+    MAGE = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and a Mage is always welcome (portals and water too). Want an invite? Just reply \"invite\"",
+    WARLOCK = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and a Warlock is always welcome (summons included). Want an invite? Just reply \"invite\"",
+    DRUID = "Hi $name! $guild is a social guild where real life comes first. We quest, run dungeons and are building our core to raid, and a Druid who can tank, heal or DPS fits any group. Want an invite? Just reply \"invite\"",
+}
+-- Earlier built-in messages: a class message still word for word one of
+-- these is swapped for the new one (edited ones are left alone).
+MS.OLD_CLASS_DEFAULTS = {
     WARRIOR = "Hi $name! $guild could use a sturdy Warrior like you for dungeons and raids. We're friendly and help each other level. Want an invite? Just reply \"invite\".",
     PALADIN = "Hi $name! $guild would love a Paladin along - healing, tanking or Retribution, all welcome. Friendly guild with regular dungeon runs. Reply \"invite\" if you'd like to join.",
     HUNTER = "Hi $name! $guild is a friendly guild that quests, runs dungeons and raids together, and we'd love a Hunter (and pet) along. Want an invite? Just reply \"invite\".",
@@ -73,6 +88,11 @@ local function Changed() ns:Fire("MESSAGES_CHANGED") end
 -- 1.08 had one message per class: turn those into rules once.
 function MS:Migrate(r)
     if r.rules then
+        -- 2.1.5: new built-in class messages
+        for _, rule in ipairs(r.rules) do
+            local old = rule.preset and self.OLD_CLASS_DEFAULTS[rule.preset]
+            if old and rule.text == old then rule.text = self.CLASS_DEFAULTS[rule.preset] end
+        end
         -- 1.10: gender filters removed (the game doesn't tell us a player's gender)
         for _, rule in ipairs(r.rules) do rule.sex = nil end
         if not r.classDefaults then
