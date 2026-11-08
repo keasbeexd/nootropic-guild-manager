@@ -425,6 +425,11 @@ function RV:BuildToolbar(page, frame)
     W.Tooltip(filter, "Filter", "Online only, mains or alts, class, rank, and guildmates using the addon.")
     self.filterBtn = filter
 
+    local craft = W.Button(page, "Who Can Craft?", 120, 22)
+    craft:SetPoint("RIGHT", filter, "LEFT", -6, 0)
+    craft:SetScript("OnClick", function() ns.RecipesView:Open() end)
+    W.Tooltip(craft, "Who can craft it?", "Search the recipes guildmates share and see who can make it. Recipes are shared automatically when someone with the addon opens one of their profession windows. Also /ngm craft <name>.")
+
     -- summary line
     local clear = CreateFrame("Button", nil, page)
     clear:SetSize(60, 16)

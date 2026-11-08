@@ -185,6 +185,7 @@ function DP:Build()
     self.tabs = self:BuildTabs(content)
     -- tab contents (and edit mode)
     self:BuildProfSection(content)
+    self:BuildRaidSection(content)
     self:BuildNoteSection(content)
     self:BuildLogSection(content)
     self:BuildHistorySection(content)
@@ -196,7 +197,7 @@ function DP:Build()
 
     self.allSections = {
         self.linkLine, self.contactBox, self.schedule, self.tabs,
-        self.prof, self.note, self.log, self.history,
+        self.prof, self.raids, self.note, self.log, self.history,
         self.editContact,
         self.alt, self.spec, self.role,
     }
@@ -459,7 +460,7 @@ function DP:BuildTabs(parent)
     s.Line:SetColorTexture(0.6, 0.5, 0.3, 0.6)
     s.buttons = {}
     local x = 0
-    for _, t in ipairs({ { "profile", "Profile" }, { "notes", "Notes" }, { "officer", "Officer" } }) do
+    for _, t in ipairs({ { "profile", "Profile" }, { "raids", "Raids" }, { "notes", "Notes" }, { "officer", "Officer" } }) do
         local b = CreateFrame("Button", nil, s, "BackdropTemplate")
         b:SetHeight(20)
         b:SetBackdrop({ bgFile = W.WHITE, edgeFile = W.WHITE, edgeSize = 1 })
@@ -576,7 +577,84 @@ function DP:BuildProfSection(parent)
     s.Empty:SetPoint("TOPLEFT", 0, -22)
     s.Empty:SetWidth(INNER)
     s.Empty:SetJustifyH("LEFT")
+
+    -- their shared recipes (Who Can Craft window)
+    s.Recipes = SmallButton(s, "Recipes", 110)
+    s.Recipes:SetPoint("TOPRIGHT", 0, 2)
+    s.Recipes:SetScript("OnClick", function() if DP.entry then ns.RecipesView:Open({ member = DP.entry.full }) end end)
+    W.Tooltip(s.Recipes, "Recipes", "Every recipe they've shared. Recipes are shared automatically when they open a profession window with the addon running.")
     self.prof = s
+end
+
+------------------------------------------------------------------------
+-- Raids tab: attunements and keys, worked out by their own addon
+------------------------------------------------------------------------
+function DP:BuildRaidSection(parent)
+    local s = NewSection(parent, "Raid Readiness")
+    s.rows = {}
+    s.Note = Para(s, "GameFontDisableSmall", INNER)
+    self.raids = s
+end
+
+local READY = "|TInterface\\RaidFrame\\ReadyCheck-Ready:14|t"
+local NOT_READY = "|TInterface\\RaidFrame\\ReadyCheck-NotReady:14|t"
+local UNKNOWN = "|TInterface\\RaidFrame\\ReadyCheck-Waiting:14|t"
+
+function DP:RefreshRaids(e)
+    local s = self.raids
+    local done = ns.Readiness:For(e.full)
+    local y = -22
+    local lastRaid
+    for i, def in ipairs(ns.Data.READINESS) do
+        local r = s.rows[i]
+        if not r then
+            r = CreateFrame("Frame", nil, s)
+            r:SetSize(INNER, 30)
+            r.Raid = r:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            r.Raid:SetPoint("TOPLEFT", 0, 0)
+            r.Text = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            r.Text:SetPoint("TOPLEFT", 0, -14)
+            r.Text:SetWidth(INNER)
+            r.Text:SetJustifyH("LEFT")
+            r:EnableMouse(true)
+            r:SetScript("OnEnter", function(self)
+                if not self.def.detail then return end
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:AddLine(self.def.label)
+                GameTooltip:AddLine(self.def.detail, 1, 1, 1, true)
+                GameTooltip:Show()
+            end)
+            r:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            s.rows[i] = r
+        end
+        r.def = def
+        local newRaid = def.raid ~= lastRaid
+        lastRaid = def.raid
+        r.Raid:SetText(newRaid and def.raid or "")
+        local icon
+        if def.info then icon = READY
+        elseif not done then icon = UNKNOWN
+        elseif done[def.key] then icon = READY
+        else icon = NOT_READY end
+        r.Text:SetText(icon .. " " .. def.label)
+        -- a raid's name, then one line per check under it
+        if newRaid and i > 1 then y = y - 8 end
+        local h = newRaid and 32 or 18
+        r:ClearAllPoints()
+        r:SetPoint("TOPLEFT", 0, y)
+        r:SetHeight(h)
+        r.Raid:SetShown(newRaid)
+        r.Text:ClearAllPoints()
+        r.Text:SetPoint("TOPLEFT", 0, newRaid and -14 or 0)
+        r:Show()
+        y = y - h
+    end
+    for i = #ns.Data.READINESS + 1, #s.rows do s.rows[i]:Hide() end
+    s.Note:ClearAllPoints()
+    s.Note:SetPoint("TOPLEFT", 0, y - 6)
+    s.Note:SetText(done and "Worked out by their own addon from completed quests and the items in their bags. Hover a line for details."
+        or "Unknown: they don't use the addon (or haven't logged in since it was updated). The game doesn't let addons check anyone else's quests or bags.")
+    s:SetHeight(-y + 6 + math.ceil(s.Note:GetStringHeight()) + 4)
 end
 
 function DP:ShowAddProfMenu(owner)
@@ -609,9 +687,13 @@ function DP:RefreshProfs(e)
     local s = self.prof
     local edit = self.editing and ns.DB:CanEditProfile(e.full)
     s.Add:SetShown(edit)
+    local recipes = not self.editing and ns.Recipes:Count(e.full) or 0
+    s.Recipes:SetShown(recipes > 0)
+    if recipes > 0 then s.Recipes:SetText(("Recipes (%d)"):format(recipes)) end
     s.Line:ClearAllPoints()
     s.Line:SetPoint("LEFT", s.Title, "RIGHT", 6, 0)
-    s.Line:SetPoint("RIGHT", edit and s.Add or s, edit and "LEFT" or "RIGHT", edit and -6 or 0, 0)
+    local right = (edit and s.Add) or (recipes > 0 and s.Recipes) or nil
+    s.Line:SetPoint("RIGHT", right or s, right and "LEFT" or "RIGHT", right and -6 or 0, 0)
     -- primary first, then secondary under a thin divider
     local y, shown, dividerAt = -22, 0, nil
     for i = 1, MAX_PROFS do
@@ -1301,6 +1383,8 @@ function DP:VisibleSections(e)
     add(self.tabs)
     if self.tab == "notes" then
         add(self.note)
+    elseif self.tab == "raids" then
+        add(self.raids)
     elseif self.tab == "officer" then
         add(self.log); add(self.history)
     else
@@ -1359,6 +1443,8 @@ function DP:Refresh(forceText)
             local box = self.note.Box
             if forceText or not box:HasFocus() then box:SetText(e.note or "") end
             self:SizeNote()
+        elseif self.tab == "raids" then
+            self:RefreshRaids(e)
         elseif self.tab == "officer" then
             self:RefreshLog(e)
             self:RefreshHistory(e)

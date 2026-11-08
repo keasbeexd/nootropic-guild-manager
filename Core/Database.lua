@@ -24,7 +24,7 @@ local DEFAULTS = {
     version = 1,
     settings = {
         minimap = { angle = 200, hide = false, left = "roster", right = "options", shift = "recruit" },
-        iconStyle = "mug",           -- "mug" | "stein" | "emblem"
+        iconStyle = "nootropic",     -- "nootropic" | "mug" | "stein" | "emblem"
         communitiesButton = true,    -- shortcut on the Guild & Communities window
         blizzRoster = true,          -- alts and tooltips on the game's guild roster
         titleUseGuild = false,       -- window title: "<Guild> Guild Manager"
@@ -66,6 +66,12 @@ function DB:Init()
     st.shareLocation, st.showOnMap, st.customDots = nil, nil, nil
     st.reviewed, st.kudosGiven = nil, nil
     sv.inspectLog = nil
+    -- 2.4: the medallion is the new default; the old default (the game's
+    -- mug icon) was saved for everyone, so move it over once
+    if not st.logoMigrated then
+        st.logoMigrated = true
+        if st.iconStyle == "mug" then st.iconStyle = "nootropic" end
+    end
     -- 2.1: tags
     for _, k in ipairs({ "left", "right", "shift" }) do
         if st.minimap[k] == "tags" then st.minimap[k] = "roster" end

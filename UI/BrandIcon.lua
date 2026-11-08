@@ -2,7 +2,8 @@
     Nootropic Guild Manager - Brand icon
     One renderer for the addon's icon wherever it appears (window portrait,
     minimap button, Guild & Communities shortcut, options previews).
-    Styles: an ale mug, a Brewfest stein, or your guild's emblem.
+    Styles: the Nootropic medallion (Media/Logo.tga, the default), an ale
+    mug, a Brewfest stein, or your guild's emblem.
 
     The layout copies Blizzard's own guild portrait (CommunitiesFrame
     PortraitOverlay): a 60x60 circle, the tabard background and border from
@@ -25,7 +26,7 @@ local BORDER_COORDS = { 0.63183594, 0.69238281, 0.74414063, 0.86523438 }
 Brand.icons = {}
 
 function Brand:Style()
-    return ns.DB:Settings().iconStyle or "mug"
+    return ns.DB:Settings().iconStyle or "nootropic"
 end
 
 -- True when there's a guild tabard to draw.
@@ -65,7 +66,11 @@ function IconMixin:Apply()
     self:ShowEmblem(false)
     local style = D:IconStyle(key)
     self.Icon:SetTexture(style.icon or D.DEFAULT_ICON)
-    self.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    if style.fullArt then
+        self.Icon:SetTexCoord(0, 1, 0, 1)
+    else
+        self.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- trim a game icon's border
+    end
 end
 
 --[[

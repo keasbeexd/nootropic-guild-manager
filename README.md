@@ -1,12 +1,51 @@
 # Nootropic Guild Manager
 
-A guild manager for **World of Warcraft: Forever**: a searchable roster with professions and specs, a main/alt manager, contact info (Discord names and notes), when people usually play, a dated officer log, an audit trail of every change (including joins, leaves, promotions and level-ups), and recruiting tools that only ever message players without a guild. The Guild Master decides which ranks can do what. Shared data stays in sync between everyone in the guild running the addon.
+Your whole guild in one window, for **World of Warcraft: Forever**. Profiles,
+crafters, raid readiness, who to play with tonight, and friendly recruiting,
+shared between everyone in the guild who runs it.
 
-**Version 2.0** is the launch release. It's a slimmed-down build: guild reviews, ratings, map sharing, polls/stats/goals (Insights), kudos, About me/status/pronouns, the compact roster, the recruiting bar, roster export and tab customization are gone. It syncs on a new protocol: guildmates on 1.x and 2.0 don't sync with each other, so everyone should update.
+<img src="docs/logo.svg" width="96" alt="Nootropic Guild Manager's gold-ringed medallion with a foaming ale tankard">
 
-**Version 2.1** adds a roster change log to the Audit tab (joins, leaves, kicks, promotions, level-ups, note and name changes) with join dates and rank-since dates on profiles. It removes tags (the Tags tab, column, filter, profile section and menus, and the two tag permissions). It syncs on protocol 5, so 2.0 and 2.1 don't sync with each other; everyone should update.
+![The addon's Find tab listing guildmates by class color, a character profile open on its Raids tab, and the Who Can Craft window searching for flasks](preview.png)
 
-**Version 2.3.0** adds the **Play Together** tab: guildmates online near your level (your zone first) and who usually plays at this hour. **Version 2.2.1** makes Recruit officers-only by default (guilds that already chose ranks keep their choice) and adds an **Edit their own profile** permission (everyone by default). **Version 2.2.0** is the first public release. Shared data now checks who **sent** it: a record only counts if the sender may write it (their own profile, or their rank's permissions), only officers may pass on other people's records, and the Guild Master's permission settings only count when they come from the current Guild Master. Escape codes in shared text are defused. Taking someone off the Do Not Whisper list needs the Recruit permission (anyone can still add). **Version 2.1.10** switches invites to copy and paste (Copy Invite, Ctrl+C, Enter, Ctrl+V, Enter), since Forever also blocked the command when the addon put it in chat. **Version 2.1.9** rewrites the default and class messages to sound like a person (first name via the new `$first`, no "Just reply invite") and adds `yeah` to the invite keywords. **Version 2.1.8** sends invites by putting `/ginvite` in your chat box for you to press Enter, since Forever also blocked it from the secure button. **Version 2.1.7** fixes the Invite button missing clicks (the secure button could end up underneath it) and adds the Invite prompt to `/ngm diag`. **Version 2.1.6** fixes guild invites, which WoW: Forever blocked when the addon sent them: the Invite prompt now runs `/ginvite` from your click. **Version 2.1.5** rewrites the built-in class messages in the same voice as the default message (social guild, real life first, building a raid core, one line for the class); unedited ones are updated, your own edits are kept. **Version 2.1.4** adds the **Do Not Whisper** window (the list plus everyone whispered in the last 14 days, with time left), **Add to Do Not Whisper** on right-clicking names in chat and on unit frames, and a choice of hourly whisper cap. **Version 2.1.3** makes sure whispers fit WoW's 255-character limit with Forever's two-part names (a shorter default message, first name only when needed, never cut mid-word), adds `no` to the Do Not Whisper words, and only lets answers to the addon's own whisper put someone on that list. **Version 2.1.2** fixes text on the options pages that overlapped or ran off the edge, and clears settings left over from tags (a minimap click set to "Open Tags" now opens Find). **Version 2.1.1** brought the new default recruitment message.
+The preview is an illustration of the addon's windows with made-up
+characters, not an in-game screenshot.
+
+Nootropic Guild Manager works on top of the game's own Guild & Communities
+window rather than replacing it, and adds a window of its own for what the
+game can't do. Every copy of the addon shares what its player knows
+(their spec, professions, recipes, attunements, when they usually play), so
+the more of your guild runs it, the more it knows. It was made for the
+**<Nootropic>** guild and is free for any guild to use.
+
+## Features
+
+- **Find** — search the whole guild by name, class, spec, profession,
+  Discord or notes; group every main with their alts; sort and filter.
+- **Who Can Craft?** — every recipe your guildmates know, searchable, with
+  online crafters first. Shared automatically when someone opens their
+  profession window.
+- **Play Together** — guildmates online near your level (your zone first),
+  and who usually plays at this hour.
+- **Profiles** — spec, roles, professions with skill levels, Discord and a
+  contact note, usual play hours, raid readiness (Onyxia attunement, the
+  Barrow Deeps key) and your own private notes.
+- **On the game's guild roster** — alt markers, richer tooltips, and Profile
+  and Main / Alt on the right-click menu.
+- **Recruiting** — `/who` for players without a guild, whispers that read
+  like you typed them, a guild-wide 14-day re-whisper lockout, a shared Do
+  Not Whisper list, and an Invite prompt when someone says yes.
+- **For officers** — an audit of every change, including joins, leaves,
+  kicks, promotions and level-ups from the guild log; an officer log; join
+  dates and "rank since" on every profile.
+- **Guild Master permissions** — choose which ranks may edit their own
+  profile, link alts, edit others' profiles and recruit.
+- **Safe sync** — every copy checks who sent each change, so nobody can
+  forge someone's profile or the Guild Master's settings. Your private notes
+  never leave your computer.
+
+Release history is in [CHANGELOG.md](CHANGELOG.md), and how it works inside
+is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Install
 
@@ -45,7 +84,7 @@ A guild manager for **World of Warcraft: Forever**: a searchable roster with pro
 
 - **Click a member** to open the detail panel beside the roster.
 - **Right-click a member** for quick main/alt (if your rank may), whisper and invite.
-- **The bar at the top:** search on the left, **Filter** on the right: **Online only**, **Show** (mains and alts, mains only, alts only), **Class**, **Rank** and **Only guildmates using the addon**, plus **Reset filters**; your filter choices are saved. The button shows how many are on, e.g. "Filter (2)".
+- **The bar at the top:** search on the left, **Who Can Craft?** and **Filter** on the right. **Filter** has **Online only**, **Show** (mains and alts, mains only, alts only), **Class**, **Rank** and **Only guildmates using the addon**, plus **Reset filters**; your filter choices are saved. The button shows how many are on, e.g. "Filter (2)".
 - **The summary line** under the bar shows members, how many are online and how many use the addon (and how many are showing when you search or filter). Active filters are listed on its right, with **Clear** to turn them all off.
 - **"x using Nootropic Guild Manager"** at the bottom of the window (it says your guild's name instead when that option is on): click it to list only guildmates running the addon, with the Version column turned on. It turns on **Filter > Only guildmates using the addon**; click **Clear** on the summary line to see everyone again. Options can hide it.
 
@@ -54,8 +93,18 @@ A guild manager for **World of Warcraft: Forever**: a searchable roster with pro
 - **Header**: name, "Level 22 Feral Druid - Veteran" (with the spec icon), online status and zone. Under it, one line for **main / alts** (click a name to open that profile).
 - **Contact**: their **Discord** name (click it to copy) and a contact note (up to 80 characters: BattleTag, timezone, "DM me before raids"). Set by the member, or by anyone whose rank may edit other guildmates' profiles (handy for guildmates without the addon). Alts without their own show their main's. Searchable with `discord:`.
 - **Usually online**: a one-line summary of when they usually play (e.g. "Mon-Fri 8 pm-11 pm - Sat-Sun 2 pm-12 am"). Times follow **your game clock**: if its **Use Local Time** box is ticked you see your local time, otherwise server time, and **24 Hour Mode** shows "20:00-23:00". **Show week** unfolds a week grid; hover a block to see it on the other clock too. Hours are **learned automatically**: while you play, your own copy of the addon notes the server hour every 10 minutes and keeps the last 4 weeks (an hour counts once you've played it in two different weeks), and only the result is shared. Don't want that? Untick **Learn when I usually play** in Options; nothing is noted or shared then. Everything is kept in server time, the same for the whole guild, so no time zone settings are needed.
-- **Tabs**: **Profile** (professions: primary first, then secondary; the ones their addon reports stay up to date by themselves), **Notes** (your **private notes** about them; only you ever see these), and **Officer** (officers only: the **officer log** and **change history**, headed by when they **joined** (and who invited them) and since when they've held their **current rank**; these two are kept even after the audit's history expires). Officers also see **Joined** and **Rank since** in the roster tooltip.
+- **Tabs**: **Profile** (professions: primary first, then secondary; the ones their addon reports stay up to date by themselves; **Recipes (N)** lists every recipe they've shared), **Raids** (raid readiness, see below), **Notes** (your **private notes** about them; only you ever see these), and **Officer** (officers only: the **officer log** and **change history**, headed by when they **joined** (and who invited them) and since when they've held their **current rank**; these two are kept even after the audit's history expires). Officers also see **Joined** and **Rank since** in the roster tooltip.
 - **Edit** (your own characters, or others if your rank may): **Contact**, **specialization**, **roles**, **professions** (add, remove, set levels) and **main & alt links**. **Done** goes back.
+
+**Who Can Craft?** (everyone) — every recipe your guildmates know, in one search. Type part of a recipe or item name ("flask", "bracers") and see who can make it, guildmates online now first (in green); hover a recipe for the full tooltip and every crafter, click it to open a crafter's profile. Open it from the Find tab's **Who Can Craft?** button or with `/ngm craft <name>`. Recipes are **shared automatically** when someone with the addon opens one of their own profession windows: the addon reads the recipes they've learned the same way the game's window lists them, and shares just the recipe numbers (every copy of the addon looks up the names). Recipes hidden by the window's own search or filters are kept from earlier visits, and a profession you drop is cleared. The game doesn't let addons read anyone else's recipes, so guildmates without the addon don't appear.
+
+**Raid readiness** (the **Raids** tab on every profile) — what each character needs for the raids, worked out by their own addon from completed quests and the items in their bags:
+
+- **Onyxia's Lair**: the **Onyxia attunement**: done when they've finished "Blood of the Black Dragon Champion" (Horde, quest 6602) or "Drakefire Amulet" (Alliance, quest 6502), or have the Drakefire Amulet in their bags or bank. The chain starts with Warlord Goretooth in Kargath (Horde) or Helendis Riverhorn at Morgan's Vigil (Alliance).
+- **The Barrow Deeps**: no attunement; the **Brooch of the Wardens** opens the Vord'anaar Prison inside it. Found in their bags by name (English game clients), then remembered.
+- **Hyjal Summit**: no attunement.
+
+A green check means done, red means not yet, and a clock means unknown (they don't run the addon, or haven't logged in since updating). Quest and item numbers come from Wowhead's WoW Forever database.
 
 **Play Together tab** (everyone) — who to play with right now. **Online now** lists guildmates online within a few levels of you (5 by default; 3, 10 or any level from the button at the top right), people in your zone first, with their level (and how far from yours), zone, spec and roles. **Usually on around now** lists guildmates who aren't online but usually play at this hour, from their shared usual hours (only guildmates running the addon with **Learn when I usually play** on share them). Your own characters are left out. Click anyone for their profile. `/ngm play` opens it.
 
@@ -141,15 +190,16 @@ Messages and keywords are saved per guild.
 
 Open from **Options > AddOns > Nootropic Guild Manager**, `/ngm options`, right-clicking the minimap button (by default), or right-clicking the addon compartment entry.
 
-Options has three pages in the game's AddOns list:
+Options has four pages in the game's AddOns list:
 
 - **Nootropic Guild Manager** (main page)
-  - **Appearance**: the **addon icon** (Ale Mug, Brewfest Stein or your **Guild Emblem**, shown on the window, the minimap button and the Guild & Communities shortcut; the emblem falls back to the mug outside a guild or without a tabard), **use my guild's name in the window title** (also in the "x using ... Guild Manager" text), **show how many guildmates use the addon** (on by default), the **shortcut on the Guild & Communities window**, **Show alts and profiles on the Guild roster** (on by default), and **Learn when I usually play** (on by default).
+  - **Appearance**: the **addon icon** (the **Nootropic Medallion** by default, or the game's Ale Mug or Brewfest Stein icons, or your **Guild Emblem**; shown on the window, the minimap button and the Guild & Communities shortcut; the emblem falls back to the medallion outside a guild or without a tabard), **use my guild's name in the window title** (also in the "x using ... Guild Manager" text), **show how many guildmates use the addon** (on by default), the **shortcut on the Guild & Communities window**, **Show alts and profiles on the Guild roster** (on by default), and **Learn when I usually play** (on by default).
   - **Minimap Button**: show/hide it (also `/ngm minimap`), and choose what left-click, right-click and shift-click do (Find, Play Together, Recruitment, Audit, Options, show/hide window, or nothing). Drag the button to move it around the edge of the minimap; the spot is saved. The game's own AddOns menu button on the minimap (where this addon is also listed) is Blizzard's and can't be moved.
   - **Reset**: window size and position, and list columns (roster and recruitment list).
-  - **About**: sync stats with a **Sync Now** button, **Open Guild Manager**, and the most useful commands.
+  - **Sync and Commands**: sync stats with a **Sync Now** button, **Open Guild Manager**, and the most useful commands.
 - **Recruiting** (saved per guild, except the hourly cap): the **recruitment whisper button on /who results** (on by default), **Whispers per hour** (40 by default, for all your characters), **Auto-Invite** (Invite popup on a keyword reply, up to 6 keywords) and **Do Not Whisper** (on/off, up to 6 words, and the shared list). The Recruitment tab shows how these are set under **Replies**, with a **Reply Settings...** button that opens this page.
 - **Officers**: **Permissions** (Guild Master, whole guild) and **Audit History** (keep 30, 60 or 90 days on your copy). Members see this page but can't change it.
+- **About**: what the addon does, credits, and links to copy (the game can't open web pages): the maintainer's site, the **Nootropic Discord** and the addon's GitHub page.
 
 The window's tabs run down its right side like the character panel's; hover one for its name. Tabs you can't use (Recruitment without the recruit permission, Audit for non-officers) are hidden.
 
@@ -208,12 +258,12 @@ In testing, three simulated clients (two officers and a member) with 40-50% of m
 Everything is saved per guild in `WTF/Account/<account>/SavedVariables/NootropicGuildManager.lua`, along with your settings. **Private notes never leave your computer**; shared data syncs as described above.
 
 What is shared:
-- With everyone running the addon: each player's own professions and spec, mains/alts, spec/profession overrides, contact info (Discord name and note), roles, when each person usually plays (only the learned summary), the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, and the Guild Master's permissions.
+- With everyone running the addon: each player's own professions and spec, mains/alts, spec/profession overrides, contact info (Discord name and note), roles, when each person usually plays (only the learned summary), the recipes they know, their raid readiness, the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, and the Guild Master's permissions.
 - With officers only: Officer Log entries (140 characters max; deleting one deletes it for every officer) and the audit trail.
 
 Each of 1.x, 2.0 and 2.1 uses its own sync protocol, so guildmates on different ones don't exchange data at all; everyone should run the latest release. When you first load 2.0, data from removed features (reviews, ratings, map dots, polls, stats, goals, kudos, About me, status, pronouns, tab settings) is deleted from your saved data. Loading 2.1 does the same for tags, tag assignments, tag icons and the tag permissions.
 
-A note on trust: the addon checks permissions before sending anything, and officer data can only arrive through the officer channel. A guildmate who modified their copy of the addon could still forge a guild-wide change, but every change is recorded in the Audit tab with its author, so it would be visible to officers.
+A note on trust: every copy of the addon checks each change it receives against the guild roster: the sender must be allowed to make it, only officers can pass on other people's changes, and permission settings only count from the Guild Master. Officer data only travels on the officer channel. Every change is also recorded in the Audit tab with its author.
 
 ## Commands
 
@@ -222,6 +272,7 @@ A note on trust: the addon checks permissions before sending anything, and offic
 | `/ngm` | open or close |
 | `/ngm find <text>` | open with a search |
 | `/ngm play` | open the Play Together tab |
+| `/ngm craft <name>` | who in the guild can craft it (the Who Can Craft? window) |
 | `/ngm recruit` | open the Recruitment tab |
 | `/ngm options` | open the options |
 | `/ngm diag` | report what the Guild & Communities shortcut, the guild roster hooks and the /who whisper buttons and the Invite prompt can see, and which name and version the addon uses for you |
@@ -235,10 +286,15 @@ A note on trust: the addon checks permissions before sending anything, and offic
 
 ```
 NootropicGuildManager.toc
-Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs, professions, roles)  Database.lua (saved data, permissions)  Sync.lua (records, repair, transport)
-Services/  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)
-UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
+Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs, professions, roles, raid checks, links)  Database.lua (saved data, permissions)  Sync.lua (records, repair, transport)
+Services/  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)
+Media/     Logo.tga (the addon's icon, from docs/logo.svg)
+UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
+docs/      ARCHITECTURE.md (how it works inside)  logo.svg  preview/ (source of preview.png)
+tests/     run.sh and offline tests (not in the release zip)
 ```
+
+The [architecture guide](docs/ARCHITECTURE.md) covers the sync protocol, every shared record and who may write it, the security checks, and WoW: Forever's restrictions.
 
 ## Names in WoW: Forever
 

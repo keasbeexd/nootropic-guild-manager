@@ -1,0 +1,105 @@
+# How Nootropic Guild Manager works
+
+A guide for anyone reading or changing the code. For using the addon, see the [README](../README.md).
+
+## Layout
+
+The addon is plain Lua and Blizzard frames, no libraries. Files load in the order of `NootropicGuildManager.toc`; every file starts with a comment saying what it does.
+
+| Folder | What's in it |
+| --- | --- |
+| `Core/` | `Core.lua` (namespace, events, helpers, slash commands, start-up), `Data.lua` (classes, specs, professions, roles, recruiting defaults, raid readiness checks, About links), `Database.lua` (saved data, settings, permissions), `Sync.lua` (shared records, repair, transport, security checks) |
+| `Services/` | Logic with no windows: `Roster.lua` (guild roster, search, sort), `Comm.lua` (your own spec and professions), `Profile.lua` (contact info, usual play hours), `Recruit.lua` (/who, whispers, lockouts, Do Not Whisper, invites), `Messages.lua` (custom recruitment messages), `Audit.lua` (audit text), `RosterLog.lua` (joins, leaves, promotions from the guild event log and roster), `Recipes.lua` (shared recipes), `Readiness.lua` (raid attunements and keys) |
+| `UI/` | Windows and hooks: `MainFrame.lua` (the window and its tabs), `RosterView.lua` (Find), `TogetherView.lua` (Play Together), `RecruitView.lua` + `MessagesView.lua` (Recruitment), `AuditView.lua`, `DetailPanel.lua` (profiles), `RecipesView.lua` (Who Can Craft?), `DNWView.lua` (Do Not Whisper window and name menus), `InvitePrompt.lua`, `Options.lua`, `GuildRoster.lua` + `Communities.lua` (hooks on the game's Guild & Communities window), `WhoWhisper.lua` (button on the game's /who results), `MinimapButton.lua`, and shared pieces (`Widgets.lua`, `Columns.lua`, `ScheduleGrid.lua`, `BrandIcon.lua`, `MemberPicker.lua`) |
+| `docs/` | This file |
+| `tests/` | Offline tests that run the real files against stand-ins for the game (see [Testing](#testing)) |
+
+Modules hang off the addon namespace (`ns.Sync`, `ns.Roster`, `ns.DB`...). `ADDON_LOADED` sets up saved data (`ns.DB:Init`); `PLAYER_LOGIN` starts everything else (see the end of `Core/Core.lua`). Modules talk through `ns:Fire(event)` / `ns:On(event, fn)` (e.g. `ROSTER_UPDATED`, `MEMBER_CHANGED`, `RECIPES_CHANGED`, `AUDIT_CHANGED`).
+
+## Saved data
+
+`NootropicGuildManagerDB` (account-wide):
+
+- `settings` — your options (minimap, window size, columns, whispers per hour, Play Together range...).
+- `guilds["<Guild>-<Realm>"]` — one entry per guild:
+  - `sync.guild` / `sync.officer` — the shared records (below). Everything shared lives here.
+  - `members[full]` — working data built from the records, plus `note`, your private note, which is never shared.
+  - `recruit` — your recruiting setup (messages, keywords, the players you found).
+  - `rosterSnap` — the last roster seen, to notice level-ups, note and name changes.
+
+## Sync
+
+Everything the guild shares is a **record**: `key -> { v = value, t = server time, a = author }`. The newest version of a record wins (ties broken by author, then value), so every copy ends up the same whatever order messages arrive in. Records are sent with `C_ChatInfo.SendAddonMessage` under the prefix `NootropicGM` on the **GUILD** channel, or on the **OFFICER** channel for officer-only data; nothing is ever whispered.
+
+### Messages
+
+All messages start with the protocol number (`PROTO`, currently 5); other versions are ignored. Fields are tab-separated.
+
+| Kind | Fields | Meaning |
+| --- | --- | --- |
+| `R` | key, time, author, batch, value | one record |
+| `D` | scope, 16 checksums | "here's what I have": a digest over 16 buckets of records |
+| `B` | scope, bucket | "I'm re-sending this bucket" (others skip it) |
+| `C` | id, part, parts, data | a piece of a message longer than 250 bytes (at most 16 parts) |
+
+Local changes are sent together 15 seconds after the first one (a **batch**, which the audit groups). Every 10 minutes, and when the window opens, each copy sends its digest; anyone whose buckets differ re-sends those buckets. This repairs lost messages and catches up people who were offline.
+
+### Record types
+
+| Key | Value | Scope | Who may write it |
+| --- | --- | --- | --- |
+| `M:<member>` | their main ("" = a main) | guild | ranks with the **links** permission |
+| `MS:<member>` | spec override | guild | the member (**own profile** permission) or ranks with **profiles** |
+| `RL:<member>` | roles: `tank,healer,damage` | guild | same as `MS` |
+| `MP:<member>` | manual professions | guild | same as `MS` |
+| `CN:<member>` | `discord;note` | guild | same as `MS` |
+| `P:<member>` | spec and professions their addon read | guild | the member only |
+| `AV:<member>` | addon version | guild | the member only |
+| `SC:<member>` | usual play hours (168 bits as hex) | guild | the member only |
+| `RP:<member>:<professionID>` | `profession;id,id,...` (base-36 recipe spell IDs) | guild | the member only |
+| `RR:<member>` | completed readiness checks (`ony,brooch`, or `-`) | guild | the member only |
+| `DN:<player>` | `time;what they said` ("" = removed) | guild | anyone adds; removing needs **recruit** |
+| `RS:<player>` | `whispered;replied;invited;reply` (kept 14 days) | guild | anyone in the guild |
+| `GS:<name>` | guild setting, e.g. `GS:perm_links = "1,3"` | guild | officers; `perm_*` only the Guild Master |
+| `L:<member>:<id>` | officer log entry | officer | officers |
+| `A:<id>` | audit entry | officer | officers (written locally from changes, or by the roster log) |
+| `JN:<member>` | `time;inviter` (joined) | officer | officers |
+| `RK:<member>` | `time;rank;by` (rank since) | officer | officers |
+
+### Security
+
+A record's author is only what the sender claims; the sender is the one name the game vouches for. So every copy of the addon checks each incoming record (`S:SenderAllowed` in `Core/Sync.lua`):
+
+- The author must be allowed to write the record (their own data, their rank's permissions from the guild roster, or officer), and must be the sender, unless the sender is a **known officer** passing on someone else's record. Officers are known by having sent on the officer channel, which the game only allows officer ranks to do.
+- Permission settings (`GS:perm_*`) only count when their author is the current Guild Master.
+- "Self-only" records (`P`, `AV`, `SC`, `RP`, `RR`) must be authored by the member they're about.
+- Records on the officer channel come only from officers, by the game's rules.
+- Keys or authors containing `|` are dropped and `|` in values is replaced, so shared text can't inject textures, colors or links. Chunked messages are capped (16 parts, 8 unfinished per sender, no chunks inside chunks).
+
+Your private notes never leave your computer. Officer data goes only over the officer channel.
+
+## WoW: Forever restrictions worth knowing
+
+- **Guild invites from addons are blocked**, in every form: `C_GuildInfo.Invite`, `/ginvite` from a secure macro button, and `/ginvite` put in the chat box by the addon (opening the chat box from addon code taints it). Only `/ginvite` the player types or pastes works, so the Invite prompt shows the command to copy. **Don't open the chat box from addon code**: it would also taint the player's own `/ginvite` for the rest of the session.
+- `/who` must run from a hardware event: the Search button is a secure macro button (`W.SecureOverlay`) placed over the visible one.
+- Names have two parts and no realms in chat: whisper and invite by `ns.ChatName(full)`.
+- Whispers are capped at 255 bytes: `RC:Format` uses first names and cuts at whole words when needed.
+- `C_Calendar.AddEvent` is restricted; reading the calendar is fine.
+- Addons can't read other players' quests, bags or recipes: each member's own addon reports theirs (`P`, `RP`, `RR`).
+
+## Adding a shared record type
+
+1. Add it to `S.TYPES` in `Core/Sync.lua` with its scope and who may write it (`selfOnly`, `self`, `officer`, `anyone`, or a permission in `DB.PERM_BY_TYPE`). The security checks follow from these.
+2. If its key has more than a member (like `L:` or `RP:`), teach `S.ParseKey` where the member name is.
+3. Turn the value into working data in `S:Materialize` (or read it straight from the store, as `Recipes.lua` does).
+4. Describe it in the comment at the top of `Core/Sync.lua` and in the table above.
+5. Records of a type that's later removed are deleted on load by `S:PurgeUnknown`. If old clients would fight over the change, bump `PROTO`.
+
+## Testing
+
+`tests/run.sh` runs every test with LuaJIT (or `lua5.1`). The tests load the real addon files with stand-ins for the game's API and check sync permissions against forged messages, the roster change log, recruitment message lengths and Do Not Whisper rules, the Invite prompt, Play Together, recipes and raid readiness. They don't replace trying it in the game: anything about frames, layout or Blizzard's restrictions needs an in-game check.
+
+## Releasing
+
+1. Bump `## Version:` in the TOC and add the release to `CHANGELOG.md`.
+2. Tag `vX.Y.Z` and attach a zip named `NootropicGuildManager-vX.Y.Z-forever.zip` (`git archive --prefix=NootropicGuildManager/`; `.gitattributes` keeps `docs/`, `tests/` and repo files out of it). WowUp only picks up assets ending in `-forever.zip` for the Forever client, and looks at the 5 newest releases.
