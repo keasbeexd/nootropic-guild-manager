@@ -7,7 +7,7 @@
     Saved per guild in guild.recruit:
       default    = "whisper used when a class has no message of its own"
       templates  = { [CLASSFILE] = "..." }
-      keywords   = { "invite", ... }          -- up to 5
+      keywords   = { "invite", ... }          -- up to 6
       autoInvite = true                       -- invite on a keyword reply
       inviteMode = "auto" | "confirm"         -- confirm = one-click popup
       query      = { min, max, class, zone, step, name, hideContacted,
@@ -15,7 +15,7 @@
       people     = { ["Name-Realm"] = { level, classFile, className, zone, guild,
                      found, seen, whispered, replied, reply, invited, joined } }
       dnwEnabled = true                       -- watch replies for Do Not Whisper words
-      dnwWords   = { "dnw", "leave me alone", ... }   -- up to 5
+      dnwWords   = { "dnw", "leave me alone", ... }   -- up to 6
       (the Do Not Whisper list itself is shared: sync records DN:<player>)
       (statuses are shared for 14 days: sync records RS:<player>, see Contact;
        while one is, nobody in the guild can queue another whisper to that player)
@@ -71,6 +71,19 @@ function RC:Settings()
     if not r.dnwWords then
         r.dnwWords = {}
         for i, w in ipairs(D.DEFAULT_DNW_WORDS) do r.dnwWords[i] = w end
+        r.dnwNoAdded = true
+    end
+    -- 2.1.3: "no" joined the defaults; add it once (in a free box), so
+    -- removing it later sticks
+    if not r.dnwNoAdded then
+        r.dnwNoAdded = true
+        local has, free = false, nil
+        for i = 1, D.MAX_KEYWORDS do
+            local w = ns.Trim(r.dnwWords[i] or ""):lower()
+            if w == "no" then has = true end
+            if w == "" and not free then free = i end
+        end
+        if not has and free then r.dnwWords[free] = "no" end
     end
     if not self.pruned then
         self.pruned = true
@@ -427,13 +440,15 @@ function RC:SetDefault(text)
     if r then r.default = text end
 end
 
--- $name, $class, $level, $race, $zone and $guild (as <Guild Name>) are replaced.
-function RC:Format(template, p)
+local function GuildTag()
     local guild = GetGuildInfo("player")
-    guild = (guild and guild ~= "") and ("<" .. guild .. ">") or ""
+    return (guild and guild ~= "") and ("<" .. guild .. ">") or ""
+end
+
+local function Fill(template, p, name, guild)
     local out = (template or ""):gsub("%$(%a+)", function(key)
         key = key:lower()
-        if key == "name" then return p.short or ns.ShortName(p.full)
+        if key == "name" then return name
         elseif key == "class" then return p.className or D:ClassName(p.classFile)
         elseif key == "level" then return tostring(p.level or "")
         elseif key == "guild" then return guild
@@ -441,8 +456,52 @@ function RC:Format(template, p)
         elseif key == "zone" then return p.zone or ""
         end
     end)
-    out = out:gsub("[\r\n]+", " ")
-    return ns.Trim(out):sub(1, D.WHISPER_MAX)
+    return ns.Trim((out:gsub("[\r\n]+", " ")))
+end
+
+-- Cuts `text` to `max` bytes at the last space, never inside a word or a
+-- multi-byte letter.
+local function CutAtWord(text, max)
+    if #text <= max then return text end
+    local cut = text:sub(1, max)
+    local space = cut:match("^.*()%s")
+    if space and space > max / 2 then cut = cut:sub(1, space - 1) end
+    -- don't leave half of a UTF-8 letter
+    cut = cut:gsub("[\192-\255][\128-\191]*$", function(tail)
+        local need = tail:byte(1) >= 240 and 4 or tail:byte(1) >= 224 and 3 or 2
+        return #tail == need and tail or ""
+    end)
+    return ns.Trim(cut)
+end
+
+-- $name, $class, $level, $race, $zone and $guild (as <Guild Name>) are replaced.
+-- $name is the full Forever name ("Audrey Pichhale"); when that makes the
+-- whisper too long, the first name alone is used, and as a last resort the
+-- message is cut at the last whole word.
+function RC:Format(template, p)
+    local guild = GuildTag()
+    local name = p.short or ns.ShortName(p.full)
+    local out = Fill(template, p, name, guild)
+    if #out > D.WHISPER_MAX then
+        local first = ns.SplitName(name)
+        if first ~= "" and first ~= name then out = Fill(template, p, first, guild) end
+    end
+    return CutAtWord(out, D.WHISPER_MAX)
+end
+
+-- The longest `template` can get once filled in (before any shortening):
+-- a 25-letter name, your guild's name, and long class, race and zone names.
+RC.LONGEST_SAMPLE = { short = "Abcdefghijkl Abcdefghijkl", className = "Warrior", level = 60,
+    race = "Night Elf", zone = "Stranglethorn Vale" }
+function RC:LongestLength(template)
+    return #Fill(template, self.LONGEST_SAMPLE, self.LONGEST_SAMPLE.short, GuildTag())
+end
+
+-- "212 / 255", red with a note when the longest name won't fit.
+function RC:LengthText(template)
+    local n = self:LongestLength(template)
+    if n <= D.WHISPER_MAX then return ("%d / %d"):format(n, D.WHISPER_MAX) end
+    return ("|cffff6060%d / %d|r (long names: first name only)"):format(n, D.WHISPER_MAX)
 end
 
 local function SendWhisper(msg, target)
@@ -840,6 +899,24 @@ function RC:MigrateDNW()
     r.dnw = nil
 end
 
+-- Your own whispers to someone the addon whispered: after one of these
+-- their replies are a conversation with you, not an answer to the addon.
+function RC:OnWhisperSent(text, target)
+    local full = ns.NormalizeName(target)
+    local p = full and self:Get(full)
+    if not (p and p.whispered) then return end
+    if text == p.lastWhisper then return end -- the addon's own whisper (or you sending it in click mode)
+    p.talkedAt = ns.DB:Now()
+end
+
+-- Is this reply an answer to the addon's whisper? Only then can it put
+-- someone on the Do Not Whisper list.
+RC.REPLY_WINDOW = 86400
+function RC:AnswersAddonWhisper(p)
+    if not p.whispered or ns.DB:Now() - p.whispered > self.REPLY_WINDOW then return false end
+    return not (p.talkedAt and p.talkedAt >= p.whispered)
+end
+
 function RC:OnWhisper(text, sender)
     local full = ns.NormalizeName(sender)
     local p = full and self:Get(full)
@@ -851,14 +928,19 @@ function RC:OnWhisper(text, sender)
     ns.PlaySound("TELL_MESSAGE")
 
     local r = self:Settings()
-    -- Do Not Whisper wins over invite keywords
-    local dnw = r.dnwEnabled and self:MatchDNW(text)
-    if dnw then
+    local keyword = r.autoInvite and not p.invited and self:MatchKeyword(text)
+    local dnw = r.dnwEnabled and self:AnswersAddonWhisper(p) and self:MatchDNW(text)
+    if dnw and keyword then
+        -- "no guild yet, inv pls": both kinds of word. Don't decide for them.
+        ns:Print(("%s replied \"%s\" - that has both a Do Not Whisper word and an invite keyword, so they weren't added to the list."):format(ns.ShortName(full), text))
+        self:ConfirmInvite(full, text)
+        Changed()
+        return
+    elseif dnw then
         self:AddDNW(full, text)
         ns:Print(("%s replied \"%s\" - added to the Do Not Whisper list. They won't be whispered or invited again."):format(ns.ShortName(full), dnw))
         return
     end
-    local keyword = r.autoInvite and not p.invited and self:MatchKeyword(text)
     if keyword then
         if r.inviteMode == "confirm" or not self:CanInvite() then
             self:ConfirmInvite(full, text)
@@ -893,6 +975,7 @@ StaticPopupDialogs.NOOTROPICGM_INVITE = {
 function RC:Init()
     ns:RegisterEvent("WHO_LIST_UPDATE", function() RC:OnWhoResults() end)
     ns:RegisterEvent("CHAT_MSG_WHISPER", function(_, text, sender) RC:OnWhisper(text, sender) end)
+    ns:RegisterEvent("CHAT_MSG_WHISPER_INFORM", function(_, text, target) RC:OnWhisperSent(text, target) end)
     ns:RegisterEvent("ADDON_ACTION_BLOCKED", function(_, addon, func) RC:OnActionBlocked(addon, func) end)
     ns:RegisterEvent("ADDON_ACTION_FORBIDDEN", function(_, addon, func) RC:OnActionBlocked(addon, func) end)
 
