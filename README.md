@@ -1,12 +1,16 @@
 # Nootropic Guild Manager
 
-A guild manager for **World of Warcraft: Forever**: a searchable roster with professions and specs, a main/alt manager, contact info (Discord names and notes), when people usually play, a dated officer log, an audit trail of every change, and recruiting tools that only ever message players without a guild. The Guild Master decides which ranks can do what. Shared data stays in sync between everyone in the guild running the addon.
+A guild manager for **World of Warcraft: Forever**: a searchable roster with professions and specs, a main/alt manager, contact info (Discord names and notes), when people usually play, a dated officer log, an audit trail of every change (including joins, leaves, promotions and level-ups), and recruiting tools that only ever message players without a guild. The Guild Master decides which ranks can do what. Shared data stays in sync between everyone in the guild running the addon.
 
 **Version 2.0** is the launch release. It's a slimmed-down build: guild reviews, ratings, map sharing, polls/stats/goals (Insights), kudos, About me/status/pronouns, the compact roster, the recruiting bar, roster export and tab customization are gone. It syncs on a new protocol: guildmates on 1.x and 2.0 don't sync with each other, so everyone should update.
 
 **Version 2.1** adds a roster change log to the Audit tab (joins, leaves, kicks, promotions, level-ups, note and name changes) with join dates and rank-since dates on profiles. It removes tags (the Tags tab, column, filter, profile section and menus, and the two tag permissions). It syncs on protocol 5, so 2.0 and 2.1 don't sync with each other; everyone should update.
 
 ## Install
+
+**With WowUp:** Get Addons > **Install from URL**, paste `https://github.com/keasbeexd/nootropic-guild-manager`, with your WoW: Forever installation selected. WowUp then offers each new release as an update.
+
+**By hand:** download `NootropicGuildManager-vX.Y-forever.zip` from the [latest release](https://github.com/keasbeexd/nootropic-guild-manager/releases/latest), then:
 
 1. Unzip so the folder sits at `Interface/AddOns/NootropicGuildManager` (the folder must be named exactly `NootropicGuildManager`).
    - Use the `Interface/AddOns` folder inside the `_classic..._` folder the Forever client installs into (the beta used `_classic_beta_`).
@@ -199,7 +203,7 @@ What is shared:
 - With everyone running the addon: each player's own professions and spec, mains/alts, spec/profession overrides, contact info (Discord name and note), roles, when each person usually plays (only the learned summary), the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, and the Guild Master's permissions.
 - With officers only: Officer Log entries (140 characters max; deleting one deletes it for every officer) and the audit trail.
 
-Guildmates on 1.x use an older sync protocol and don't exchange data with 2.0 at all. When you first load 2.0, data from removed features (reviews, ratings, map dots, polls, stats, goals, kudos, About me, status, pronouns, tab settings) is deleted from your saved data. Loading 2.1 does the same for tags, tag assignments, tag icons and the tag permissions.
+Each of 1.x, 2.0 and 2.1 uses its own sync protocol, so guildmates on different ones don't exchange data at all; everyone should run the latest release. When you first load 2.0, data from removed features (reviews, ratings, map dots, polls, stats, goals, kudos, About me, status, pronouns, tab settings) is deleted from your saved data. Loading 2.1 does the same for tags, tag assignments, tag icons and the tag permissions.
 
 A note on trust: the addon checks permissions before sending anything, and officer data can only arrive through the officer channel. A guildmate who modified their copy of the addon could still forge a guild-wide change, but every change is recorded in the Audit tab with its author, so it would be visible to officers.
 
@@ -232,7 +236,7 @@ Forever characters have a first and second name (e.g. "Audrey Pichhale") and no 
 
 ## Credits
 
-Nootropic Guild Manager was created by [aigoodandy](https://github.com/aigoodandy), who wrote the 1.x addon this fork is built on ([aigoodandy/nootropic-guild-manager](https://github.com/aigoodandy/nootropic-guild-manager)). Version 2.0 is maintained by [keasbeexd](https://github.com/keasbeexd) with Andy's permission.
+Nootropic Guild Manager was created by [aigoodandy](https://github.com/aigoodandy), who wrote the 1.x addon this fork is built on ([aigoodandy/nootropic-guild-manager](https://github.com/aigoodandy/nootropic-guild-manager)). Version 2.0 and later are maintained by [keasbeexd](https://github.com/keasbeexd) with Andy's permission.
 
 ## Licence
 
