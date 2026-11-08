@@ -1271,8 +1271,7 @@ end
 -- May you edit anything on this profile?
 function DP:CanEdit(e)
     if not e then return false end
-    return e.full == ns.PlayerFullName() or ns.IsOfficer() or ns.DB:CanEditProfile(e.full)
-        or ns.DB:CanEditLinks()
+    return ns.DB:CanEditProfile(e.full) or ns.Profile:CanEditContact(e.full) or ns.DB:CanEditLinks()
 end
 
 function DP:SetEditing(on)

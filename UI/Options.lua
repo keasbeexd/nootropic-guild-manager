@@ -412,7 +412,7 @@ end
 
 function O:BuildPermControls(L)
     L:Header("Permissions  |cff9d9d9d(Guild Master, whole guild)|r")
-    L:Text("Choose which ranks may do each of these. By default recruiting is open to everyone and the rest is for officers (ranks that can read officer notes). Pick ranks to hand it to them instead; the Guild Master always can.")
+    L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers (ranks that can read officer notes). Pick ranks to hand it to them instead; the Guild Master always can.")
     L:Text("The Officer Log and the Audit always stay with officers: the game only sends that data to officer ranks.", "GameFontDisableSmall")
     self.permRows = {}
     for _, perm in ipairs(ns.DB.PERMS) do

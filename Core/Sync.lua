@@ -199,7 +199,8 @@ function S:CanWrite(key)
     local def = S.TYPES[typ]
     if def.selfOnly then return member == Me() end
     if def.anyone then return IsInGuild() end -- (DN removal is checked in RC:RemoveDNW)
-    if def.self and member == Me() then return true end
+    -- your own profile: the Guild Master decides (everyone by default)
+    if def.self and member == Me() and ns.DB:HasPerm("ownprofile") then return true end
     -- permissions only the Guild Master changes
     if typ == "GS" and rest:sub(1, 5) == "perm_" then return ns.DB:IsGuildMaster() end
     -- what the Guild Master hands out per rank (Options > Officers > Permissions)
@@ -257,7 +258,7 @@ function S:MayAuthor(name, typ, member, rest)
     if def.anyone then return RosterEntry(name) ~= nil end
     if def.selfOnly then return Same(name, member) end
     if typ == "GS" and rest:sub(1, 5) == "perm_" then return IsGuildMaster(name) end
-    if def.self and Same(name, member) then return true end
+    if def.self and Same(name, member) and self:RankMay(name, "ownprofile") then return true end
     local e = RosterEntry(name)
     if e and e.rankIndex == 0 then return true end
     local perm = def.scope == "guild" and ns.DB.PERM_BY_TYPE[typ]
