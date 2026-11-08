@@ -2,6 +2,11 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.5.1
+
+- **Sync limits**: a guildmate's copy can't flood everyone's saved data: values are capped at 4,000 bytes, recipe lists need a real profession ID (at most 12 per member), and a non-officer can add at most 500 new records per 10 minutes.
+- Releases are now published automatically (GitHub today; CurseForge and Wago once their projects exist). See docs/PUBLISHING.md.
+
 ## 2.5.0
 
 - **Welcome tour** on first launch (and once for everyone updating): a page per tab, your sharing choices, your profile basics (Discord, contact note, roles), and for the Guild Master the permissions. Reopen it from Options or `/ngm welcome`.

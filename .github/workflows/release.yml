@@ -1,0 +1,43 @@
+# Publishes a release when a version tag (v1.2.3) is pushed:
+#   1. runs the offline tests (tests/run.sh); a failure stops the release
+#   2. packages the addon with the BigWigs packager and uploads it to
+#      GitHub (with release.json, which WowUp reads), CurseForge and Wago.
+# CurseForge and Wago are skipped until their project IDs are in the TOC
+# (X-Curse-Project-ID, X-Wago-ID) and their tokens are repository secrets
+# (CF_API_KEY, WAGO_API_TOKEN). See docs/PUBLISHING.md.
+#
+# Security: runs only on tags you push (never on pull requests, so outside
+# code can't reach the tokens); actions are pinned to exact commits; the job
+# may only write releases.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      # actions/checkout v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Offline tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq luajit lua5.1
+          tests/run.sh
+
+      # BigWigsMods/packager v2.6.1
+      - uses: BigWigsMods/packager@e50a250f8705041e40f2fa1ddcb280a686d65aa0
