@@ -2,9 +2,11 @@
 ## Title: |cffffd100Nootropic|r Guild Manager
 ## Notes: Guild roster for WoW: Forever with mains and alts, professions, specs, contact info, an officer log, a roster change log and recruiting tools. Synced between guildmates.
 ## Author: Nootropic
-## Version: 2.5.1
+## Version: 2.5.2
 ## X-Website: https://github.com/keasbeexd/nootropic-guild-manager
 ## X-License: MIT
+## X-Curse-Project-ID: 1793021
+## X-Wago-ID: 4N2baaNL
 ## SavedVariables: NootropicGuildManagerDB
 ## Category: Guild
 ## IconTexture: Interface\AddOns\NootropicGuildManager\Media\Logo
