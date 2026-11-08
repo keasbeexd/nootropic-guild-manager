@@ -330,16 +330,10 @@ function O:BuildRecruiting()
     L:Space(4)
 
     L:Header("Auto-Invite")
-    self.autoCheck = L:Check("Invite when they reply with a keyword",
-        "Only replies from players you whispered from the addon are checked.", function(on)
+    self.autoCheck = L:Check("Invite popup when they reply with a keyword",
+        "Only replies from players you whispered from the addon are checked. WoW: Forever only lets you send guild invites yourself, so this pops up an Invite button to click.", function(on)
             local r = ns.Recruit:Settings()
             if r then r.autoInvite = on end
-            RecruitChanged()
-        end)
-    self.confirmCheck = L:Check("Ask me first (one-click Invite popup)",
-        "Needed on clients that only allow guild invites from a click.", function(on)
-            local r = ns.Recruit:Settings()
-            if r then r.inviteMode = on and "confirm" or "auto" end
             RecruitChanged()
         end)
     L:Text("|cffffd100Keywords|r  |cff9d9d9d(whole words, any case)|r", "GameFontHighlightSmall", 4)
@@ -549,7 +543,7 @@ function O:RefreshRecruiting()
     self.hourButton:SetText(self.hourButton.HourText(s.whisperPerHour or 40))
     local r = ns.Recruit:Settings()
     self.recruitNoGuild:SetShown(r == nil)
-    for _, w in ipairs({ self.autoCheck, self.confirmCheck, self.dnwCheck, self.dnwView }) do SetUsable(w, r ~= nil) end
+    for _, w in ipairs({ self.autoCheck, self.dnwCheck, self.dnwView }) do SetUsable(w, r ~= nil) end
     for _, eb in ipairs(self.keywordBoxes) do eb:SetEnabled(r ~= nil) end
     for _, eb in ipairs(self.dnwBoxes) do eb:SetEnabled(r ~= nil) end
     if not r then
@@ -557,7 +551,6 @@ function O:RefreshRecruiting()
         return
     end
     self.autoCheck:SetChecked(r.autoInvite)
-    self.confirmCheck:SetChecked(r.inviteMode == "confirm")
     self.dnwCheck:SetChecked(r.dnwEnabled)
     for i, eb in ipairs(self.keywordBoxes) do
         if not eb:HasFocus() then eb:SetText(r.keywords[i] or "") end

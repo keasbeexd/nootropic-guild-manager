@@ -1,15 +1,15 @@
 --[[
     Nootropic Guild Manager - Recruitment service
     Runs /who searches for players without a guild (never anyone in one), remembers who you've contacted,
-    fills in per-class whisper templates, sends guild invites, and invites
-    automatically when a whispered player replies with one of your keywords.
+    fills in per-class whisper templates, and pops up an Invite prompt (see
+    UI/InvitePrompt.lua) when a whispered player replies with one of your keywords.
 
     Saved per guild in guild.recruit:
       default    = "whisper used when a class has no message of its own"
       templates  = { [CLASSFILE] = "..." }
       keywords   = { "invite", ... }          -- up to 6
       autoInvite = true                       -- invite on a keyword reply
-      inviteMode = "auto" | "confirm"         -- confirm = one-click popup
+      inviteMode = "confirm"                  -- always: Forever only allows invites from a click
       query      = { min, max, class, zone, step, name, hideContacted,
                      zoneAuto, levelAuto }       -- *Auto: follow the player (see ApplyAutoQuery)
       people     = { ["Name-Realm"] = { level, classFile, className, zone, guild,
@@ -60,7 +60,7 @@ function RC:Settings()
         for i, k in ipairs(D.DEFAULT_KEYWORDS) do r.keywords[i] = k end
     end
     if r.autoInvite == nil then r.autoInvite = true end
-    r.inviteMode = r.inviteMode or "confirm" -- WoW: Forever only allows guild invites from a click
+    r.inviteMode = "confirm" -- WoW: Forever blocks addon invites; the Invite prompt runs /ginvite on your click
     r.people = r.people or {}
     r.query = r.query or { min = 1, max = 60, step = false }
     r.query.guildOn, r.query.guild = nil, nil -- 2.0: guild search removed
@@ -538,7 +538,8 @@ function RC:CanInvite()
     return true
 end
 
-function RC:Invite(full, automatic)
+-- Can you invite `full` right now? true, or false and why.
+function RC:CanInviteNow(full)
     if self:IsDNW(full) then
         return false, ns.ShortName(full) .. " asked not to be contacted (Do Not Whisper list)."
     end
@@ -548,13 +549,12 @@ function RC:Invite(full, automatic)
         return false, "Whisper " .. ns.ShortName(full) .. " before inviting them."
     end
     if not self:CanInvite() then return false, "Your guild rank can't invite new members." end
-    self.lastInvite = { full = full, at = GetTime(), automatic = automatic }
-    local target = ns.ChatName(full)
-    if C_GuildInfo and C_GuildInfo.Invite then
-        C_GuildInfo.Invite(target)
-    elseif GuildInvite then
-        GuildInvite(target)
-    end
+    if self:Get(full) and self:Get(full).joined then return false, ns.ShortName(full) .. " already joined." end
+    return true
+end
+
+-- Records an invite you just sent (from the Invite prompt).
+function RC:MarkInvited(full)
     local r = self:Settings()
     local p = r and r.people[full]
     if p then
@@ -562,31 +562,26 @@ function RC:Invite(full, automatic)
         self:ShareStatus(full)
     end
     Changed()
+end
+
+-- WoW: Forever blocks addons from calling C_GuildInfo.Invite, so inviting
+-- always goes through the Invite prompt, whose button runs /ginvite on your
+-- click (UI/InvitePrompt.lua). Returns false and why when it can't.
+function RC:Invite(full)
+    local ok, err = self:CanInviteNow(full)
+    if not ok then return false, err end
+    ns.InvitePrompt:Show(full)
     return true
 end
 
 -- One-click confirmation (a click always counts as a player action).
 function RC:ConfirmInvite(full, reply)
-    StaticPopup_Show("NOOTROPICGM_INVITE", ns.ShortName(full), reply or "", { full = full })
+    ns.InvitePrompt:Show(full, reply)
 end
 
--- If the game refuses an automatic invite, switch to one-click confirmation.
+-- The game refused something the addon tried (e.g. a timed whisper).
 function RC:OnActionBlocked(addon, func)
-    if addon == ns.name and self:OnWhisperBlocked(func) then return end
-    local li = self.lastInvite
-    if addon ~= ns.name or not (li and li.automatic) or GetTime() - li.at > 2 then return end
-    local r = self:Settings()
-    if not r then return end
-    r.inviteMode = "confirm"
-    local p = r.people[li.full]
-    if p then
-        p.invited = nil
-        self:ShareStatus(li.full, { invited = true })
-    end
-    self.lastInvite = nil
-    ns:Print("This game client only allows guild invites from a click, so Nootropic Guild Manager will now pop up an Invite button when someone replies with a keyword.")
-    self:ConfirmInvite(li.full, p and p.reply)
-    Changed()
+    if addon == ns.name then self:OnWhisperBlocked(func) end
 end
 
 ------------------------------------------------------------------------
@@ -979,12 +974,8 @@ function RC:OnWhisper(text, sender)
         return
     end
     if keyword then
-        if r.inviteMode == "confirm" or not self:CanInvite() then
-            self:ConfirmInvite(full, text)
-        else
-            ns:Print(("%s replied \"%s\" - sending a guild invite."):format(ns.ShortName(full), keyword))
-            self:Invite(full, true)
-        end
+        ns:Print(("%s replied \"%s\" - click Invite to send them a guild invite."):format(ns.ShortName(full), keyword))
+        self:ConfirmInvite(full, text)
     end
     Changed()
 end
@@ -992,22 +983,6 @@ end
 ------------------------------------------------------------------------
 -- Init
 ------------------------------------------------------------------------
-StaticPopupDialogs.NOOTROPICGM_INVITE = {
-    text = "|cffffd100%s|r replied:\n\"%s\"\n\nInvite them to the guild?",
-    button1 = "Invite",
-    button2 = CANCEL or "Cancel",
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-    OnAccept = function(self, data)
-        data = data or self.data
-        if data and data.full then
-            local ok, err = RC:Invite(data.full, false)
-            if not ok and err then ns:Print("|cffff5555" .. err .. "|r") end
-        end
-    end,
-}
 
 function RC:Init()
     ns:RegisterEvent("WHO_LIST_UPDATE", function() RC:OnWhoResults() end)
