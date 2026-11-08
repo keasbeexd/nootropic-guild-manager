@@ -6,7 +6,7 @@ A guild manager for **World of Warcraft: Forever**: a searchable roster with pro
 
 **Version 2.1** adds a roster change log to the Audit tab (joins, leaves, kicks, promotions, level-ups, note and name changes) with join dates and rank-since dates on profiles. It removes tags (the Tags tab, column, filter, profile section and menus, and the two tag permissions). It syncs on protocol 5, so 2.0 and 2.1 don't sync with each other; everyone should update.
 
-**Version 2.1.8** sends invites by putting `/ginvite` in your chat box for you to press Enter, since Forever also blocked it from the secure button. **Version 2.1.7** fixes the Invite button missing clicks (the secure button could end up underneath it) and adds the Invite prompt to `/ngm diag`. **Version 2.1.6** fixes guild invites, which WoW: Forever blocked when the addon sent them: the Invite prompt now runs `/ginvite` from your click. **Version 2.1.5** rewrites the built-in class messages in the same voice as the default message (social guild, real life first, building a raid core, one line for the class); unedited ones are updated, your own edits are kept. **Version 2.1.4** adds the **Do Not Whisper** window (the list plus everyone whispered in the last 14 days, with time left), **Add to Do Not Whisper** on right-clicking names in chat and on unit frames, and a choice of hourly whisper cap. **Version 2.1.3** makes sure whispers fit WoW's 255-character limit with Forever's two-part names (a shorter default message, first name only when needed, never cut mid-word), adds `no` to the Do Not Whisper words, and only lets answers to the addon's own whisper put someone on that list. **Version 2.1.2** fixes text on the options pages that overlapped or ran off the edge, and clears settings left over from tags (a minimap click set to "Open Tags" now opens Find). **Version 2.1.1** brought the new default recruitment message.
+**Version 2.1.9** rewrites the default and class messages to sound like a person (first name via the new `$first`, no "Just reply invite") and adds `yeah` to the invite keywords. **Version 2.1.8** sends invites by putting `/ginvite` in your chat box for you to press Enter, since Forever also blocked it from the secure button. **Version 2.1.7** fixes the Invite button missing clicks (the secure button could end up underneath it) and adds the Invite prompt to `/ngm diag`. **Version 2.1.6** fixes guild invites, which WoW: Forever blocked when the addon sent them: the Invite prompt now runs `/ginvite` from your click. **Version 2.1.5** rewrites the built-in class messages in the same voice as the default message (social guild, real life first, building a raid core, one line for the class); unedited ones are updated, your own edits are kept. **Version 2.1.4** adds the **Do Not Whisper** window (the list plus everyone whispered in the last 14 days, with time left), **Add to Do Not Whisper** on right-clicking names in chat and on unit frames, and a choice of hourly whisper cap. **Version 2.1.3** makes sure whispers fit WoW's 255-character limit with Forever's two-part names (a shorter default message, first name only when needed, never cut mid-word), adds `no` to the Do Not Whisper words, and only lets answers to the addon's own whisper put someone on that list. **Version 2.1.2** fixes text on the options pages that overlapped or ran off the edge, and clears settings left over from tags (a minimap click set to "Open Tags" now opens Find). **Version 2.1.1** brought the new default recruitment message.
 
 ## Install
 
@@ -77,6 +77,7 @@ A guild manager for **World of Warcraft: Forever**: a searchable roster with pro
 
 | Token | Becomes |
 | --- | --- |
+| `$first` | their first name (e.g. "Audrey"), what a person would type |
 | `$name` | their full character name, first and second (e.g. "Audrey Pichhale") |
 | `$class` | their class |
 | `$level` | their level |
@@ -94,7 +95,7 @@ A live preview shows the result. Whispers are limited to 255 characters (bytes: 
 
 Order is priority: use the up/down arrows to move a message. Put specific messages ("Night Elf Druids in Darkshore") above broad ones ("Druids"). **New**, **Copy** (duplicate and tweak) and **Delete** manage the list, and the enable box beside each message turns it off without deleting it. While you edit, the window shows how many players in the current search match the filters, how many will actually get this message (others may be taken by a message above it), and a preview for one of them. There's no gender filter: the game doesn't reliably say a player's gender.
 
-**Built-in class messages**: a ready-made, friendly message for every class is added for you (turned on, after any messages of your own). That includes Paladins and Shamans for both factions, since WoW: Forever lets either faction play them; guilds that set up their messages on older versions get the one they were missing (Paladin for Horde, Shaman for Alliance) added once, turned on. Edit them, switch them off or delete them; **Class Defaults** adds back any class that's missing one.
+**Built-in class messages**: a ready-made, friendly message for every class is added for you, written to read like a person typed it (their first name, "I'm recruiting for...", and a question like "Want an invite?" rather than a command word) (turned on, after any messages of your own). That includes Paladins and Shamans for both factions, since WoW: Forever lets either faction play them; guilds that set up their messages on older versions get the one they were missing (Paladin for Horde, Shaman for Alliance) added once, turned on. Edit them, switch them off or delete them; **Class Defaults** adds back any class that's missing one.
 
 **Import / Export**: **Export...** shows every message as plain text to copy (Ctrl+C) and share on Discord, a website or a text file. **Import...** takes that text (Ctrl+V) and either adds the messages after yours or replaces your whole list. The format is easy to write by hand:
 
@@ -105,7 +106,7 @@ classes: Druid
 races: Night Elf
 levels: 10-60
 zones: Teldrassil, Darkshore
-text: Hi $name! $guild would love a Druid from $zone. Reply "invite" to join.
+text: Hey $first! I'm recruiting for $guild and we'd love a Druid from $zone. Want an invite?
 ```
 
 Each message starts with `message:`. Lines you leave out mean "any"; `#` lines are ignored (older exports' `guild:` lines are accepted and ignored). Anything the importer can't read is reported, and the rest still imports.
