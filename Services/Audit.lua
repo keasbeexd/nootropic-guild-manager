@@ -4,20 +4,21 @@
     for the Audit tab and the profile History section (officers only).
 ]]
 local _, ns = ...
-local D = ns.Data
 local AU = {}
 ns.Audit = AU
 
 AU.CATEGORIES = {
-    { key = "MT", label = "Tags" },
+    { key = "GM", label = "Joined / left" },
+    { key = "GK", label = "Promotions / demotions" },
+    { key = "LV", label = "Level ups" },
+    { key = "GN", label = "Guild notes" },
+    { key = "NC", label = "Name changes" },
     { key = "M",  label = "Main / Alt" },
     { key = "MS", label = "Spec" },
     { key = "RL", label = "Role" },
     { key = "MP", label = "Professions" },
     { key = "P",  label = "Reported by their addon" },
     { key = "L",  label = "Officer log" },
-    { key = "T",  label = "Tag list" },
-    { key = "TI", label = "Tag icons" },
     { key = "CN", label = "Contact" },
     { key = "GS", label = "Guild settings" },
     { key = "DN", label = "Do Not Whisper" },
@@ -25,10 +26,16 @@ AU.CATEGORIES = {
 
 local GREEN, RED, GRAY = "|cff40ff40", "|cffff6060", "|cff9d9d9d"
 
-local function TagName(id)
-    local rec = ns.Sync:Get("T:" .. id)
-    local def = rec and ns.Sync.Codec.ParseTagDef(rec.v)
-    return def and def.name or id
+-- Who made a change. Changes noticed in the guild roster (level-ups, note
+-- edits, renames) have no known author.
+function AU.Who(author)
+    if not author or author == "" then return "Guild roster" end
+    return ns.ShortName(author)
+end
+
+local function Quote(text)
+    if text == "" then return GRAY .. "empty|r" end
+    return "\"" .. text .. "\""
 end
 
 local function SetDiff(old, new, nameOf)
@@ -53,9 +60,25 @@ end
 -- Readable description of one entry.
 function AU:Describe(e)
     local t, old, new = e.typ, e.old or "", e.new or ""
-    if t == "MT" then
-        local diff = SetDiff(old, new, TagName)
-        return "Tags: " .. (diff ~= "" and diff or GRAY .. "unchanged|r")
+    if t == "GM" then
+        if new == "join" or new == "rejoin" then
+            local how = new == "rejoin" and "Rejoined the guild" or "Joined the guild"
+            return GREEN .. how .. "|r" .. ((e.ref and e.ref ~= "") and (" (invited by " .. ShortChar(e.ref) .. ")") or "")
+        end
+        if new == "quit" then return RED .. "Left the guild|r" end
+        if new == "remove" then return RED .. "Removed from the guild|r" end
+        return "Membership changed"
+    elseif t == "GK" then
+        local verb = e.ref == "demote" and "Demoted to " or "Promoted to "
+        return verb .. new .. (old ~= "" and (GRAY .. " (was " .. old .. ")|r") or "")
+    elseif t == "LV" then
+        return ("Level %s to %s"):format(old, new)
+    elseif t == "GN" then
+        local which = e.ref == "officer" and "Officer note" or "Public note"
+        if new == "" then return which .. " cleared" .. GRAY .. " (was " .. Quote(old) .. ")|r" end
+        return which .. ": " .. Quote(new) .. (old ~= "" and (GRAY .. " (was " .. Quote(old) .. ")|r") or "")
+    elseif t == "NC" then
+        return ("Renamed from %s to %s"):format(ShortChar(old), ShortChar(new))
     elseif t == "M" then
         if new ~= "" and old == "" then return "Marked as an alt of " .. ShortChar(new) end
         if new == "" then return "Unlinked from main " .. ShortChar(old) .. " (now a main)" end
@@ -100,17 +123,6 @@ function AU:Describe(e)
         if new == "" then return "Removed " .. who .. " from the Do Not Whisper list" end
         local reply = new:match("^%d+;(.*)$")
         return "Added " .. who .. " to the Do Not Whisper list" .. ((reply and reply ~= "") and (GRAY .. " (said \"" .. reply .. "\")|r") or "")
-    elseif t == "T" then
-        local o, n = ns.Sync.Codec.ParseTagDef(old), ns.Sync.Codec.ParseTagDef(new)
-        if n and not o then return "Tag created: " .. n.name end
-        if n and n.deleted and not (o and o.deleted) then return RED .. "Tag deleted:|r " .. n.name end
-        if o and n and o.name ~= n.name then return ("Tag renamed from %s to %s"):format(o.name, n.name) end
-        if o and n and o.color ~= n.color then return "Tag color changed: " .. n.name end
-        if o and n and o.order ~= n.order then return "Tag moved: " .. n.name end
-        return "Tag changed: " .. (n and n.name or "?")
-    elseif t == "TI" then
-        local icon = D:ParseIcon(new)
-        return "Tag icon changed: " .. (icon and ("|T" .. icon .. ":14:14:0:0:64:64:5:59:5:59|t ") or "") .. TagName(e.ref or "?")
     elseif t == "GS" then
         local perm = (e.ref or ""):match("^perm_(.+)$")
         local def = perm and ns.DB:PermDef(perm)

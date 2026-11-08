@@ -3,12 +3,12 @@
     Opens beside the roster. Two modes:
 
       Read (default)  header (name, level, spec, class, rank, location),
-                      main/alt line, contact, tags they have, usual online
+                      main/alt line, contact, usual online
                       hours (learned from play time), then tabs:
                         Profile   professions
                         Notes     your private notes about them
                         Officer   officer log, change history (officers)
-      Edit            contact, spec, roles, tags, professions and main/alt
+      Edit            contact, spec, roles, professions and main/alt
                       links, each as far as your rank may
 
     The Edit button shows when you may edit something: always your own
@@ -121,23 +121,6 @@ local function SmallX(parent, tip)
     return b
 end
 
--- Places frames left to right, wrapping at INNER. Returns the height used.
-local function Flow(items, startY, gapX, gapY, rowH)
-    local x, y = 0, startY
-    for _, it in ipairs(items) do
-        local w = it:GetWidth()
-        if x > 0 and x + w > INNER then
-            x = 0
-            y = y - rowH - gapY
-        end
-        it:ClearAllPoints()
-        it:SetPoint("TOPLEFT", x, y)
-        it:Show()
-        x = x + w + gapX
-    end
-    return -(y - rowH)
-end
-
 ------------------------------------------------------------------------
 -- Build
 ------------------------------------------------------------------------
@@ -198,7 +181,6 @@ function DP:Build()
     -- read mode
     self.linkLine = self:BuildLinkLine(content)
     self.contactBox = self:BuildContactBox(content)
-    self.tagsRead = self:BuildTagSection(content, "read")
     self.schedule = self:BuildScheduleSection(content)
     self.tabs = self:BuildTabs(content)
     -- tab contents (and edit mode)
@@ -211,13 +193,12 @@ function DP:Build()
     self:BuildAltSection(content)
     self:BuildSpecSection(content)
     self:BuildRoleSection(content)
-    self.tagsEdit = self:BuildTagSection(content, "edit")
 
     self.allSections = {
-        self.linkLine, self.contactBox, self.tagsRead, self.schedule, self.tabs,
+        self.linkLine, self.contactBox, self.schedule, self.tabs,
         self.prof, self.note, self.log, self.history,
         self.editContact,
-        self.alt, self.spec, self.role, self.tagsEdit,
+        self.alt, self.spec, self.role,
     }
 
     self.footer = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -395,60 +376,6 @@ function DP:RefreshContactBox(e)
     s.From:SetText(fromMain and ("From their main, " .. ns.ShortName(fromMain)) or "")
     if fromMain then y = y - 15 end
     s:SetHeight(-y + 2)
-    return true
-end
-
-------------------------------------------------------------------------
--- Tags: read mode shows theirs, edit mode shows all to toggle
-------------------------------------------------------------------------
-function DP:BuildTagSection(parent, mode)
-    local s = NewSection(parent, mode == "edit" and "Tags" or nil)
-    s.mode = mode
-    s.pills = {}
-    if mode == "edit" then
-        s.Hint = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        s.Hint:SetPoint("LEFT", s.Title, "RIGHT", 6, 0)
-        s.Hint:SetText("click to turn on or off")
-        s.Line:SetPoint("LEFT", s.Hint, "RIGHT", 6, 0)
-    end
-    return s
-end
-
-function DP:LayoutTags(s, e)
-    local m = ns.DB:GetMember(e.full)
-    local set = (m and m.tags) or {}
-    local items = {}
-    for _, tag in ipairs(ns.DB:GetTags()) do
-        if s.mode == "edit" or set[tag.id] then
-            local i = #items + 1
-            local p = s.pills[i]
-            if not p then
-                p = W.Pill(s, 18, 16)
-                p:SetScript("OnClick", function(self)
-                    if s.mode == "edit" and DP.entry and self.tag and ns.DB:CanEditTags(DP.entry.full) then
-                        ns.DB:SetTag(DP.entry.full, self.tag.id)
-                        ns.PlaySound("U_CHAT_SCROLL_BUTTON")
-                    end
-                end)
-                p:SetScript("OnEnter", function(self)
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:AddLine(self.tag and D:TagLabel(self.tag) or "")
-                    if s.mode == "edit" then
-                        GameTooltip:AddLine("Click to turn on or off. Shared with the guild.", 1, 1, 1, true)
-                    end
-                    GameTooltip:Show()
-                end)
-                p:SetScript("OnLeave", function() GameTooltip:Hide() end)
-                s.pills[i] = p
-            end
-            p:SetTag(tag, s.mode == "read" or (set[tag.id] and true or false))
-            items[#items + 1] = p
-        end
-    end
-    for i = #items + 1, #s.pills do s.pills[i]:Hide() end
-    if #items == 0 then return false end
-    local top = s.mode == "edit" and -22 or 0
-    s:SetHeight(Flow(items, top, 4, 4, 18))
     return true
 end
 
@@ -901,6 +828,10 @@ function DP:BuildHistorySection(parent)
     s.rows = {}
     s.Empty = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     s.Empty:SetText("No recorded changes yet.")
+    s.Member = s:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    s.Member:SetPoint("TOPLEFT", 0, -22)
+    s.Member:SetWidth(INNER)
+    s.Member:SetJustifyH("LEFT")
     s.All = SmallButton(s, "View all in Audit", 140)
     s.All:SetScript("OnClick", function()
         if not DP.entry then return end
@@ -933,13 +864,18 @@ function DP:RefreshHistory(e)
     local entries = ns.Audit:Entries({ member = e.full })
     local groups = ns.Audit:Group(entries)
     local y = -22
+    -- join date and rank since (kept longer than the audit itself)
+    local member = ns.RosterLog:Lines(e.full)
+    s.Member:SetText(member and table.concat(member, "\n") or "")
+    s.Member:SetShown(member ~= nil)
+    if member then y = y - math.ceil(s.Member:GetStringHeight()) - 8 end
     local shown = math.min(#groups, HISTORY_MAX)
     for i = 1, shown do
         local g = groups[i]
         local r = HistoryRow(s, i)
         local lines = {}
         for _, entry in ipairs(g.entries) do lines[#lines + 1] = ns.Audit:Describe(entry) end
-        r.Meta:SetText(ns.FormatDate(g.t) .. "  -  " .. ns.ShortName(g.author or "?")
+        r.Meta:SetText(ns.FormatDate(g.t) .. "  -  " .. ns.Audit.Who(g.author)
             .. (#lines > 1 and ("  -  " .. #lines .. " changes") or ""))
         r.Text:SetText(table.concat(lines, "\n"))
         local h = 12 + 2 + math.max(12, math.ceil(r.Text:GetStringHeight()))
@@ -1347,7 +1283,7 @@ end
 -- May you edit anything on this profile?
 function DP:CanEdit(e)
     if not e then return false end
-    return e.full == ns.PlayerFullName() or ns.IsOfficer() or ns.DB:CanEditProfile(e.full) or ns.DB:CanEditTags(e.full)
+    return e.full == ns.PlayerFullName() or ns.IsOfficer() or ns.DB:CanEditProfile(e.full)
         or ns.DB:CanEditLinks()
 end
 
@@ -1369,13 +1305,11 @@ function DP:VisibleSections(e)
         add(self.alt, ns.DB:CanEditLinks())
         add(self.spec)
         add(self.role)
-        add(self.tagsEdit, self:LayoutTags(self.tagsEdit, e))
         add(self.prof)
         return list
     end
     add(self.linkLine)
     add(self.contactBox, self:RefreshContactBox(e))
-    add(self.tagsRead, self:LayoutTags(self.tagsRead, e))
     add(self.schedule, self:RefreshSchedule(e))
     add(self.tabs)
     if self.tab == "notes" then
@@ -1398,7 +1332,7 @@ function DP:Layout(visible)
     for _, s in ipairs(visible) do
         s:ClearAllPoints()
         local gap = (s == self.tabs) and (SECTION_GAP + 4) or SECTION_GAP
-        if s == self.linkLine or s == self.contactBox or s == self.tagsRead then gap = 8 end
+        if s == self.linkLine or s == self.contactBox then gap = 8 end
         s:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -gap)
         total = total + gap + s:GetHeight()
         prev = s

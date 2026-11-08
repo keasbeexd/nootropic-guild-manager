@@ -3,24 +3,22 @@
     Adds this addon's data to Blizzard's own guild roster instead of
     replacing it:
 
-      Rows      a few tag icons and an "alt" marker after each name
-      Tooltip   tags, main / alts, Discord, usually online, professions
-      Menu      right-click a member: Profile, Tags, Main / Alt
+      Rows      an "alt" marker after each alt's name
+      Tooltip   main / alts, Discord, usually online, professions
+      Menu      right-click a member: Profile, Main / Alt
       Alt+click a member opens their profile docked beside the window
 
     Only additive, taint-safe hooks are used: our own child frames on the
     rows, HookScript on tooltips, ScrollUtil's row callback, and the
     official Menu.ModifyMenu. Blizzard's frames, sorting and protected
     actions (invite, promote, remove) are left untouched.
-    Off switch: Options > "Show tags and alts on the Guild roster".
+    Off switch: Options > "Show alts and profiles on the Guild roster".
 ]]
 local _, ns = ...
-local W, D = ns.Widgets, ns.Data
 local GR = {}
 ns.GuildRoster = GR
 
 local ICON = 12
-local MAX_TAG_ICONS = 3
 local decorated = setmetatable({}, { __mode = "k" }) -- rows we've added to
 
 function GR:Enabled()
@@ -74,22 +72,15 @@ function GR:OpenProfile(e)
 end
 
 ------------------------------------------------------------------------
--- Rows: tag icons and an alt marker after the name
+-- Rows: an alt marker after the name
 ------------------------------------------------------------------------
 local function Badge(row)
     local b = row.NGMBadge
     if b then return b end
     b = CreateFrame("Frame", nil, row)
-    b:SetSize(ICON * (MAX_TAG_ICONS + 1) + 8, ICON)
+    b:SetSize(ICON * 2, ICON)
     b:SetFrameLevel(row:GetFrameLevel() + 3)
     b:EnableMouse(false)
-    b.icons = {}
-    for i = 1, MAX_TAG_ICONS do
-        local t = b:CreateTexture(nil, "OVERLAY")
-        t:SetSize(ICON, ICON)
-        t:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-        b.icons[i] = t
-    end
     b.Alt = b:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     b.Alt:SetText("alt")
     row.NGMBadge = b
@@ -111,20 +102,8 @@ function GR:DecorateRow(row)
     end
     b = Badge(row)
     local x = 0
-    for i = 1, MAX_TAG_ICONS do
-        local tag, t = e.tagList and e.tagList[i], b.icons[i]
-        if tag then
-            W.SetIcon(t, D:TagIcon(tag))
-            t:ClearAllPoints()
-            t:SetPoint("LEFT", x, 0)
-            t:Show()
-            x = x + ICON + 1
-        else
-            t:Hide()
-        end
-    end
     b.Alt:ClearAllPoints()
-    b.Alt:SetPoint("LEFT", x + (x > 0 and 3 or 0), 0)
+    b.Alt:SetPoint("LEFT", 0, 0)
     b.Alt:SetShown(e.isAlt and true or false)
     if e.isAlt then x = x + 3 + math.ceil(b.Alt:GetStringWidth()) end
     b:SetWidth(math.max(1, x))
@@ -170,11 +149,6 @@ function GR:AddTooltip(e)
     local hours = PF:Hours(e.full)
     local summary = hours and PF.Summary(hours)
     if summary then GameTooltip:AddLine(("Usually online: %s (%s)"):format(summary, PF.ClockLabel()), 0.7, 0.7, 0.7, true) end
-    if e.tagList and #e.tagList > 0 then
-        local names = {}
-        for i, tag in ipairs(e.tagList) do names[i] = D:TagLabel(tag, 12) end
-        GameTooltip:AddLine(table.concat(names, "  "), 1, 1, 1, true)
-    end
     GameTooltip:AddLine("Alt+click or right-click for the profile.", 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end
@@ -229,15 +203,6 @@ function GR:AddMenu(owner, root, contextData)
     root:CreateDivider()
     root:CreateTitle("Nootropic Guild Manager")
     root:CreateButton("Profile", function() GR:OpenProfile(ns.Roster.byName[full]) end)
-    if ns.DB:CanEditTags(full) and #ns.DB:GetTags() > 0 then
-        local sub = root:CreateButton("Tags")
-        for _, tag in ipairs(ns.DB:GetTags()) do
-            local id = tag.id
-            sub:CreateCheckbox(D:TagLabel(tag, 14),
-                function() local m = ns.DB:GetMember(full); return (m and m.tags and m.tags[id]) and true or false end,
-                function() ns.DB:SetTag(full, id) end)
-        end
-    end
     if ns.DB:CanEditLinks() then
         local sub = root:CreateButton("Main / Alt")
         local cur = ns.Roster.byName[full]
@@ -308,6 +273,5 @@ function GR:Init()
     self:Attach()
     local function refresh() ns.Debounce("guildrosterrows", 0.1, function() GR:RefreshRows() end) end
     ns:On("ROSTER_UPDATED", refresh)
-    ns:On("TAGS_CHANGED", refresh)
     ns:On("MEMBER_CHANGED", refresh)
 end

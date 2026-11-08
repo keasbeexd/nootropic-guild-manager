@@ -199,7 +199,7 @@ function W.ColumnHeader(parent, label, width, justify)
 end
 
 ------------------------------------------------------------------------
--- Tag pill
+-- Pill (a small rounded label)
 ------------------------------------------------------------------------
 function W.Pill(parent, height, padding)
     height = height or 16
@@ -229,31 +229,7 @@ function W.Pill(parent, height, padding)
         end
     end
 
-    -- Tag icon and name in the tag's color. active == false draws it dimmed (toggles).
-    function p:SetTag(tag, active)
-        self.tag = tag
-        self.Text:SetText(tag.name)
-        self.Icon:SetTexture(D:TagIcon(tag))
-        self.Icon:Show()
-        local r, g, b = D:TagColor(tag.color)
-        if active == false then
-            self:SetBackdropColor(0.06, 0.06, 0.06, 0.85)
-            self:SetBackdropBorderColor(0.32, 0.32, 0.32, 0.9)
-            self.Text:SetTextColor(0.55, 0.55, 0.55)
-            self.Icon:SetDesaturated(true)
-            self.Icon:SetAlpha(0.6)
-        else
-            self:SetBackdropColor(r * 0.28, g * 0.28, b * 0.28, 0.92)
-            self:SetBackdropBorderColor(r, g, b, 0.85)
-            self.Text:SetTextColor(math.min(1, r * 0.45 + 0.55), math.min(1, g * 0.45 + 0.55), math.min(1, b * 0.45 + 0.55))
-            self.Icon:SetDesaturated(false)
-            self.Icon:SetAlpha(1)
-        end
-        Fit(self)
-    end
-
     function p:SetLabel(text)
-        self.tag = nil
         self.Icon:Hide()
         self.Text:SetText(text)
         self:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
@@ -263,24 +239,6 @@ function W.Pill(parent, height, padding)
     end
 
     return p
-end
-
--- A tag's icon with a thin border in the tag's color (roster Tags column).
-function W.TagIcon(parent, size)
-    local f = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    f:SetSize(size, size)
-    f:SetBackdrop({ edgeFile = W.WHITE, edgeSize = 1 })
-    f.Icon = f:CreateTexture(nil, "ARTWORK")
-    f.Icon:SetPoint("TOPLEFT", 1, -1)
-    f.Icon:SetPoint("BOTTOMRIGHT", -1, 1)
-    f.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    function f:SetTag(tag)
-        self.tag = tag
-        self.Icon:SetTexture(D:TagIcon(tag))
-        local r, g, b = D:TagColor(tag.color)
-        self:SetBackdropBorderColor(r, g, b, 1)
-    end
-    return f
 end
 
 ------------------------------------------------------------------------
@@ -454,43 +412,6 @@ function W.StatBar(parent, height)
     bar:SetMinMaxValues(0, 1)
     bg.Bar = bar
     return bg
-end
-
--- The color menu for tags, kudos, polls and stats: the general colors, then
--- the class colors in a submenu. getCurrent() returns the chosen number;
--- onPick(number) runs on a pick.
-function W.ShowColorMenu(owner, getCurrent, onPick)
-    local items, classes = { { text = "Color", isTitle = true } }, {}
-    for i, c in ipairs(D.TAG_COLORS) do
-        local item = {
-            text = D:TagColorHex(i) .. c.name .. "|r",
-            radio = true,
-            checked = function() return getCurrent() == i end,
-            func = function() onPick(i) end,
-        }
-        if c.hidden then
-            -- not offered (a class this game doesn't have)
-        elseif c.class then
-            classes[#classes + 1] = item
-        else
-            items[#items + 1] = item
-        end
-    end
-    items[#items + 1] = { text = "Class Colors", submenu = classes }
-    W.ShowMenu(owner, items)
-end
-
--- A dropdown-looking button for picking a color (text set by the caller).
-function W.ColorButton(parent, width)
-    local b = W.Button(parent, "", width or 140, 22)
-    b.Arrow = b:CreateTexture(nil, "OVERLAY")
-    b.Arrow:SetSize(18, 18)
-    b.Arrow:SetPoint("RIGHT", -4, 0)
-    b.Arrow:SetTexture("Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up")
-    function b:SetColor(index)
-        self:SetText(D:TagColorHex(index) .. D:ColorName(index) .. "|r")
-    end
-    return b
 end
 
 ------------------------------------------------------------------------

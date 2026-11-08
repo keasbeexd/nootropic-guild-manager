@@ -1,7 +1,7 @@
 --[[
     Nootropic Guild Manager - Main window
     Blizzard portrait frame with icon tabs down the right side (Find,
-    Recruitment, Tags, Audit),
+    Recruitment, Audit),
     a status line, and the member detail flyout.
 ]]
 local _, ns = ...
@@ -11,9 +11,9 @@ ns.UI = UI
 
 local FRAME_W, FRAME_H = 1000, 580
 local MIN_W, MIN_H, MAX_W, MAX_H = 640, 520, 1800, 1100
-local TAB_LABELS = { "Find", "Recruitment", "Tags", "Audit" }
-UI.TAB_ROSTER, UI.TAB_RECRUIT, UI.TAB_TAGS, UI.TAB_AUDIT = 1, 2, 3, 4
-local OFFICER_TABS = { [3] = true, [4] = true } -- Tags and Audit
+local TAB_LABELS = { "Find", "Recruitment", "Audit" }
+UI.TAB_ROSTER, UI.TAB_RECRUIT, UI.TAB_AUDIT = 1, 2, 3
+local OFFICER_TABS = { [3] = true } -- Audit
 
 ------------------------------------------------------------------------
 -- Creation
@@ -54,12 +54,10 @@ function UI:Create()
     ns.RosterView.LIST_WIDTH = math.floor(f:GetWidth() - ns.RosterView.LIST_INSET)
     ns.RosterView:Build(f)
     ns.RecruitView:Build(f)
-    ns.TagsView:Build(f)
     ns.AuditView:Build(f)
     ns.DetailPanel:Build()
     self:BuildTabs(f)
     self:BuildResizeGrip(f)
-    ns.TagsView:OnResize(f:GetWidth())
 
     f:SetScript("OnShow", ns.Safe(function()
         ns.PlaySound("IG_CHARACTER_INFO_OPEN")
@@ -131,7 +129,6 @@ function UI:BuildResizeGrip(f)
     f:SetScript("OnSizeChanged", function(self, w)
         ns.RosterView:SetListWidth((w or self:GetWidth()) - ns.RosterView.LIST_INSET)
         ns.RecruitView:OnResize()
-        ns.TagsView:OnResize(w or self:GetWidth())
         ns.AuditView:OnResize()
     end)
 end
@@ -171,7 +168,6 @@ UI.DEFAULT_TAB_ICONS = {
     -- a group of people, as on the Guild & Communities window's roster tab
     IconIfPresent("Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend", "Interface\\Icons\\Spell_Holy_PrayerOfFortitude"), -- Roster
     "Interface\\Icons\\Ability_Warrior_BattleShout",  -- Recruitment
-    "Interface\\Icons\\INV_Misc_Note_01",             -- Tags
     "Interface\\Icons\\INV_Misc_Spyglass_02",         -- Audit
 }
 
@@ -324,7 +320,6 @@ end
 
 function UI:IsTabAvailable(id)
     if id == UI.TAB_RECRUIT then return ns.DB:HasPerm("recruit") end
-    if id == UI.TAB_TAGS and ns.DB:HasPerm("tags") then return true end
     return not OFFICER_TABS[id] or ns.IsOfficer()
 end
 
@@ -399,7 +394,6 @@ function UI:SelectTab(id)
 
     ns.RosterView.page:SetShown(id == UI.TAB_ROSTER)
     ns.RecruitView.page:SetShown(id == UI.TAB_RECRUIT)
-    ns.TagsView.page:SetShown(id == UI.TAB_TAGS)
     ns.AuditView.page:SetShown(id == UI.TAB_AUDIT)
     if id ~= UI.TAB_ROSTER and ns.DetailPanel.host == f then ns.DetailPanel:Hide() end
 end
