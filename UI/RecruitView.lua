@@ -601,7 +601,7 @@ function RCV:ShowRowMenu(row, p)
         { text = whispered and "Invite to Guild" or "Invite to Guild (whisper them first)",
           disabled = p.joined or dnw or not whispered or not ns.Recruit:CanInvite(),
           func = function()
-              local ok, err = ns.Recruit:Invite(p.full, false)
+              local ok, err = ns.Recruit:Invite(p.full)
               if not ok and err then ns:Print("|cffff5555" .. err .. "|r") end
           end },
         { divider = true },
@@ -717,7 +717,7 @@ function RCV:RefreshReplyInfo()
     local words = {}
     for _, k in ipairs(r.keywords or {}) do if ns.Trim(k) ~= "" then words[#words + 1] = k end end
     local ON, OFF = "|cff40ff40on|r", "|cff9d9d9doff|r"
-    local invite = r.autoInvite and (ON .. (r.inviteMode == "confirm" and ", asks you first" or ", automatic")) or OFF
+    local invite = r.autoInvite and (ON .. ", Invite popup") or OFF
     local n = #ns.Recruit:DNWList()
     self.replyInfo:SetText(("|cffffd100Auto-invite:|r %s%s\n|cffffd100Do Not Whisper:|r %s, %s on the list"):format(
         invite, (r.autoInvite and #words > 0) and ("  |cff9d9d9d(" .. table.concat(words, ", ") .. ")|r") or "",
