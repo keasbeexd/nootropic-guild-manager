@@ -30,6 +30,9 @@ local DEFAULTS = {
         titleUseGuild = false,       -- window title: "<Guild> Guild Manager"
         showAddonCount = true,       -- "x using ... Guild Manager" at the bottom of the window
         whoWhisperButton = true,     -- recruitment whisper button on the game's /who results
+        shareReport = true,          -- share my spec and professions (Services/Sharing.lua)
+        shareRecipes = true,         -- share my recipes
+        showInTogether = true,       -- appear in guildmates' Play Together lists
         playRange = 5,               -- Play Together: levels either side of yours (0 = any)
         whisperPerHour = 40,         -- whisper queue cap per rolling hour (0 = only the 12-second spacing)
         auditDays = 30,              -- audit history kept: 30, 60 or 90 days

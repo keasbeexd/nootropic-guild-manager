@@ -2,6 +2,12 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.5.0
+
+- **Welcome tour** on first launch (and once for everyone updating): a page per tab, your sharing choices, your profile basics (Discord, contact note, roles), and for the Guild Master the permissions. Reopen it from Options or `/ngm welcome`.
+- **Sharing options** (Options > Sharing): Share my spec and professions, Share my recipes, Learn when I usually play, and Show me in Play Together. Turning one off stops sharing it and clears what was already shared; hiding from Play Together is respected by everyone's copy.
+- Fix: when someone stops sharing their spec and professions, guildmates' copies drop them right away instead of after a reload.
+
 ## 2.4.0
 
 - **Who Can Craft?** Every recipe your guildmates know, searchable, with online crafters first. Recipes are shared automatically when someone with the addon opens one of their profession windows (only recipes they've learned, never someone else's linked list). Open it from the Find tab's **Who Can Craft?** button or `/ngm craft <name>`. Each profile's professions show a **Recipes** button.

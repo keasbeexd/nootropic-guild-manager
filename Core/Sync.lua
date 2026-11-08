@@ -46,6 +46,8 @@
                            (base-36 spell IDs; Services/Recipes.lua)   the member only
       RR:<member>          raid readiness: attunements and keys
                            (Services/Readiness.lua)   the member only
+      PS:<member>          sharing choices others must respect: "together" =
+                           leave me out of Play Together (Services/Sharing.lua)   the member only
       SC:<member>          usual online hours: 168 bits (Monday 00:00 UTC
                            onward) as 42 hex digits   the member only
 
@@ -90,6 +92,7 @@ S.TYPES = {
     SC = { scope = "guild",   selfOnly = true, noAudit = true, label = "Usually online" },
     RP = { scope = "guild",   selfOnly = true, noAudit = true, low = true, label = "Recipes" },
     RR = { scope = "guild",   selfOnly = true, noAudit = true, label = "Raid readiness" },
+    PS = { scope = "guild",   selfOnly = true, noAudit = true, label = "Sharing choices" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
 }
@@ -560,7 +563,8 @@ function S:Materialize(typ, key, member, rec)
         local list = Codec.ParseProfs(v)
         m.profs = #list > 0 and list or nil
     elseif typ == "P" then
-        local data = Codec.ParseReport(v)
+        local data = v ~= "" and Codec.ParseReport(v) or nil
+        if v == "" then m.auto = nil end -- they stopped sharing it
         if data then
             data.ts = rec.t
             m.auto = data

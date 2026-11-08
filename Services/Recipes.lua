@@ -75,6 +75,7 @@ end
 
 function RCP:Capture()
     if not (IsInGuild() and ns.DB:Guild() and ns.Sync.readyFor) then return end
+    if not ns.Sharing:Get("recipes") then return end -- Options > Sharing
     local T = C_TradeSkillUI
     local profID, profName, childID = self:OpenProfession()
     if not (profID and T and T.GetFilteredRecipeIDs and T.GetRecipeInfo) then return end
