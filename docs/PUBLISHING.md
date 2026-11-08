@@ -5,8 +5,8 @@ Releases are automatic: push a version tag and the [Release workflow](../.github
 | Where | How players get it | Set up |
 | --- | --- | --- |
 | **GitHub** releases | WowUp's "Install from URL", or by hand | Works now: nothing to set up |
-| **CurseForge** | the CurseForge app, WowUp (CurseForge source) | Needs a project, its ID in the TOC and a token (below) |
-| **Wago Addons** | the Wago app, WowUp (Wago source) | Needs a project, its ID in the TOC and a token (below) |
+| **CurseForge** | the CurseForge app, WowUp (CurseForge source) | Set up: [project 1793021](https://www.curseforge.com/wow/addons/nootropic-guild-manager), `CF_API_KEY` secret |
+| **Wago Addons** | the Wago app, WowUp (Wago source) | Set up: [project 4N2baaNL](https://addons.wago.io/addons/nootropic-guild-manager), `WAGO_API_TOKEN` secret |
 | **WowUp** | installs from GitHub, CurseForge and Wago | Nothing extra: it reads the other three |
 | WoWInterface | — | Has no WoW: Forever category, so the packager skips it |
 

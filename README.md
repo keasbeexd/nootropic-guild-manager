@@ -50,7 +50,13 @@ published is in [docs/PUBLISHING.md](docs/PUBLISHING.md).
 
 ## Install
 
-**With WowUp:** Get Addons > **Install from URL**, paste `https://github.com/keasbeexd/nootropic-guild-manager`, with your WoW: Forever installation selected. WowUp then offers each new release as an update.
+Every release is published to all three, so use whichever you like:
+
+- **[CurseForge](https://www.curseforge.com/wow/addons/nootropic-guild-manager)**: the CurseForge app, or search "Nootropic Guild Manager" in WowUp.
+- **[Wago Addons](https://addons.wago.io/addons/nootropic-guild-manager)**: the Wago app, or WowUp.
+- **GitHub, with WowUp:** Get Addons > **Install from URL**, paste `https://github.com/keasbeexd/nootropic-guild-manager`, with your WoW: Forever installation selected.
+
+Whichever you pick, it offers each new release as an update.
 
 **By hand:** download `NootropicGuildManager-vX.Y-forever.zip` from the [latest release](https://github.com/keasbeexd/nootropic-guild-manager/releases/latest), then:
 
