@@ -57,6 +57,6 @@ Nothing is published to a site until both of its pieces are in place, so these c
 ## Security of the workflow
 
 - It runs only when you push a tag, never for pull requests, so code from forks can't reach the tokens.
-- Actions are pinned to exact commits (`actions/checkout` v4.2.2, `BigWigsMods/packager` v2.6.1). To update one, check the new release's notes, wait until it's been out a couple of weeks, and pin its commit.
+- Actions are pinned to exact commits (`actions/checkout` v7.0.1, `BigWigsMods/packager` v2.6.1). To update one, check the new release's notes, wait until it's been out a couple of weeks, and pin its commit.
 - The job can only write releases (`permissions: contents: write`), and the checkout doesn't keep the GitHub token.
 - Tokens are repository secrets: GitHub hides them in logs. If one leaks, revoke it on its site and add a new one.
