@@ -55,15 +55,40 @@ function Layout:Check(text, hint, onClick)
     return cb
 end
 
--- A line of text (wraps to the page width).
+-- Text blocks wrap at a fixed width. Pages are built while hidden, before
+-- the game has sized them, so a block can't measure its own wrapped height;
+-- an invisible copy on UIParent (always laid out) measures it instead. The
+-- settings canvas is ~635 wide on Forever (SettingsPanel 920), so 564 fits.
+local TEXT_W = 564
+local measure
+local function TextHeight(text, font)
+    if not measure then
+        measure = UIParent:CreateFontString(nil, "OVERLAY")
+        measure:SetWordWrap(true)
+        measure:SetJustifyH("LEFT")
+        -- shown but invisible and off screen, so it's always laid out
+        measure:SetPoint("TOPLEFT", UIParent, "BOTTOMRIGHT", 200, -200)
+        measure:SetAlpha(0)
+    end
+    measure:SetFontObject(font)
+    measure:SetSpacing(3)
+    measure:SetWidth(TEXT_W)
+    measure:SetText(text ~= "" and text or " ")
+    return math.ceil(measure:GetStringHeight() or 14)
+end
+
+-- A block of text (wraps at TEXT_W). Text set later with SetText should be
+-- no longer than the text it was built with, or it would run into what's below.
 function Layout:Text(text, font, gap)
-    local fs = self.panel:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
+    font = font or "GameFontHighlightSmall"
+    local fs = self.panel:CreateFontString(nil, "OVERLAY", font)
     fs:SetPoint("TOPLEFT", 18, self.y)
-    fs:SetPoint("RIGHT", self.panel, "RIGHT", -18, 0)
+    fs:SetWidth(TEXT_W)
     fs:SetJustifyH("LEFT")
+    fs:SetWordWrap(true)
     fs:SetSpacing(3)
     fs:SetText(text)
-    self.y = self.y - math.max(14, math.ceil(fs:GetStringHeight() or 14)) - (gap or 8)
+    self.y = self.y - math.max(14, TextHeight(text, font)) - (gap or 8)
     return fs
 end
 
@@ -363,7 +388,8 @@ end
 
 function O:BuildPermControls(L)
     L:Header("Permissions  |cff9d9d9d(Guild Master, whole guild)|r")
-    L:Text("Choose which ranks may do each of these. By default recruiting is open to everyone and the rest is for officers (ranks that can read officer notes). Pick ranks to give it to them instead; the Guild Master always can. Officer Log, Audit and officer-only stats always stay with officers: the game only sends that data to officer ranks.")
+    L:Text("Choose which ranks may do each of these. By default recruiting is open to everyone and the rest is for officers (ranks that can read officer notes). Pick ranks to hand it to them instead; the Guild Master always can.")
+    L:Text("The Officer Log and the Audit always stay with officers: the game only sends that data to officer ranks.", "GameFontDisableSmall")
     self.permRows = {}
     for _, perm in ipairs(ns.DB.PERMS) do
         local y = L:Row(28)
