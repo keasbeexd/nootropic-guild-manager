@@ -32,7 +32,30 @@ function Layout:Header(text)
     return title
 end
 
--- A checkbox with an optional one-line hint under it.
+-- Text blocks wrap at a fixed width. Pages are built while hidden, before
+-- the game has sized them, so a block can't measure its own wrapped height;
+-- an invisible copy on UIParent (always laid out) measures it instead. The
+-- settings canvas is ~635 wide on Forever (SettingsPanel 920), so 564 fits.
+local TEXT_W = 564
+local measure
+local function TextHeight(text, font, width)
+    if not measure then
+        measure = UIParent:CreateFontString(nil, "OVERLAY")
+        measure:SetWordWrap(true)
+        measure:SetJustifyH("LEFT")
+        -- shown but invisible and off screen, so it's always laid out
+        measure:SetPoint("TOPLEFT", UIParent, "BOTTOMRIGHT", 200, -200)
+        measure:SetAlpha(0)
+    end
+    measure:SetFontObject(font)
+    measure:SetSpacing(3)
+    measure:SetWidth(width or TEXT_W)
+    measure:SetText(text ~= "" and text or " ")
+    return math.ceil(measure:GetStringHeight() or 14)
+end
+
+-- A checkbox with an optional hint under it (wraps, like Text).
+local HINT_INDENT = 26 -- the label starts 26 further right than text blocks
 function Layout:Check(text, hint, onClick)
     local cb = CreateFrame("CheckButton", nil, self.panel, "UICheckButtonTemplate")
     cb:SetSize(26, 26)
@@ -44,37 +67,21 @@ function Layout:Check(text, hint, onClick)
     end
     label:SetFontObject("GameFontHighlight")
     label:SetText(text)
+    local hintH = 0
     if hint then
         local h = self.panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         h:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
+        h:SetWidth(TEXT_W - HINT_INDENT)
+        h:SetJustifyH("LEFT")
+        h:SetWordWrap(true)
+        h:SetSpacing(3)
         h:SetText(hint)
         cb.Hint = h
+        hintH = TextHeight(hint, "GameFontDisableSmall", TEXT_W - HINT_INDENT)
     end
     cb:SetScript("OnClick", function(b) onClick(b:GetChecked() and true or false) end)
-    self.y = self.y - (hint and 42 or 30)
+    self.y = self.y - (hint and (30 + hintH) or 30)
     return cb
-end
-
--- Text blocks wrap at a fixed width. Pages are built while hidden, before
--- the game has sized them, so a block can't measure its own wrapped height;
--- an invisible copy on UIParent (always laid out) measures it instead. The
--- settings canvas is ~635 wide on Forever (SettingsPanel 920), so 564 fits.
-local TEXT_W = 564
-local measure
-local function TextHeight(text, font)
-    if not measure then
-        measure = UIParent:CreateFontString(nil, "OVERLAY")
-        measure:SetWordWrap(true)
-        measure:SetJustifyH("LEFT")
-        -- shown but invisible and off screen, so it's always laid out
-        measure:SetPoint("TOPLEFT", UIParent, "BOTTOMRIGHT", 200, -200)
-        measure:SetAlpha(0)
-    end
-    measure:SetFontObject(font)
-    measure:SetSpacing(3)
-    measure:SetWidth(TEXT_W)
-    measure:SetText(text ~= "" and text or " ")
-    return math.ceil(measure:GetStringHeight() or 14)
 end
 
 -- A block of text (wraps at TEXT_W). Text set later with SetText should be
