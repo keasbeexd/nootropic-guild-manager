@@ -23,7 +23,8 @@ function IP:Build()
     f:SetSize(360, 170)
     f:SetPoint("TOP", 0, -160)
     f:SetFrameStrata("DIALOG")
-    f:SetToplevel(true)
+    -- not a top-level frame: raising itself on click would lift the Invite
+    -- button above its secure overlay
     f:SetClampedToScreen(true)
     f:SetMovable(true)
     f:EnableMouse(true)
@@ -48,11 +49,15 @@ function IP:Build()
     invite:SetPoint("BOTTOMRIGHT", f, "BOTTOM", -6, 14)
     -- Only reached when the secure button isn't over it (in combat, or a
     -- client without secure buttons): say why nothing happened.
-    invite:SetScript("OnClick", function()
+    invite:SetScript("OnClick", function(btn)
         if InCombatLockdown() then
             ns:Print("You can't send guild invites in combat. Click Invite again once the fight is over.")
+        elseif btn.secure then
+            -- the secure button wasn't on top for that click; put it back
+            btn.secure.Update()
+            ns:Print("Click Invite once more to send the invite.")
         else
-            ns:Print(("Couldn't send the invite from here. Type |cffffffff/ginvite %s|r instead."):format(IP.full and ns.ChatName(IP.full) or "<name>"))
+            ns:Print(("This game client has no secure buttons for addons. Type |cffffffff/ginvite %s|r to invite them."):format(IP.full and ns.ChatName(IP.full) or "<name>"))
         end
     end)
     self.inviteButton = invite
@@ -146,4 +151,18 @@ function IP:Next()
         self.full, self.reply = nil, nil
         if self.frame then self.frame:Hide() end
     end
+end
+
+-- /ngm diag: is the secure Invite button there and on top?
+function IP:Diagnose()
+    if not self.frame then self:Build() end
+    local host, b = self.inviteButton, self.inviteButton.secure
+    if not b then
+        ns:Print("Invite prompt: no secure button (this client doesn't offer SecureActionButtonTemplate to addons).")
+        return
+    end
+    ns:Print(("Invite prompt: secure button %s, prompt %s, layer %s/%d over %s/%d, combat=%s, macro=%q"):format(
+        b:IsShown() and "shown" or "hidden", self.frame:IsShown() and "open" or "closed",
+        b:GetFrameStrata(), b:GetFrameLevel(), host:GetFrameStrata(), host:GetFrameLevel(),
+        tostring(InCombatLockdown()), tostring(b:GetAttribute("macrotext") or "")))
 end
