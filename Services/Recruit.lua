@@ -52,6 +52,9 @@ function RC:Settings()
     end
 
     if r.default == nil then r.default = D.DEFAULT_WHISPER end
+    for _, old in ipairs(D.OLD_DEFAULT_WHISPERS) do
+        if r.default == old then r.default = D.DEFAULT_WHISPER end
+    end
     if not r.keywords then
         r.keywords = {}
         for i, k in ipairs(D.DEFAULT_KEYWORDS) do r.keywords[i] = k end

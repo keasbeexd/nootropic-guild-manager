@@ -150,7 +150,12 @@ D.MAX_LOG_LENGTH = 140 -- fits one addon message
 ------------------------------------------------------------------------
 -- Recruitment defaults
 ------------------------------------------------------------------------
-D.DEFAULT_WHISPER = "Hi $name! $guild is looking for friendly players to quest, run dungeons and raid with. Want an invite? Just reply \"invite\"."
+-- Kept within D.WHISPER_MAX once filled in: a 12-letter name and <Nootropic> make it exactly 255.
+D.DEFAULT_WHISPER = "Hi $name! $guild is looking for friendly players to quest, run dungeons and raid with. We're a social guild that understands real life comes first. Looking to eventually raid and currently building our core. Want an invite? Just reply \"invite\""
+-- Earlier defaults: a guild still using one of these unchanged gets the new one.
+D.OLD_DEFAULT_WHISPERS = {
+    "Hi $name! $guild is looking for friendly players to quest, run dungeons and raid with. Want an invite? Just reply \"invite\".",
+}
 D.DEFAULT_KEYWORDS = { "invite", "inv", "yes", "sure", "interested" }
 D.MAX_KEYWORDS = 5
 -- Replies that put someone on the Do Not Whisper list (whole words, any case)
