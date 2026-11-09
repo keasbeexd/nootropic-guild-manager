@@ -1,15 +1,12 @@
 # Nootropic Guild Manager
 
 Your whole guild in one window, for **World of Warcraft: Forever**. Profiles,
-crafters, raid readiness, who to play with tonight, and friendly recruiting,
-shared between everyone in the guild who runs it.
+crafters, raid readiness, who to play with tonight, a guild census, a Hall
+of Fame and friendly recruiting, shared between everyone in the guild who runs it.
 
 <img src="docs/logo.svg" width="96" alt="Nootropic Guild Manager's gold-ringed medallion with a foaming ale tankard">
 
-![The addon's Find tab listing guildmates by class color, a character profile open on its Raids tab, and the Who Can Craft window searching for flasks](preview.png)
-
-The preview is an illustration of the addon's windows with made-up
-characters, not an in-game screenshot.
+![The Find tab: every guildmate with level, class, spec, main or alt, location, professions, rank and addon version](docs/screenshots/1-find.png)
 
 Nootropic Guild Manager works on top of the game's own Guild & Communities
 window rather than replacing it, and adds a window of its own for what the
@@ -52,6 +49,21 @@ the more of your guild runs it, the more it knows. It was made for the
 Release history is in [CHANGELOG.md](CHANGELOG.md), how it works inside
 is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and how releases are
 published is in [docs/PUBLISHING.md](docs/PUBLISHING.md).
+
+## Screenshots
+
+In-game shots from the <Nootropic> guild. Other players' names are blurred.
+
+| | |
+|---|---|
+| ![Overview tab: bars for classes, levels and professions, and a week heatmap of when the guild plays](docs/screenshots/4-overview.png) | ![Hall of Fame tab: leaderboard cards for quests, kills, dungeon bosses, honorable kills and deaths, with guild totals](docs/screenshots/5-hall-of-fame.png) |
+| **Overview**: classes, levels, professions and when the guild plays | **Hall of Fame**: leaderboards from everyone's statistics |
+| ![Recruitment tab: unguilded players found with /who, and the whisper message with a live preview](docs/screenshots/6-recruitment.png) | ![Audit tab: joins, level-ups, promotions and Do Not Whisper changes with who made them](docs/screenshots/7-audit.png) |
+| **Recruitment**: friendly whispers, lockouts and a Do Not Whisper list | **Audit** (officers): every change and who made it |
+| ![Play Together tab: guildmates online near your level and who usually plays at this hour](docs/screenshots/3-play-together.png) | ![Who Can Craft? window searching for bandage recipes](docs/screenshots/2-who-can-craft.png) |
+| **Play Together**: who to play with right now | **Who Can Craft?**: every recipe the guild knows |
+| ![Character profile: spec, rank, alts, Discord, usual online hours and professions](docs/screenshots/8-profile.png) | ![Character profile Raids tab: Onyxia attunement, Brooch of the Wardens and Hyjal Summit readiness](docs/screenshots/9-raid-readiness.png) |
+| **Profiles**: alts, Discord, usual hours, professions | **Raid readiness**: attunements and keys |
 
 ## Install
 
@@ -314,7 +326,7 @@ Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs,
 Services/  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)  HallOfFame.lua (shared character statistics)
 Media/     Logo.tga (the addon's icon, from docs/logo.svg)
 UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  OverviewView.lua (Overview tab)  HallOfFameView.lua (Hall of Fame tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
-docs/      ARCHITECTURE.md (how it works inside)  PUBLISHING.md (releases and addon sites)  logo.svg  preview/ (source of preview.png)
+docs/      ARCHITECTURE.md (how it works inside)  PUBLISHING.md (releases and addon sites)  logo.svg  screenshots/ (README and addon-site images)  preview/ (source of preview.png, an older illustration)
 tests/     run.sh and offline tests (not in the release zip)
 ```
 
