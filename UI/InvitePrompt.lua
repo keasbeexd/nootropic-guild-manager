@@ -23,6 +23,7 @@ IP.queue = {} -- { { full, reply }, ... } waiting behind the one shown
 
 function IP:Build()
     local f = CreateFrame("Frame", "NootropicGMInvitePrompt", UIParent, "BasicFrameTemplateWithInset")
+    W.CombatSafeClose(f)
     f:SetSize(380, 214)
     f:SetPoint("TOP", 0, -160)
     f:SetFrameStrata("DIALOG")

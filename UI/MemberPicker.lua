@@ -14,6 +14,7 @@ local ROW_H = 22
 
 function MP:Build()
     local f = CreateFrame("Frame", "NootropicGMMemberPicker", UIParent, "BasicFrameTemplateWithInset")
+    W.CombatSafeClose(f)
     f:SetSize(280, 400)
     f:SetFrameStrata("DIALOG")
     f:SetToplevel(true)

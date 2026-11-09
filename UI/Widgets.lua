@@ -13,6 +13,14 @@ W.WHITE = "Interface\\Buttons\\WHITE8x8"
 ------------------------------------------------------------------------
 -- Frame chrome
 ------------------------------------------------------------------------
+-- The templates' close button calls HideUIPanel, which does nothing in
+-- combat (it returns early while CheckProtectedFunctionsAllowed() is false).
+-- None of our windows are UI panels, so hiding them directly is always fine.
+function W.CombatSafeClose(frame)
+    local close = frame.CloseButton or (frame:GetName() and _G[frame:GetName() .. "CloseButton"])
+    if close then close:SetScript("OnClick", function() frame:Hide() end) end
+end
+
 function W.SetTitle(frame, text)
     if frame.SetTitle then
         frame:SetTitle(text)

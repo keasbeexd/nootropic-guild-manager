@@ -88,6 +88,7 @@ Your private notes never leave your computer. Officer data goes only over the of
 - Names have two parts and no realms in chat: whisper and invite by `ns.ChatName(full)`.
 - Whispers are capped at 255 bytes: `RC:Format` uses first names and cuts at whole words when needed.
 - `C_Calendar.AddEvent` is restricted; reading the calendar is fine.
+- The window templates' close button calls `HideUIPanel`, which does nothing in combat. Every window calls `W.CombatSafeClose(f)` right after it's created so its X hides it directly.
 - Addons can't read other players' quests, bags or recipes: each member's own addon reports theirs (`P`, `RP`, `RR`).
 
 ## Adding a shared record type

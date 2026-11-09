@@ -25,6 +25,7 @@ local RED, GOLD, GRAY = "|cffff6060", "|cffffd100", "|cff9d9d9d"
 ------------------------------------------------------------------------
 function DV:Build()
     local f = CreateFrame("Frame", "NootropicGMDNWWindow", UIParent, "BasicFrameTemplateWithInset")
+    W.CombatSafeClose(f)
     f:SetSize(460, 480)
     f:SetFrameStrata("DIALOG")
     f:SetToplevel(true)
