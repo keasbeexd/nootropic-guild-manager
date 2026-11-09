@@ -26,7 +26,7 @@ local COLUMNS = {
     { key = "zone",   label = "Location",    width = 130, min = 74, hidePriority = 3.5 },
     { key = "profs",  label = "Professions", width = 150, min = 56, hidePriority = 4 },
     { key = "rank",   label = "Rank",        width = 96,  min = 56, hidePriority = 1 },
-    { key = "version", label = "Version",    width = 62,  min = 50, hidePriority = 0.5 },
+    { key = "version", label = "Addon Version", width = 96, min = 80, hidePriority = 0.5 },
 }
 local COL = {}
 for _, c in ipairs(COLUMNS) do COL[c.key] = c end
@@ -81,7 +81,7 @@ function RV:ResetColumns()
     s.columnOrder = nil
     wipe(s.columnWidths)
     wipe(s.hiddenColumns)
-    for _, key in ipairs({ "version", "second", "level", "class", "zone", "rank" }) do s.hiddenColumns[key] = true end
+    s.hiddenColumns.second = true
     self:Relayout()
     self:Refresh()
 end
