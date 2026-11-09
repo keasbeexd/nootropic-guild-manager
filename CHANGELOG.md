@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.6.0
+
+- **Sort** menu on the Find tab, next to Filter: sort by any column, including the ones that start hidden (Level, Rank, Second Name, Class, Location), and pick the direction (lowest or highest level first, highest or lowest rank first). Clicking a column header still works.
+
 ## 2.5.3
 
 - The first release uploaded to CurseForge and Wago (2.5.2 only reached GitHub). No changes in game.

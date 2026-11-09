@@ -425,8 +425,23 @@ function RV:BuildToolbar(page, frame)
     W.Tooltip(filter, "Filter", "Online only, mains or alts, class, rank, and guildmates using the addon.")
     self.filterBtn = filter
 
+    -- Sort: every column, including the hidden ones (Level and Rank start
+    -- hidden, so their headers can't be clicked until they're turned on)
+    local sort = MenuButton(page, "Sort", 72, "down")
+    sort:SetPoint("RIGHT", filter, "LEFT", -6, 0)
+    sort:SetScript("OnClick", function(b) RV:ShowSortMenu(b) end)
+    sort:SetScript("OnEnter", function(b)
+        GameTooltip:SetOwner(b, "ANCHOR_BOTTOM")
+        GameTooltip:SetText("Sort")
+        GameTooltip:AddLine("Now: " .. RV:SortDescription(), 1, 1, 1, true)
+        GameTooltip:AddLine("Sort by any column, shown or hidden. Clicking a column header works too.", nil, nil, nil, true)
+        GameTooltip:Show()
+    end)
+    sort:SetScript("OnLeave", GameTooltip_Hide)
+    self.sortBtn = sort
+
     local craft = W.Button(page, "Who Can Craft?", 120, 22)
-    craft:SetPoint("RIGHT", filter, "LEFT", -6, 0)
+    craft:SetPoint("RIGHT", sort, "LEFT", -6, 0)
     craft:SetScript("OnClick", function() ns.RecipesView:Open() end)
     W.Tooltip(craft, "Who can craft it?", "Search the recipes guildmates share and see who can make it. Recipes are shared automatically when someone with the addon opens one of their profession windows. Also /ngm craft <name>.")
 
@@ -455,6 +470,65 @@ function RV:BuildToolbar(page, frame)
     count:SetJustifyH("LEFT")
     count:SetWordWrap(false)
     self.countText = count
+
+    -- keep the search box clear of the buttons on a narrow window
+    local function FitSearch()
+        local room = frame:GetWidth() - 78 - (12 + 96 + 6 + 72 + 6 + 120) - 12
+        search:SetWidth(math.max(140, math.min(300, room)))
+    end
+    frame:HookScript("OnSizeChanged", FitSearch)
+    FitSearch()
+end
+
+-- Direction names per column; the first is ascending.
+local SORT_DIRS = {
+    level   = { "Lowest first", "Highest first" },
+    rank    = { "Highest rank first", "Lowest rank first" },
+    version = { "Oldest first", "Newest first" },
+}
+local function SortDirs(key) return SORT_DIRS[key] or { "A to Z", "Z to A" } end
+
+local function SetSort(key, asc)
+    local s = ns.DB:Settings()
+    s.sortKey, s.sortAsc = key, asc
+    ns.PlaySound("U_CHAT_SCROLL_BUTTON")
+    RV:Refresh()
+end
+
+function RV:SortDescription()
+    local s = ns.DB:Settings()
+    local c = COL[s.sortKey] or COL.rank
+    return c.label .. ", " .. SortDirs(c.key)[s.sortAsc and 1 or 2]:lower()
+end
+
+function RV:ShowSortMenu(owner)
+    local items = { { text = "Sort by", isTitle = true } }
+    for _, c in ipairs(COLUMNS) do
+        if self:IsColumnAvailable(c.key) then
+            items[#items + 1] = {
+                text = c.label .. (self:IsColumnShown(c.key) and "" or "  |cff9d9d9d(column hidden)|r"),
+                checked = function() return ns.DB:Settings().sortKey == c.key end,
+                radio = true,
+                func = function()
+                    if ns.DB:Settings().sortKey ~= c.key then
+                        SetSort(c.key, not ns.Roster.DEFAULT_DESC[c.key])
+                    end
+                end,
+            }
+        end
+    end
+    items[#items + 1] = { divider = true }
+    local key = ns.DB:Settings().sortKey
+    for i, label in ipairs(SortDirs(key)) do
+        local asc = (i == 1)
+        items[#items + 1] = {
+            text = label,
+            checked = function() return (ns.DB:Settings().sortAsc and true or false) == asc end,
+            radio = true,
+            func = function() SetSort(ns.DB:Settings().sortKey, asc) end,
+        }
+    end
+    W.ShowMenu(owner, items)
 end
 
 -- A small panel that opens under a toolbar button.
