@@ -175,8 +175,8 @@ local function CreateButton(row)
         local ok, err = ns.Recruit:WhisperFromWho(info)
         if ok then
             ns.PlaySound("U_CHAT_SCROLL_BUTTON")
-            if ns.Recruit:Settings().whisperMode == "click" then
-                ns:Print(("Whisper queued. This client only sends whispers from a click: use |cffffffffSend Next|r on the %s tab."):format(ns.TabName("recruit")))
+            if ns.Recruit:ClickOnly() then
+                ns:Print(("Whisper queued. Timed whispers were blocked this session: use |cffffffffSend Next|r on the %s tab."):format(ns.TabName("recruit")))
             end
         elseif err then
             ns:Print("|cffff5555" .. err .. "|r")

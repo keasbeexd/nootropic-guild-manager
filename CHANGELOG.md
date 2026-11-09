@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.6.2
+
+- Fix: whispers stuck needing **Send Next** for every one. If the game blocked a single automatic whisper, the addon switched to click-to-send and saved that for good. It now lasts only until a `/reload` or your next login, and updating to 2.6.2 switches everyone back to automatic. `/ngm diag` shows whether whispers are automatic and, if the game blocked one, what and when.
+
 ## 2.6.1
 
 - The Find tab's **Sort** button is gone again; sort by clicking a column header.
