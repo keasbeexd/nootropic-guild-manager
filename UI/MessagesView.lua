@@ -89,6 +89,7 @@ end
 ------------------------------------------------------------------------
 function MV:Build()
     local f = CreateFrame("Frame", "NootropicGMMessagesFrame", UIParent, "BasicFrameTemplateWithInset")
+    W.CombatSafeClose(f)
     f:SetSize(WIDTH, HEIGHT)
     f:SetPoint("CENTER", 0, 30)
     f:SetFrameStrata("DIALOG")

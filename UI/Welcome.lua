@@ -113,6 +113,7 @@ end
 
 function WL:Build()
     local f = CreateFrame("Frame", "NootropicGMWelcome", UIParent, "BasicFrameTemplateWithInset")
+    W.CombatSafeClose(f)
     f:SetSize(WIDTH, HEIGHT)
     f:SetPoint("CENTER", 0, 40)
     f:SetFrameStrata("DIALOG")

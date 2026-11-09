@@ -19,6 +19,7 @@ local GREEN, GRAY = "|cff40ff40", "|cff9d9d9d"
 
 function RV:Build()
     local f = CreateFrame("Frame", "NootropicGMRecipesWindow", UIParent, "BasicFrameTemplateWithInset")
+    W.CombatSafeClose(f)
     f:SetSize(520, 480)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)

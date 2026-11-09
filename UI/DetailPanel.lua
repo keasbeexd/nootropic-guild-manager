@@ -134,6 +134,7 @@ end
 function DP:Build()
     if self.frame then return end
     local f = CreateFrame("Frame", "NootropicGMDetailFrame", UIParent, "BasicFrameTemplateWithInset")
+    W.CombatSafeClose(f)
     f:SetWidth(WIDTH)
     f:SetFrameStrata("HIGH")
     f:SetToplevel(true)

@@ -22,6 +22,8 @@ function UI:Create()
     if self.frame then return self.frame end
 
     local f = CreateFrame("Frame", "NootropicGMFrame", UIParent, "ButtonFrameTemplate")
+
+    W.CombatSafeClose(f)
     self.frame = f
     local size = ns.DB:Settings().frameSize or {}
     f:SetSize(math.max(MIN_W, math.min(MAX_W, size.w or FRAME_W)), math.max(MIN_H, math.min(MAX_H, size.h or FRAME_H)))
