@@ -29,6 +29,9 @@ the more of your guild runs it, the more it knows. It was made for the
   and who usually plays at this hour.
 - **Overview** — how many of each class, level and profession, and a
   heatmap of when the guild plays.
+- **Hall of Fame** — guild leaderboards from everyone's character
+  statistics: quests, kills, dungeon bosses, deaths and more, all time or by
+  month.
 - **Profiles** — spec, roles, professions with skill levels, Discord and a
   contact note, usual play hours, raid readiness (Onyxia attunement, the
   Barrow Deeps key) and your own private notes.
@@ -123,6 +126,8 @@ A green check means done, red means not yet, and a clock means unknown (they don
 
 **Overview tab** (everyone) — the guild at a glance. Bars for how many of each **class**, **level** band (1-9 up to 60) and **profession**, and **When we play**: a week heatmap (in your clock) of how many guildmates usually play in each two-hour block, from the hours they share. Hover a block to see who; click any bar to list those members on the Find tab. The button at the top right picks who's counted: members online in the last 7, 30 (default) or 90 days, or everyone. Each person counts once, as their main, and is active if any of their characters was; tick **Count alts** to count every character. `/ngm overview` opens it.
 
+**Hall of Fame tab** (everyone) — guild leaderboards from the game's own character statistics (the Statistics page of the achievement window), which each member's addon reads and shares. A card per statistic shows the top five: **quests completed**, **kills**, **dungeon & raid bosses** (final bosses, Forever's own included), **dungeons entered**, **honorable kills**, **battlegrounds won**, **duels won**, **epics looted**, **deaths**, **deaths from falling**, **flights taken**, **hearthstones used**, **fish caught** and **hugs given**, with guild totals on top. Hover a card for the top 15. Pick **All time**, **This month** or **Last month** (UTC months; a member's first month counts from when they installed the addon). Each person's characters are added up under their main unless **Count alts** is on. Gold is never shared. Only members running the addon with **Share my statistics** on are listed. `/ngm hof` opens it.
+
 **Recruitment tab**
 
 1. The search bar reads **Name**, **Zone**, **Level**, **Filter**, **Search**. Click **Search** (it runs the game's own `/who` through a secure button, the approved way for addons, so it can't be used in combat). To keep you clear of spam detection, searches are limited to one every 15 seconds and 12 per 5 minutes; the button counts down until the next one is allowed. Everyone without a guild (who isn't already in yours) is added to the list. Players in a guild are never listed or messaged, here or from the /who window's whisper button. The game returns at most 50 players per search and limits how often you can search, so use narrow level ranges.
@@ -209,7 +214,7 @@ Options has four pages in the game's AddOns list:
 
 - **Nootropic Guild Manager** (main page)
   - **Appearance**: the **addon icon** (the **Nootropic Medallion** by default, or the game's Ale Mug or Brewfest Stein icons, or your **Guild Emblem**; shown on the window, the minimap button and the Guild & Communities shortcut; the emblem falls back to the medallion outside a guild or without a tabard), **use my guild's name in the window title** (also in the "x using ... Guild Manager" text), **show how many guildmates use the addon** (on by default), the **shortcut on the Guild & Communities window**, and **Show alts and profiles on the Guild roster** (on by default).
-  - **Sharing** (what your copy shares with the guild; all on by default): **Share my spec and professions**, **Share my recipes**, **Learn when I usually play** (this character) and **Show me in Play Together**. Turning one off stops sharing it and clears what was already shared. A **Show the Welcome Tour** button reopens the walkthrough.
+  - **Sharing** (what your copy shares with the guild; all on by default): **Share my spec and professions**, **Share my recipes**, **Learn when I usually play** (this character), **Show me in Play Together** and **Share my statistics** (Hall of Fame). Turning one off stops sharing it and clears what was already shared. A **Show the Welcome Tour** button reopens the walkthrough.
   - **Minimap Button**: show/hide it (also `/ngm minimap`), and choose what left-click, right-click and shift-click do (Find, Play Together, Recruitment, Audit, Options, show/hide window, or nothing). Drag the button to move it around the edge of the minimap; the spot is saved. The game's own AddOns menu button on the minimap (where this addon is also listed) is Blizzard's and can't be moved.
   - **Reset**: window size and position, and list columns (roster and recruitment list).
   - **Sync and Commands**: sync stats with a **Sync Now** button, **Open Guild Manager**, and the most useful commands.
@@ -290,6 +295,7 @@ A note on trust: every copy of the addon checks each change it receives against 
 | `/ngm welcome` | the welcome tour again |
 | `/ngm play` | open the Play Together tab |
 | `/ngm overview` | open the Overview tab |
+| `/ngm hof` | open the Hall of Fame tab |
 | `/ngm craft <name>` | who in the guild can craft it (the Who Can Craft? window) |
 | `/ngm recruit` | open the Recruitment tab |
 | `/ngm options` | open the options |
@@ -305,9 +311,9 @@ A note on trust: every copy of the addon checks each change it receives against 
 ```
 NootropicGuildManager.toc
 Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs, professions, roles, raid checks, links)  Database.lua (saved data, permissions)  Sync.lua (records, repair, transport)
-Services/  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)
+Services/  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)  HallOfFame.lua (shared character statistics)
 Media/     Logo.tga (the addon's icon, from docs/logo.svg)
-UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  OverviewView.lua (Overview tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
+UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  OverviewView.lua (Overview tab)  HallOfFameView.lua (Hall of Fame tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
 docs/      ARCHITECTURE.md (how it works inside)  PUBLISHING.md (releases and addon sites)  logo.svg  preview/ (source of preview.png)
 tests/     run.sh and offline tests (not in the release zip)
 ```

@@ -50,6 +50,8 @@
                            leave me out of Play Together (Services/Sharing.lua)   the member only
       SC:<member>          usual online hours: 168 bits (Monday 00:00 UTC
                            onward) as 42 hex digits   the member only
+      HF:<member>          Hall of Fame: their character statistics, all time,
+                           this month and last (Services/HallOfFame.lua)   the member only
 
     Types with a ttl (or an expires function) expire: older records are
     deleted, left out of digests and repairs, and refused when they arrive.
@@ -93,6 +95,7 @@ S.TYPES = {
     RP = { scope = "guild",   selfOnly = true, noAudit = true, low = true, label = "Recipes" },
     RR = { scope = "guild",   selfOnly = true, noAudit = true, label = "Raid readiness" },
     PS = { scope = "guild",   selfOnly = true, noAudit = true, label = "Sharing choices" },
+    HF = { scope = "guild",   selfOnly = true, noAudit = true, low = true, label = "Hall of Fame" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
 }
@@ -579,6 +582,9 @@ function S:Materialize(typ, key, member, rec)
         return
     elseif typ == "RP" then
         ns.Debounce("recipeschanged", 0.3, function() ns:Fire("RECIPES_CHANGED") end)
+        return
+    elseif typ == "HF" then
+        ns.Debounce("hofchanged", 0.5, function() ns:Fire("HALL_OF_FAME_CHANGED") end)
         return
     elseif typ == "DN" or typ == "RS" then
         -- Do Not Whisper entries are about people outside the guild: no member record

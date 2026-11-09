@@ -6,6 +6,7 @@
       report    your spec and professions as the game reports them (P record)
       recipes   the recipes you've learned (RP records, Who Can Craft?)
       together  appearing in guildmates' Play Together lists
+      stats     your character statistics for the Hall of Fame (HF record)
 
     Turning one off stops sharing it and clears what was already shared:
     the records are emptied, so guildmates' copies drop them too. Hiding from
@@ -22,6 +23,7 @@ SH.KEYS = {
     report   = "shareReport",
     recipes  = "shareRecipes",
     together = "showInTogether",
+    stats    = "shareStats",
 }
 
 local function Me() return ns.PlayerFullName() end
@@ -51,6 +53,13 @@ function SH:Enforce(only)
         local prefix = "RP:" .. me .. ":"
         for key, rec in pairs(ns.Sync:Store("guild") or {}) do
             if key:sub(1, #prefix) == prefix and rec.v ~= "" then ns.Sync:Set(key, "") end
+        end
+    end
+    if not only or only == "stats" then
+        if self:Get("stats") then
+            ns.HallOfFame:Publish()
+        elseif (ns.Sync:Value("HF:" .. me) or "") ~= "" then
+            ns.Sync:Set("HF:" .. me, "")
         end
     end
     if not only or only == "together" then

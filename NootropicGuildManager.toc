@@ -30,6 +30,7 @@ Services\Audit.lua
 Services\RosterLog.lua
 Services\Recipes.lua
 Services\Readiness.lua
+Services\HallOfFame.lua
 Services\Sharing.lua
 
 # Interface
@@ -43,6 +44,7 @@ UI\DetailPanel.lua
 UI\GuildRoster.lua
 UI\TogetherView.lua
 UI\OverviewView.lua
+UI\HallOfFameView.lua
 UI\RecruitView.lua
 UI\DNWView.lua
 UI\RecipesView.lua
