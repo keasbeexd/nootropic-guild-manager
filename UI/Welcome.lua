@@ -41,6 +41,9 @@ local function Pages()
         { key = "together", icon = TAB_ICONS[2], title = "Play Together",
           text = "Who to play with right now: guildmates online within a few levels of you (people in your zone first), and guildmates who usually play at this hour.\n\n"
               .. "Usual hours are learned from when people actually play, so this list grows over the first few days." },
+        { key = "overview", icon = TAB_ICONS[5], title = "Overview",
+          text = "The guild at a glance: how many of each class, level and profession, counting the people who've played lately.\n\n"
+              .. "|cffffd100When we play|r is a week heatmap from the hours guildmates share: hover a block to see who usually plays then. Click any bar to list those members on the Find tab." },
         { key = "craft", icon = "Interface\\Icons\\Trade_Alchemy", title = "Who Can Craft It?",
           text = "Every recipe your guildmates know, in one search, with crafters who are online first.\n\n"
               .. "Open it from the |cffffd100Who Can Craft?|r button on the Find tab, or type |cffffd100/ngm craft flask|r.\n\n"

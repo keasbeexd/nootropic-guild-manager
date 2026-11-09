@@ -27,6 +27,8 @@ the more of your guild runs it, the more it knows. It was made for the
   profession window.
 - **Play Together** — guildmates online near your level (your zone first),
   and who usually plays at this hour.
+- **Overview** — how many of each class, level and profession, and a
+  heatmap of when the guild plays.
 - **Profiles** — spec, roles, professions with skill levels, Discord and a
   contact note, usual play hours, raid readiness (Onyxia attunement, the
   Barrow Deeps key) and your own private notes.
@@ -118,6 +120,8 @@ The first time you log in with the addon (and once after updating to 2.5.0), a s
 A green check means done, red means not yet, and a clock means unknown (they don't run the addon, or haven't logged in since updating). Quest and item numbers come from Wowhead's WoW Forever database.
 
 **Play Together tab** (everyone) — who to play with right now. **Online now** lists guildmates online within a few levels of you (5 by default; 3, 10 or any level from the button at the top right), people in your zone first, with their level (and how far from yours), zone, spec and roles. **Usually on around now** lists guildmates who aren't online but usually play at this hour, from their shared usual hours (only guildmates running the addon with **Learn when I usually play** on share them). Your own characters are left out. Click anyone for their profile. `/ngm play` opens it.
+
+**Overview tab** (everyone) — the guild at a glance. Bars for how many of each **class**, **level** band (1-9 up to 60) and **profession**, and **When we play**: a week heatmap (in your clock) of how many guildmates usually play in each two-hour block, from the hours they share. Hover a block to see who; click any bar to list those members on the Find tab. The button at the top right picks who's counted: members online in the last 7, 30 (default) or 90 days, or everyone. Each person counts once, as their main, and is active if any of their characters was; tick **Count alts** to count every character. `/ngm overview` opens it.
 
 **Recruitment tab**
 
@@ -285,6 +289,7 @@ A note on trust: every copy of the addon checks each change it receives against 
 | `/ngm find <text>` | open with a search |
 | `/ngm welcome` | the welcome tour again |
 | `/ngm play` | open the Play Together tab |
+| `/ngm overview` | open the Overview tab |
 | `/ngm craft <name>` | who in the guild can craft it (the Who Can Craft? window) |
 | `/ngm recruit` | open the Recruitment tab |
 | `/ngm options` | open the options |
@@ -302,7 +307,7 @@ NootropicGuildManager.toc
 Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs, professions, roles, raid checks, links)  Database.lua (saved data, permissions)  Sync.lua (records, repair, transport)
 Services/  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)
 Media/     Logo.tga (the addon's icon, from docs/logo.svg)
-UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
+UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  OverviewView.lua (Overview tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua
 docs/      ARCHITECTURE.md (how it works inside)  PUBLISHING.md (releases and addon sites)  logo.svg  preview/ (source of preview.png)
 tests/     run.sh and offline tests (not in the release zip)
 ```

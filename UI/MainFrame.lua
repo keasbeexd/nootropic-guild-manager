@@ -11,8 +11,10 @@ ns.UI = UI
 
 local FRAME_W, FRAME_H = 1000, 580
 local MIN_W, MIN_H, MAX_W, MAX_H = 640, 520, 1800, 1100
-local TAB_LABELS = { "Find", "Play Together", "Recruitment", "Audit" }
-UI.TAB_ROSTER, UI.TAB_TOGETHER, UI.TAB_RECRUIT, UI.TAB_AUDIT = 1, 2, 3, 4
+local TAB_LABELS = { "Find", "Play Together", "Recruitment", "Audit", "Overview" }
+UI.TAB_ROSTER, UI.TAB_TOGETHER, UI.TAB_RECRUIT, UI.TAB_AUDIT, UI.TAB_OVERVIEW = 1, 2, 3, 4, 5
+-- the order the tabs run down the window (ids stay stable for saved settings)
+local TAB_ORDER = { 1, 2, 5, 3, 4 }
 local OFFICER_TABS = { [4] = true } -- Audit
 
 ------------------------------------------------------------------------
@@ -58,6 +60,7 @@ function UI:Create()
     ns.TogetherView:Build(f)
     ns.RecruitView:Build(f)
     ns.AuditView:Build(f)
+    ns.OverviewView:Build(f)
     ns.DetailPanel:Build()
     self:BuildTabs(f)
     self:BuildResizeGrip(f)
@@ -173,6 +176,7 @@ UI.DEFAULT_TAB_ICONS = {
     "Interface\\Icons\\Ability_Mount_RidingHorse",    -- Play Together
     "Interface\\Icons\\Ability_Warrior_BattleShout",  -- Recruitment
     "Interface\\Icons\\INV_Misc_Spyglass_02",         -- Audit
+    IconIfPresent("Interface\\Icons\\INV_Misc_Map_01", "Interface\\Icons\\INV_Misc_Book_09"), -- Overview
 }
 
 -- Flips a texture left to right (keeps an atlas's own coordinates).
@@ -345,7 +349,8 @@ function UI:LayoutTabs()
         end
     end
     local prev
-    for i, tab in ipairs(f.Tabs) do
+    for _, i in ipairs(TAB_ORDER) do
+        local tab = f.Tabs[i]
         tab:SetSide(side)
         W.SetIcon(tab.Icon, self:TabIcon(i))
         if tab.iconCoords then tab.Icon:SetTexCoord(unpack(tab.iconCoords)) end
@@ -396,6 +401,7 @@ function UI:SelectTab(id)
     ns.TogetherView.page:SetShown(id == UI.TAB_TOGETHER)
     ns.RecruitView.page:SetShown(id == UI.TAB_RECRUIT)
     ns.AuditView.page:SetShown(id == UI.TAB_AUDIT)
+    ns.OverviewView.page:SetShown(id == UI.TAB_OVERVIEW)
     if id ~= UI.TAB_ROSTER and ns.DetailPanel.host == f then ns.DetailPanel:Hide() end
 end
 

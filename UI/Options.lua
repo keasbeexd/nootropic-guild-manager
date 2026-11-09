@@ -566,6 +566,7 @@ function O:BuildAbout()
     L:Header("What's Inside")
     L:Text("|cffffd100Find|r  search the whole guild by name, class, spec, profession or Discord, with mains and alts grouped together.\n"
         .. "|cffffd100Play Together|r  who's online near your level right now, and who usually plays at this hour.\n"
+        .. "|cffffd100Overview|r  how many of each class, level and profession, and a heatmap of when the guild plays.\n"
         .. "|cffffd100Who Can Craft?|r  every recipe your guildmates know, searchable, with online crafters first.\n"
         .. "|cffffd100Profiles|r  specs, roles, professions, Discord, usual play hours, raid readiness and your private notes.\n"
         .. "|cffffd100Recruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n"
