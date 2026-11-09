@@ -55,6 +55,7 @@ The workflow passes these to the packager as `CF_API_KEY` and `WAGO_API_TOKEN`. 
 
 - Blizzard's [UI Add-On Development Policy](https://us.forums.blizzard.com/en/wow/t/ui-add-on-development-policy/24534) applies: the addon is free, has no ads, and doesn't ask for donations in game. Donation links (GitHub Sponsors, Ko-fi) belong on the project pages and the repository, never inside the addon.
 - Use the same name, description and logo (`docs/logo.svg`; most sites want a square PNG: render it with `rsvg-convert -w 400 -h 400 docs/logo.svg -o logo.png`) and screenshots on every site.
+- Screenshots live in `docs/screenshots/` (the README shows them too). Blur other players' names before publishing one: guildmates, recruits and anyone on the Do Not Whisper list.
 
 ## Security of the workflow
 

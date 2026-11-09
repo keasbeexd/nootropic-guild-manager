@@ -2,6 +2,12 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.7.1
+
+- Overview: the counts and percentages next to each bar no longer run into the bar.
+- Play Together: the level and how far it is from yours (for example "Level 21 (-6)") is no longer cut off.
+- README and addon pages now have in-game screenshots of every tab.
+
 ## 2.7.0
 
 - **Overview tab** for everyone: how many of each class, level band and profession, and **When we play**, a week heatmap of how many guildmates usually play in each two-hour block (from the hours they share; hover for who). Click a bar to list those members on Find. Counts members online in the last 7, 30 or 90 days, or everyone; each person once as their main unless **Count alts** is on. `/ngm overview`.

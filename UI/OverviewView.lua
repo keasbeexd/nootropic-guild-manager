@@ -23,6 +23,7 @@ ns.OverviewView = OV
 local GRAY = "|cff9d9d9d"
 local WINDOWS = { 7, 30, 90, 0 }
 local BAR_H, BAR_GAP = 18, 3
+local COUNT_W = 62 -- room right of the bar for "11  44%"
 local LEVEL_BANDS = { { 1, 9 }, { 10, 19 }, { 20, 29 }, { 30, 39 }, { 40, 49 }, { 50, 59 }, { 60, 60 } }
 local DAYS = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }
 
@@ -155,7 +156,7 @@ local function Bar(section)
     b.Label:SetWordWrap(false)
     b.Track = b:CreateTexture(nil, "BACKGROUND")
     b.Track:SetPoint("LEFT", b.Label, "RIGHT", 6, 0)
-    b.Track:SetPoint("RIGHT", -40, 0)
+    b.Track:SetPoint("RIGHT", -COUNT_W, 0)
     b.Track:SetHeight(BAR_H - 6)
     b.Track:SetColorTexture(0.05, 0.04, 0.03, 1)
     b.Fill = b:CreateTexture(nil, "ARTWORK")
@@ -190,13 +191,13 @@ local function FillBars(section, rows, total, width)
         b:SetWidth(width)
         if r.classFile then W.SetClassIcon(b.Icon, r.classFile) else W.SetIcon(b.Icon, r.icon) end
         b.Label:SetText(r.label)
-        local track = width - 2 - 16 - 6 - 96 - 6 - 40
+        local track = width - 2 - 16 - 6 - 96 - 6 - COUNT_W
         b.Fill:SetWidth(math.max(1, track * (max > 0 and r.n / max or 0)))
         b.Fill:SetShown(r.n > 0)
         local c = r.color or { 0.16, 0.62, 0.42 }
         b.Fill:SetColorTexture(c[1], c[2], c[3], 0.85)
         local pct = total > 0 and math.floor(r.n / total * 100 + 0.5) or 0
-        b.Count:SetText(r.n > 0 and (r.n .. GRAY .. " " .. pct .. "%|r") or (GRAY .. "0|r"))
+        b.Count:SetText(r.n > 0 and (r.n .. GRAY .. "  " .. pct .. "%|r") or (GRAY .. "0|r"))
         b.search, b.tipTitle, b.tipText = r.search, r.label, r.tip
         b:Show()
     end
