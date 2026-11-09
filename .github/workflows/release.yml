@@ -4,7 +4,7 @@
 #      GitHub (with release.json, which WowUp reads), CurseForge and Wago.
 # CurseForge and Wago are skipped until their project IDs are in the TOC
 # (X-Curse-Project-ID, X-Wago-ID) and their tokens are repository secrets
-# (CF_API_KEY, WAGO_API_TOKEN). See docs/PUBLISHING.md.
+# (CURSEFORGE, WAGO). See docs/PUBLISHING.md.
 #
 # Security: runs only on tags you push (never on pull requests, so outside
 # code can't reach the tokens); actions are pinned to exact commits; the job
@@ -23,8 +23,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     env:
-      CF_API_KEY: ${{ secrets.CF_API_KEY }}
-      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      # the packager reads CF_API_KEY / WAGO_API_TOKEN; the repository
+      # secrets are named CURSEFORGE and WAGO
+      CF_API_KEY: ${{ secrets.CURSEFORGE }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO }}
       GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
     steps:
       # actions/checkout v7.0.1
@@ -38,6 +40,19 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq luajit lua5.1
           tests/run.sh
+
+      # The packager skips a site silently when its token is missing, so
+      # say so: a release with an ID in the TOC but no token fails here.
+      - name: Check upload tokens
+        run: |
+          missing=0
+          if grep -q '^## X-Curse-Project-ID:' NootropicGuildManager.toc && [ -z "$CF_API_KEY" ]; then
+            echo "::error::The CURSEFORGE secret is empty, so nothing would go to CurseForge"; missing=1
+          fi
+          if grep -q '^## X-Wago-ID:' NootropicGuildManager.toc && [ -z "$WAGO_API_TOKEN" ]; then
+            echo "::error::The WAGO secret is empty, so nothing would go to Wago"; missing=1
+          fi
+          exit $missing
 
       # BigWigsMods/packager v2.6.1
       - uses: BigWigsMods/packager@e50a250f8705041e40f2fa1ddcb280a686d65aa0
