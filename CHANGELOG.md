@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.5.3
+
+- The first release uploaded to CurseForge and Wago (2.5.2 only reached GitHub). No changes in game.
+
 ## 2.5.2
 
 - Now on **CurseForge** (https://www.curseforge.com/wow/addons/nootropic-guild-manager) and **Wago Addons** (https://addons.wago.io/addons/nootropic-guild-manager), as well as GitHub. Every release goes to all three, so install from whichever app you use; WowUp finds it on any of them.

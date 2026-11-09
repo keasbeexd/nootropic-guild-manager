@@ -5,8 +5,8 @@ Releases are automatic: push a version tag and the [Release workflow](../.github
 | Where | How players get it | Set up |
 | --- | --- | --- |
 | **GitHub** releases | WowUp's "Install from URL", or by hand | Works now: nothing to set up |
-| **CurseForge** | the CurseForge app, WowUp (CurseForge source) | Set up: [project 1793021](https://www.curseforge.com/wow/addons/nootropic-guild-manager), `CF_API_KEY` secret |
-| **Wago Addons** | the Wago app, WowUp (Wago source) | Set up: [project 4N2baaNL](https://addons.wago.io/addons/nootropic-guild-manager), `WAGO_API_TOKEN` secret |
+| **CurseForge** | the CurseForge app, WowUp (CurseForge source) | Set up: [project 1793021](https://www.curseforge.com/wow/addons/nootropic-guild-manager), `CURSEFORGE` secret |
+| **Wago Addons** | the Wago app, WowUp (Wago source) | Set up: [project 4N2baaNL](https://addons.wago.io/addons/nootropic-guild-manager), `WAGO` secret |
 | **WowUp** | installs from GitHub, CurseForge and Wago | Nothing extra: it reads the other three |
 | WoWInterface | — | Has no WoW: Forever category, so the packager skips it |
 
@@ -37,7 +37,7 @@ Nothing is published to a site until both of its pieces are in place, so these c
    ## X-Curse-Project-ID: 123456
    ```
 3. Create an API token at [CurseForge > API tokens](https://authors.curseforge.com/#/settings/api-tokens).
-4. In the GitHub repository: **Settings > Secrets and variables > Actions > New repository secret**, name `CF_API_KEY`, value the token.
+4. In the GitHub repository: **Settings > Secrets and variables > Actions > New repository secret**, name `CURSEFORGE`, value the token.
 
 ### Wago Addons
 
@@ -47,7 +47,9 @@ Nothing is published to a site until both of its pieces are in place, so these c
    ## X-Wago-ID: aBcD1234
    ```
 3. Create an API token at [Wago > API keys](https://addons.wago.io/account/apikeys).
-4. Add it as a repository secret named `WAGO_API_TOKEN`.
+4. Add it as a repository secret named `WAGO`.
+
+The workflow passes these to the packager as `CF_API_KEY` and `WAGO_API_TOKEN`. If a project ID is in the TOC but its secret is empty, the release stops at **Check upload tokens** instead of quietly skipping that site.
 
 ## Rules the sites share
 
