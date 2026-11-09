@@ -380,7 +380,7 @@ function RCV:OnSendClicked(order)
     local RC = ns.Recruit
     local r = RC:Settings()
     if RC:IsSending() then
-        if r and r.whisperMode == "click" and RC:WhisperWait() <= 0 then
+        if RC:ClickOnly() and RC:WhisperWait() <= 0 then
             RC:SendNext(true)
         else
             RC:StopSending()
@@ -402,7 +402,7 @@ function RCV:SendState(short)
     local wait = RC:WhisperWait()
     if RC:IsSending() then
         local left = #RC.queue
-        if r and r.whisperMode == "click" then
+        if RC:ClickOnly() then
             return wait > 0 and ("Wait %ds"):format(math.ceil(wait)) or "Send Next", true,
                 ("%d waiting - click Send Next for each"):format(left)
         end

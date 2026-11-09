@@ -67,7 +67,9 @@ function RC:Settings()
     r.query.guildOn, r.query.guild = nil, nil -- 2.0: guild search removed
     r.query.name = r.query.name or ""
     if r.dnwEnabled == nil then r.dnwEnabled = true end
-    r.whisperMode = r.whisperMode or "auto" -- "click" if this client blocks timed whispers
+    -- 2.6.2: click-only whispering used to be saved for good after a single
+    -- blocked whisper; it now lasts the session (RC.clickOnly)
+    r.whisperMode = nil
     ns.Messages:Migrate(r)
     if not r.dnwWords then
         r.dnwWords = {}
@@ -618,6 +620,11 @@ end
 RC.selected = {}            -- full -> true (this session)
 RC.queue = {}               -- fulls waiting to be whispered
 RC.sentTimes = {}           -- GetTime() of recent whispers from the queue
+RC.clickOnly = false        -- the game blocked a timed whisper this session
+
+-- One click per whisper? Set when the game blocks a timed whisper, until
+-- the next login or /reload, when timed whispers are tried again.
+function RC:ClickOnly() return self.clickOnly end
 
 -- Players anyone in the guild whispered in the last RECONTACT_DAYS, or a
 -- guildmate invited, can't be ticked: one whisper from the guild is enough.
@@ -750,7 +757,7 @@ function RC:WhisperFromWho(info)
     end
     self.queue[#self.queue + 1] = full
     self.queueTotal = (self.queueSent or 0) + #self.queue
-    if r.whisperMode == "click" then
+    if self:ClickOnly() then
         self:SendNext(true) -- this click can send it, if the spacing allows
     end
     self:Pump()
@@ -771,7 +778,7 @@ function RC:SendNext(fromClick)
     local r = self:Settings()
     if not r or #self.queue == 0 then return false end
     if self:WhisperWait() > 0 then return false end
-    if r.whisperMode == "click" and not fromClick then return false end
+    if self:ClickOnly() and not fromClick then return false end
     while #self.queue > 0 do
         local full = table.remove(self.queue, 1)
         local p = self:Get(full)
@@ -814,8 +821,8 @@ function RC:OnWhisperBlocked(func)
     local lq = self.lastQueued
     if not (lq and lq.auto) or GetTime() - lq.at > 2 then return false end
     if func and not tostring(func):find("SendChatMessage", 1, true) then return false end
-    local r = self:Settings()
-    r.whisperMode = "click"
+    self.clickOnly = true
+    self.lastBlock = { func = tostring(func or "?"), at = time() }
     local p = self:Get(lq.full)
     if p then
         p.whispered, p.lastWhisper = nil, nil
@@ -825,9 +832,17 @@ function RC:OnWhisperBlocked(func)
     table.remove(self.sentTimes)
     self.queueSent = math.max(0, (self.queueSent or 1) - 1)
     self.lastQueued = nil
-    ns:Print("This game client only sends whispers from a click. Click |cffffffffSend Next|r for each whisper; the spacing between whispers still applies.")
+    ns:Print("The game blocked a timed whisper, so for the rest of this session click |cffffffffSend Next|r for each whisper (the spacing still applies). After a /reload or your next login, whispers go out on their own again.")
     Changed()
     return true
+end
+
+function RC:Diagnose()
+    local b = self.lastBlock
+    ns:Print(("Whispers: %s%s, %d queued, next in %ds"):format(
+        self:ClickOnly() and "one click each (timed whisper blocked this session)" or "timed",
+        b and (", blocked: " .. b.func .. " at " .. date("%H:%M", b.at)) or "",
+        #self.queue, math.ceil(self:WhisperWait())))
 end
 
 ------------------------------------------------------------------------
