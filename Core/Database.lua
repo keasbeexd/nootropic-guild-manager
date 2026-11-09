@@ -33,7 +33,10 @@ local DEFAULTS = {
         shareReport = true,          -- share my spec and professions (Services/Sharing.lua)
         shareRecipes = true,         -- share my recipes
         showInTogether = true,       -- appear in guildmates' Play Together lists
+        shareStats = true,           -- share my character statistics for the Hall of Fame
         playRange = 5,               -- Play Together: levels either side of yours (0 = any)
+        overviewDays = 30,           -- Overview: count members online in this many days (0 = everyone)
+        hofPeriod = "all",           -- Hall of Fame: "all", "month" or "last"
         whisperPerHour = 40,         -- whisper queue cap per rolling hour (0 = only the 12-second spacing)
         auditDays = 30,              -- audit history kept: 30, 60 or 90 days
         onlineOnly = false,

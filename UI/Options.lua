@@ -259,6 +259,9 @@ function O:BuildMain()
     self.togetherCheck = L:Check("Show me in Play Together",
         "Guildmates near your level see you when you're online, or when you usually play. Off: you're left out of everyone's lists.",
         function(on) ns.Sharing:Set("together", on) end)
+    self.statsCheck = L:Check("Share my statistics",
+        "Your character's numbers from the game's Statistics page (quests, kills, bosses, deaths and more), for the Hall of Fame. Never gold. Off: your numbers are cleared.",
+        function(on) ns.Sharing:Set("stats", on) end)
     local wy = L:Row(30)
     local tour = W.Button(L.panel, "Show the Welcome Tour", 190, 24)
     tour:SetPoint("TOPLEFT", 18, wy)
@@ -566,6 +569,8 @@ function O:BuildAbout()
     L:Header("What's Inside")
     L:Text("|cffffd100Find|r  search the whole guild by name, class, spec, profession or Discord, with mains and alts grouped together.\n"
         .. "|cffffd100Play Together|r  who's online near your level right now, and who usually plays at this hour.\n"
+        .. "|cffffd100Overview|r  how many of each class, level and profession, and a heatmap of when the guild plays.\n"
+        .. "|cffffd100Hall of Fame|r  guild leaderboards from everyone's statistics: quests, kills, bosses, deaths and more.\n"
         .. "|cffffd100Who Can Craft?|r  every recipe your guildmates know, searchable, with online crafters first.\n"
         .. "|cffffd100Profiles|r  specs, roles, professions, Discord, usual play hours, raid readiness and your private notes.\n"
         .. "|cffffd100Recruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n"
@@ -628,6 +633,7 @@ function O:Refresh()
     self.shareReportCheck:SetChecked(ns.Sharing:Get("report"))
     self.shareRecipesCheck:SetChecked(ns.Sharing:Get("recipes"))
     self.togetherCheck:SetChecked(ns.Sharing:Get("together"))
+    self.statsCheck:SetChecked(ns.Sharing:Get("stats"))
     self.minimapCheck:SetChecked(not s.minimap.hide)
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end
     local st = ns.Sync.stats

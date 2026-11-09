@@ -8,6 +8,8 @@
           onChange = function(bits) end, onHover = function(day, block) end })
       grid:SetBits(bits)   -- hour index (0 = Monday 00:00) -> true
       grid:GetBits()
+      grid:SetCounts(counts, max)  -- heatmap: block (day * 12 + block) -> n,
+                                   -- shaded by n / max; nil goes back to bits
 ]]
 local _, ns = ...
 local SG = {}
@@ -117,6 +119,14 @@ function SG:SetBlock(day, block, on)
 end
 
 function SG:Paint(cell)
+    if self.counts then
+        local n = self.counts[cell.day * 12 + cell.block] or 0
+        local t = (self.countMax or 0) > 0 and n / self.countMax or 0
+        if n > 0 then t = 0.2 + 0.8 * t end -- anyone at all shows
+        cell:SetBackdropColor(OFF[1] + (ON[1] - OFF[1]) * t, OFF[2] + (ON[2] - OFF[2]) * t, OFF[3] + (ON[3] - OFF[3]) * t, 1)
+        if n > 0 then cell:SetBackdropBorderColor(0.36, 0.79, 0.65, 0.25 + 0.75 * t) else cell:SetBackdropBorderColor(0.2, 0.18, 0.14, 1) end
+        return
+    end
     local on = self:Block(cell.day, cell.block)
     local c = on and ON or OFF
     cell:SetBackdropColor(c[1], c[2], c[3], 1)
@@ -134,6 +144,11 @@ function SG:SetBits(bits)
 end
 
 function SG:GetBits() return self.bits end
+
+function SG:SetCounts(counts, max)
+    self.counts, self.countMax = counts, max
+    self:Redraw()
+end
 
 -- Copies a day to the other weekdays (Mon-Fri) or the other weekend day.
 function SG:CopyDay(d)

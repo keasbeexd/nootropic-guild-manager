@@ -2,6 +2,11 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.7.0
+
+- **Overview tab** for everyone: how many of each class, level band and profession, and **When we play**, a week heatmap of how many guildmates usually play in each two-hour block (from the hours they share; hover for who). Click a bar to list those members on Find. Counts members online in the last 7, 30 or 90 days, or everyone; each person once as their main unless **Count alts** is on. `/ngm overview`.
+- **Hall of Fame tab** for everyone: guild leaderboards from the game's own character statistics, the top five for quests, kills, dungeon and raid bosses, dungeons entered, honorable kills, battlegrounds and duels won, epics looted, deaths (and from falling), flights, hearthstones, fish and hugs, with guild totals. All time, this month or last month; alts added up under their main unless **Count alts** is on. Each member's addon shares their own numbers, never gold; **Share my statistics** in Options > Sharing turns it off and clears them. `/ngm hof`.
+
 ## 2.6.3
 
 - Fix: the close button (X) did nothing in combat on every window: Who Can Craft?, profiles, the main window, Do Not Whisper, custom messages, the Invite prompt, the member picker and the welcome tour. They close straight away now. (Escape already worked.)
