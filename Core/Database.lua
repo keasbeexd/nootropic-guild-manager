@@ -40,7 +40,7 @@ local DEFAULTS = {
         sortKey = "rank",
         sortAsc = true,
         -- the game's own roster already shows level, class, zone and rank
-        hiddenColumns = { version = true, second = true, level = true, class = true, zone = true, rank = true }, -- false = shown on purpose
+        hiddenColumns = { second = true }, -- false = shown on purpose
         columnWidths = {},
         frameSize = { w = 1000, h = 580 },
     },
@@ -74,6 +74,24 @@ function DB:Init()
     if not st.logoMigrated then
         st.logoMigrated = true
         if st.iconStyle == "mug" then st.iconStyle = "nootropic" end
+    end
+    -- 2.6.1: every column but Second Name starts shown. Anyone still on the
+    -- old default (version, second, level, class, zone, rank hidden, nothing
+    -- else changed) moves over once; customised columns are kept.
+    if not st.columnsMigrated then
+        st.columnsMigrated = true
+        local old = { version = true, second = true, level = true, class = true, zone = true, rank = true }
+        local same = true
+        for k, v in pairs(st.hiddenColumns) do
+            if (v and true or false) ~= (old[k] or false) then same = false end
+        end
+        for k in pairs(old) do
+            if not st.hiddenColumns[k] then same = false end
+        end
+        if same then
+            wipe(st.hiddenColumns)
+            st.hiddenColumns.second = true
+        end
     end
     -- 2.1: tags
     for _, k in ipairs({ "left", "right", "shift" }) do

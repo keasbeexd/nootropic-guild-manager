@@ -2,9 +2,15 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.6.1
+
+- The Find tab's **Sort** button is gone again; sort by clicking a column header.
+- **Every column is shown by default** except Second Name: Level, Class, Location, Rank and Addon Version now start on, so you can sort by level or rank straight away. If you never changed your columns, they switch over once; if you did, yours are kept (Options > Reset > List Columns, or right-click a header > Show all, gets the new default).
+- The Version column is now called **Addon Version**.
+
 ## 2.6.0
 
-- **Sort** menu on the Find tab, next to Filter: sort by any column, including the ones that start hidden (Level, Rank, Second Name, Class, Location), and pick the direction (lowest or highest level first, highest or lowest rank first). Clicking a column header still works.
+- A Sort menu on the Find tab (removed again in 2.6.1).
 
 ## 2.5.3
 
