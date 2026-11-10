@@ -273,7 +273,8 @@ function O:BuildMain()
         W.Prompt("The whisper sent by \"Remind to install the addon\".\n$first, $name and $guild are filled in. Leave it empty for the default.",
             ns.InstallReminder:Text(), function(text) ns.InstallReminder:SetText(text) end, 255)
     end)
-    W.Tooltip(reminder, "Install reminder", "What guildmates without the addon get when you click \"Remind to install the addon\" on their profile or right-click menu. Your own text; each person is reminded at most once per 30 days, guild-wide.")
+    W.Tooltip(reminder, "Install reminder", "What guildmates without the addon get when you click \"Remind to install the addon\" on their profile or right-click menu. Your own text (add your Discord invite if you like); each person is reminded at most once per 30 days, guild-wide.",
+        function() return "Now: |cffff80ff" .. ns.InstallReminder:Text() .. "|r" end)
     L:Space(4)
 
     L:Header("Minimap Button")
