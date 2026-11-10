@@ -38,8 +38,8 @@ function M:Init()
     bg:SetPoint("TOPLEFT", 7, -5)
 
     -- Same icon as the window portrait (mug, stein or guild emblem).
-    -- the minimap border is the ring: crop off the medallion's own (13% each side)
-    self.icon = ns.Brand:Attach(b, 20, { "TOPLEFT", b, "TOPLEFT", 7, -5 }, { crop = 0.13 })
+    -- the minimap border is the ring: crop off the medallion's own (14% each side)
+    self.icon = ns.Brand:Attach(b, 20, { "TOPLEFT", b, "TOPLEFT", 7, -5 }, { crop = 0.14 })
 
     local border = b:CreateTexture(nil, "OVERLAY")
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
