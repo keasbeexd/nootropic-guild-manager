@@ -150,14 +150,30 @@ assert(#said == 1 and said[1]:find("^GUILD:Congrats"))
 local at, by = HF:LastAnnounced(202611)
 assert(at == NOW and by == "Marc Priest")
 assert(HF:Announce() and #said == 2, "officers can announce again (not greyed out)")
+-- Shawn announced; then a recount by Marc changed them: every officer sees it
+guild.sync.guild["HA:202611"] = { v = tostring(NOW - 3600), t = NOW - 3600, a = "Probably Shawn" }
+local hw = guild.sync.guild["HW:202611"]
+local savedT, savedA = hw.t, hw.a
+hw.t, hw.a = NOW - 60, "Marc Priest"
+local status = HF:AnnounceStatus(202611)
+assert(status.text:find("Corrected", 1, true) and status.text:find("by Marc Priest, AFTER Probably Shawn last announced", 1, true), status.text)
+hw.t, hw.a = NOW - 7200, savedA
+assert(HF:AnnounceStatus(202611).text:find("^Last announced .- by Probably Shawn%.$"), "crowned before the announcement: no correction")
+hw.t = savedT
 -- many winners: split into several lines, each under 255
 local many = {}
 for _, st in ipairs(HF.STATS) do if not st.noChampion then many[st.key] = { winners = {
   { key = "Abcdefghijkl Abcdefghijkl" }, { key = "Bbcdefghijkl Abcdefghijkl" } } } end end
 guild.sync.guild["HW:202610"] = { v = HF.EncodeChampions(many), t = 1, a = "Marc Priest" }
+ns.Roster.byName["Abcdefghijkl Abcdefghijkl"] = { full = "Abcdefghijkl Abcdefghijkl", short = "Abcdefghijkl Abcdefghijkl" }
+ns.Roster.byName["Bbcdefghijkl Abcdefghijkl"] = { full = "Bbcdefghijkl Abcdefghijkl", short = "Bbcdefghijkl Abcdefghijkl" }
 lines = HF:AnnounceLines(202610)
 assert(#lines > 1)
 for _, l in ipairs(lines) do assert(#l <= 255, #l) end
+-- names that aren't guildmates never reach guild chat
+guild.sync.guild["HW:202610"].v = "quests=Visit my site,Marc Priest"
+lines = HF:AnnounceLines(202610)
+assert(#lines == 1 and not lines[1]:find("Visit", 1, true) and lines[1]:find("Quests completed: Marc Priest", 1, true))
 guild.sync.guild["HW:202610"] = nil
 
 -- a member can't award themselves titles: champs in their own record is ignored

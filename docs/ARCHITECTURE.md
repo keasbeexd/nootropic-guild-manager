@@ -64,7 +64,7 @@ Hall of Fame extras (Services/HallOfFame.lua): `social` is a count of 15-minute 
 | `HX:<member>` | left out of the Hall of Fame (`1`, or empty = shown) | guild | officers |
 | `HW:<month>` | that month's champions, `quests=Name,Name;kills=Name` (written once, from the 2nd of the next month) | guild | officers |
 | `HA:<month>` | that month's champions were announced in guild chat (the time; author = who announced) | guild | officers |
-| `HC:<member>` | Hall of Fame numbers checked against the game on inspect: `<time>;ok` or `<time>;bad;key=claimed/real,...` | guild | officers |
+| `HC:<member>` | Hall of Fame numbers checked against the game on inspect: `<time>;ok` or `<time>;bad;key=claimed/real,...` | officer | officers |
 | `IR:<member>` | when they were reminded to install the addon (the time; the record's author is who reminded them; kept 30 days) | guild | anyone in the guild |
 | `PS:<member>` | sharing choices others must respect (`together` = leave me out of Play Together) | guild | the member only |
 | `DN:<player>` | `time;what they said` ("" = removed) | guild | anyone adds; removing needs **recruit** |

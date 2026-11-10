@@ -701,12 +701,13 @@ function HF:AnnounceLines(won)
     local champs = HF.DecodeChampions(rec.v)
     local parts = {}
     for _, s in ipairs(self.STATS) do
-        local names = champs[s.key]
-        if names and #names > 0 then
-            local short = {}
-            for i, n in ipairs(names) do short[i] = ns.ShortName(n) end
-            parts[#parts + 1] = s.label .. ": " .. table.concat(short, " & ")
+        -- only current guildmates' names go into guild chat
+        local short = {}
+        for _, n in ipairs(champs[s.key] or {}) do
+            local e = ns.Roster.byName[n]
+            if e then short[#short + 1] = e.short end
         end
+        if #short > 0 then parts[#parts + 1] = s.label .. ": " .. table.concat(short, " & ") end
     end
     if #parts == 0 then return nil end
     local lines = {}
@@ -727,6 +728,22 @@ function HF:LastAnnounced(won)
     local rec = ns.Sync:Get("HA:" .. won)
     if not rec or (rec.v or "") == "" then return nil end
     return rec.t, rec.a
+end
+
+-- The announcement's state for the Announce tooltip, the same on every
+-- officer's copy (both records are shared): { text, r, g, b } or nil.
+--   "Last announced 2 Dec, 7 pm by Shawn."
+--   "Corrected 2 Dec, 9 pm by Marc, AFTER Shawn last announced on 2 Dec, 7 pm. Announce again to post the correction."
+function HF:AnnounceStatus(won)
+    local t, by = self:LastAnnounced(won)
+    if not t then return nil end
+    local when = (ns.HallOfFameView and ns.HallOfFameView.When) or ns.FormatAgo
+    local crowned = ns.Sync:Get("HW:" .. won)
+    if crowned and crowned.t > t then
+        return { text = ("Corrected %s by %s, AFTER %s last announced on %s. Announce again to post the correction."):format(
+            when(crowned.t), ns.ShortName(crowned.a or "?"), ns.ShortName(by or "?"), when(t)), r = 1, g = 0.5, b = 0.3 }
+    end
+    return { text = ("Last announced %s by %s."):format(when(t), ns.ShortName(by or "?")), r = 0.6, g = 0.6, b = 0.6 }
 end
 
 function HF:CanAnnounce()
@@ -754,7 +771,9 @@ function HF:Init()
     C_Timer.After(30, publish)
     -- officers: last month's champions, once guildmates' numbers have synced
     local record = ns.Safe(function() HF:RecordChampions() end, "HallOfFame")
-    C_Timer.After(120, record)
+    -- 2 to 3 minutes after login (staggered, so two officers logging in
+    -- together don't both crown: the first one's record reaches the other)
+    C_Timer.After(120 + math.random() * 60, record)
     C_Timer.NewTicker(3600, record)
     -- recount day: re-check soon after guildmates' late numbers arrive
     ns:On("HALL_OF_FAME_CHANGED", function()

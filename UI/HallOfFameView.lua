@@ -260,14 +260,10 @@ function HV:Build(frame)
         else
             GameTooltip:AddLine("Not recorded yet: an officer's addon writes down last month's champions on the 2nd.", 1, 1, 1, true)
         end
-        local t, by = HF:LastAnnounced(won)
-        if t then
-            GameTooltip:AddLine(("Last announced %s by %s."):format(ns.FormatAgo(t), ns.ShortName(by or "?")), 0.6, 0.6, 0.6)
-            local crowned = ns.Sync:Get("HW:" .. won)
-            if crowned and crowned.t > t then
-                GameTooltip:AddLine("The champions changed in the recount after that announcement.", 1, 0.5, 0.3, true)
-            end
-        end
+        -- shared by every officer: who announced last, and whether the
+        -- recount changed the champions after that (by anyone)
+        local line = HF:AnnounceStatus(won)
+        if line then GameTooltip:AddLine(line.text, line.r, line.g, line.b, true) end
         GameTooltip:Show()
     end)
     announce:SetScript("OnLeave", function() GameTooltip:Hide() end)

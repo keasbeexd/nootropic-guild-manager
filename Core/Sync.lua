@@ -57,7 +57,8 @@
                            "<time>" (the author announced them)   officers
       HC:<member>          their Hall of Fame numbers checked against the game:
                            "<time>;ok" or "<time>;bad;key=claimed/real,..."
-                           (Services/HofCheck.lua)   officers
+                           (Services/HofCheck.lua)   officers (officer scope: only
+                           officers ever receive it)
       IR:<member>          reminded to install the addon: "" (the time and who
                            are the record's own; kept 30 days)   anyone in the guild
       HF:<member>          Hall of Fame: their character statistics, all time,
@@ -110,7 +111,7 @@ S.TYPES = {
     HX = { scope = "guild",   officer = true, label = "Hidden from Hall of Fame" },
     HW = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame champions" },
     HA = { scope = "guild",   officer = true, noAudit = true, label = "Champions announced" },
-    HC = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame check" },
+    HC = { scope = "officer", officer = true, noAudit = true, label = "Hall of Fame check" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
 }
@@ -1056,6 +1057,14 @@ function S:OnMessage(msg, channel, sender)
         -- hand-made escape code (textures, colors, links) for our tooltips
         if key:find("[|%c]") or (author or ""):find("[|%c]") then return end
         local value = table.concat(f, FS, 7):gsub("|", "/")
+        -- the same as our own edits (Clean): no line breaks or other control
+        -- characters (fake extra lines in tooltips); audit entries keep their
+        -- field separator
+        local typ0 = key:match("^(%u+):")
+        if typ0 ~= "A" then value = value:gsub(US, "") end
+        value = value:gsub("[%z\1-\30\127]", " ")
+        -- batch ids are ours (base-36, short); anything else is dropped
+        if batch and not batch:match("^%w%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?$") then batch = "" end
         local rec = { v = value, t = t, a = author, b = (batch ~= "" and batch) or nil }
         key, rec = S.Canon(key, rec)
         self:Apply(key, rec, { origin = "remote", channel = channel, sender = who })

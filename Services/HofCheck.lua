@@ -10,8 +10,9 @@
       HC:<member> = "<time>;bad;quests=900/150,kills=..."        claimed/real
 
     Officers only (they're the ones who can act on it, and it keeps requests
-    to the game rare): written by the officer who checked, shown to officers
-    in tooltips. Nothing happens automatically: an officer decides whether to
+    to the game rare): written by the officer who checked, sent only on the
+    officer channel (other members never receive it), shown to officers in
+    tooltips. Nothing happens automatically: an officer decides whether to
     Hide from Hall of Fame. Shared numbers can be a few minutes behind the
     game, so only claims above the real number (plus a small margin) count.
     Each guildmate is checked at most every 6 hours, and only when you
