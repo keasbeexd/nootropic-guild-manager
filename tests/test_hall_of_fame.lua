@@ -1,6 +1,6 @@
 -- Test: Hall of Fame: reading statistics, monthly snapshots across month
 -- changes, the shared record, periods as of a later month, turning sharing
--- off, and the leaderboards (alts added up under their main).
+-- off, and the leaderboards (alts always added up under their main).
 -- Run with tests/run.sh (it passes the repo root as arg[1]).
 local ROOT = arg[1]
 local NOW = 1800000000
@@ -104,10 +104,6 @@ assert(b.boards.quests[1].e.short == "Big Main" and b.boards.quests[1].n == 350,
 assert(b.boards.deaths[1].n == 45 and b.boards.hugs[1].n == 3)
 assert(b.mine == "Me Self-R" and b.totals.quests == 355)
 
-settings.hofAlts = true
-b = HV:Boards()
-assert(b.people == 4 and b.boards.quests[2].e.short == "Big Alt" and b.boards.quests[2].n == 50)
-settings.hofAlts = nil
 
 settings.hofPeriod = "month"
 b = HV:Boards()

@@ -45,8 +45,8 @@ local function Pages()
           text = "The guild at a glance: how many of each class, level and profession, counting the people who've played lately.\n\n"
               .. "|cffffd100When we play|r is a week heatmap from the hours guildmates share: hover a block to see who usually plays then. Click any bar to list those members on the Find tab." },
         { key = "hof", icon = TAB_ICONS[6], title = "Hall of Fame",
-          text = "Guild leaderboards from everyone's character statistics: quests, kills, dungeon bosses, honorable kills, deaths, flights, fish, hugs and more.\n\n"
-              .. "See all time, this month or last month. Each member's own addon shares their numbers (never gold); turn it off in Options > Sharing." },
+          text = "Guild leaderboards from everyone's character statistics: quests, kills, dungeon bosses, honorable kills, deaths, flights, fish, hugs and more, plus |cffffd100Social Butterfly|r, the time spent chatting with guildmates.\n\n"
+              .. "Each card's leader for the month is its |cffffd100champion|r, shown on the card all next month; titles add up on |cffffd100Most Champion Wins|r. Each member's own addon shares their numbers (never gold); turn it off in Options > Sharing." },
         { key = "craft", icon = "Interface\\Icons\\Trade_Alchemy", title = "Who Can Craft It?",
           text = "Every recipe your guildmates know, in one search, with crafters who are online first.\n\n"
               .. "Open it from the |cffffd100Who Can Craft?|r button on the Find tab, or type |cffffd100/ngm craft flask|r.\n\n"
@@ -206,7 +206,7 @@ function WL:BuildSharing(f)
         { "recipes", "Share my recipes", "So guildmates can find you in Who Can Craft?. Shared when you open a profession window." },
         { "learn", "Learn when I usually play", "Shares a summary of the hours you usually play (this character), for Play Together and your profile." },
         { "together", "Show me in Play Together", "Guildmates near your level see you when you're online or usually around." },
-        { "stats", "Share my statistics", "Quests, kills, bosses, deaths and more from the game's Statistics page, for the Hall of Fame. Never gold." },
+        { "stats", "Share my statistics", "Quests, kills, bosses and more, plus your guild chat time (never what was said), for the Hall of Fame. Never gold." },
     }
     p.checks = {}
     local y = 0

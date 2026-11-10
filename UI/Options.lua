@@ -260,7 +260,7 @@ function O:BuildMain()
         "Guildmates near your level see you when you're online, or when you usually play. Off: you're left out of everyone's lists.",
         function(on) ns.Sharing:Set("together", on) end)
     self.statsCheck = L:Check("Share my statistics",
-        "Your character's numbers from the game's Statistics page (quests, kills, bosses, deaths and more), for the Hall of Fame. Never gold. Off: your numbers are cleared.",
+        "Your character's numbers from the game's Statistics page (quests, kills, bosses, deaths and more) and how long you've spent in guild chat conversations (Social Butterfly: only the time, never what was said), for the Hall of Fame. Never gold. Off: your numbers are cleared.",
         function(on) ns.Sharing:Set("stats", on) end)
     local wy = L:Row(30)
     local tour = W.Button(L.panel, "Show the Welcome Tour", 190, 24)

@@ -1037,6 +1037,20 @@ function RV:ShowRowMenu(row, e)
     }) do items[#items + 1] = it end
     local remind = ns.InstallReminder:MenuItem(e)
     if remind then items[#items + 1] = remind end
+    -- officers: leave someone out of the Hall of Fame (their main and alts together)
+    local HF = ns.HallOfFame
+    if HF:CanHide() then
+        local person = e.main or full
+        local chars = { person }
+        for _, alt in ipairs(ns.Roster.altIndex[person] or {}) do chars[#chars + 1] = alt end
+        local hidden = false
+        for _, c in ipairs(chars) do if HF:Hidden(c) then hidden = true end end
+        items[#items + 1] = { text = hidden and "Show in Hall of Fame" or "Hide from Hall of Fame",
+            tooltip = { title = "Hall of Fame", text = "Officers only. Leaves this person (main and alts) out of every card and champion title, for the whole guild. Use it if their numbers look wrong." },
+            func = function()
+                for _, c in ipairs(chars) do HF:SetHidden(c, not hidden) end
+            end }
+    end
     W.ShowMenu(row, items)
 end
 

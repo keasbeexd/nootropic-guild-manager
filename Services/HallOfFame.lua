@@ -12,6 +12,12 @@
     it reads the statistics in a new month, so the first month counts from
     when the addon was installed. Gold is left out on purpose.
 
+    Also: Social Butterfly (guild chat time, counted by your own copy),
+    last month's champions (HF:Champions; titles written down by officers as
+    HW:<month>), plausibility limits on everyone's numbers (HF.Plausible),
+    and officers leaving someone out (HX:<member>). A person's main and alts
+    always count as one.
+
     Statistic IDs were read from the Forever client's own catalogue
     (build 1.60.1, Interface 16001), the Wrath-era set plus Forever additions.
     GetStatistic returns text: "1,234", "--" for never, or a money string.
@@ -25,24 +31,37 @@ HF.PUBLISH_EVERY = 600 -- shared again at most every 10 minutes (and at login)
 
 -- key, statistic id(s), label, icon. A list of ids is added up.
 HF.STATS = {
-    { key = "quests",   id = 98,   label = "Quests completed",  icon = "Interface\\Icons\\INV_Misc_Note_01" },
-    { key = "kills",    id = 1197, label = "Kills",             icon = "Interface\\Icons\\Ability_DualWield" },
-    { key = "bosses",   label = "Dungeon & raid bosses",         icon = "Interface\\Icons\\INV_Misc_Head_Dragon_01",
+    { key = "champs",   label = "Most Champion Wins", icon = "Interface\\Icons\\INV_Crown_01", computed = true, noChampion = true,
+      tip = "Champion titles: each card's leader for a month (all of them, on a tie) wins its title. Recorded by officers' copies of the addon a few days into the next month, so nobody can award themselves one." },
+    { key = "social",   label = "Social Butterfly", icon = "Interface\\Icons\\Spell_Holy_MindVision", rate = 8, since = 1793491200,
+      format = function(n) return ("%.1f h"):format(n / 4) end,
+      tip = "Hours spent in guild chat conversations: 15-minute blocks where you and at least one guildmate both spoke (8 blocks a day at most). Only the count is shared, never what was said." },
+    { key = "quests",   id = 98,   rate = 150, label = "Quests completed",  icon = "Interface\\Icons\\INV_Misc_Note_01" },
+    { key = "kills",    id = 1197, rate = 4000, label = "Kills",             icon = "Interface\\Icons\\Ability_DualWield" },
+    { key = "bosses",   rate = 60, label = "Dungeon & raid bosses",         icon = "Interface\\Icons\\INV_Misc_Head_Dragon_01",
       tip = "Final bosses killed: every dungeon and raid, Forever's own included." },
-    { key = "dungeons", id = 932,  label = "Dungeons entered",  icon = "Interface\\Icons\\INV_Misc_Key_14" },
-    { key = "hk",       id = 588,  label = "Honorable kills",   icon = "Interface\\Icons\\INV_BannerPVP_02" },
-    { key = "bgs",      id = 840,  label = "Battlegrounds won", icon = "Interface\\Icons\\INV_Sword_27" },
-    { key = "duels",    id = 319,  label = "Duels won",         icon = "Interface\\Icons\\Ability_Parry" },
-    { key = "epics",    id = 341,  label = "Epics looted",      icon = "Interface\\Icons\\INV_Misc_Gem_Amethyst_02" },
-    { key = "deaths",   id = 60,   label = "Deaths",            icon = "Interface\\Icons\\INV_Misc_Bone_HumanSkull_01" },
-    { key = "falls",    id = 114,  label = "Deaths from falling", icon = "Interface\\Icons\\Spell_Magic_FeatherFall" },
-    { key = "flights",  id = 349,  label = "Flights taken",     icon = "Interface\\Icons\\Ability_Mount_Wyvern_01" },
-    { key = "hearths",  id = 353,  label = "Hearthstones used", icon = "Interface\\Icons\\INV_Misc_Rune_01" },
-    { key = "fish",     id = 1518, label = "Fish caught",       icon = "Interface\\Icons\\INV_Misc_Fish_02" },
-    { key = "hugs",     id = 1042, label = "Hugs given",        icon = "Interface\\Icons\\Spell_Holy_GreaterHeal" },
+    { key = "dungeons", id = 932,  rate = 60, label = "Dungeons entered",  icon = "Interface\\Icons\\INV_Misc_Key_14" },
+    { key = "hk",       id = 588,  rate = 3000, label = "Honorable kills",   icon = "Interface\\Icons\\INV_BannerPVP_02" },
+    { key = "bgs",      id = 840,  rate = 40, label = "Battlegrounds won", icon = "Interface\\Icons\\INV_Sword_27" },
+    { key = "duels",    id = 319,  rate = 300, label = "Duels won",         icon = "Interface\\Icons\\Ability_Parry" },
+    { key = "epics",    id = 341,  rate = 40, label = "Epics looted",      icon = "Interface\\Icons\\INV_Misc_Gem_Amethyst_02" },
+    { key = "deaths",   id = 60,   rate = 300, label = "Deaths",            icon = "Interface\\Icons\\INV_Misc_Bone_HumanSkull_01" },
+    { key = "falls",    id = 114,  rate = 200, label = "Deaths from falling", icon = "Interface\\Icons\\Spell_Magic_FeatherFall" },
+    { key = "flights",  id = 349,  rate = 150, label = "Flights taken",     icon = "Interface\\Icons\\Ability_Mount_Wyvern_01" },
+    { key = "hearths",  id = 353,  rate = 100, label = "Hearthstones used", icon = "Interface\\Icons\\INV_Misc_Rune_01" },
+    { key = "fish",     id = 1518, rate = 1500, label = "Fish caught",       icon = "Interface\\Icons\\INV_Misc_Fish_02" },
+    { key = "hugs",     id = 1042, rate = 3000, label = "Hugs given",        icon = "Interface\\Icons\\Spell_Holy_GreaterHeal" },
 }
 HF.BY_KEY = {}
 for _, s in ipairs(HF.STATS) do HF.BY_KEY[s.key] = s end
+
+-- Formats a statistic's value for display.
+function HF.Format(stat, n)
+    if stat and stat.format then return stat.format(n or 0) end
+    local s = tostring(math.floor(n or 0))
+    local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+    return (out:gsub("^,", ""))
+end
 
 -- Final-boss kill statistics, one per dungeon or raid.
 HF.BOSS_IDS = {
@@ -89,8 +108,10 @@ end
 
 -- { key = n } for every statistic the game answered (nil when it can't).
 function HF:ReadMine()
-    if not self:Available() then return nil end
     local out, any = {}, false
+    local social = self:SocialTotal()
+    if social > 0 then out.social, any = social, true end
+    if not self:Available() then return any and out or nil end
     for _, s in ipairs(self.STATS) do
         local n
         if s.id then
@@ -163,7 +184,7 @@ end
 local function DecodeList(v)
     local t = {}
     for k, n in (v or ""):gmatch("(%w+)=(%d+)") do
-        if HF.BY_KEY[k] then t[k] = tonumber(n) end
+        if HF.BY_KEY[k] and not HF.BY_KEY[k].computed then t[k] = tonumber(n) end
     end
     return t
 end
@@ -180,6 +201,60 @@ function HF.Decode(v)
     if parts[1] ~= HF.VERSION then return nil end
     return { month = tonumber(parts[2]) or 0, all = DecodeList(parts[3]), this = DecodeList(parts[4]),
              lastMonth = tonumber(parts[5]) or 0, last = DecodeList(parts[6]) }
+end
+
+------------------------------------------------------------------------
+-- Plausibility. The game only lets an addon read its own player's
+-- statistics, so guildmates' numbers can't be checked against the game. The
+-- sync already stops anyone sending numbers for someone else (a record must
+-- come from its own member); these limits stop a modified copy from lying
+-- big about its own. Each statistic has a generous ceiling per day of play
+-- (`rate`): all-time numbers can't beat it since WoW: Forever opened
+-- (HF.LAUNCH; Social Butterfly since it began counting), a month's can't beat
+-- 31 days of it, and no month can beat all time. A record that breaks any of
+-- them is left out of the Hall of Fame altogether.
+------------------------------------------------------------------------
+HF.LAUNCH = 1788220800 -- 1 Sep 2026, before WoW: Forever opened
+HF.MONTH_DAYS = 31
+
+function HF.Plausible(r, now)
+    now = now or (ns.DB and ns.DB.Now and ns.DB:Now()) or time()
+    if not r then return false end
+    if r.month < 202609 or r.month > HF.Month(now + 86400) then return false end
+    for _, s in ipairs(HF.STATS) do
+        if s.rate then
+            local days = math.max(1, (now - (s.since or HF.LAUNCH)) / 86400 + 1)
+            local all, this, last = r.all[s.key], r.this[s.key], r.last[s.key]
+            if all and all > s.rate * days then return false end
+            for _, v in ipairs({ this or 0, last or 0 }) do
+                if v > s.rate * HF.MONTH_DAYS then return false end
+                if v > 0 and v > (all or 0) then return false end
+            end
+        end
+    end
+    return true
+end
+
+-- Members whose shared numbers break the limits (for the tab's note).
+function HF:Implausible(full)
+    local r = HF.Decode(ns.Sync:Value("HF:" .. full))
+    return r ~= nil and not HF.Plausible(r)
+end
+
+------------------------------------------------------------------------
+-- Officers can leave a member out (HX:<member> = "1"), e.g. numbers that
+-- look wrong but stay inside the limits. Shared and audited.
+------------------------------------------------------------------------
+function HF:Hidden(full)
+    return (ns.Sync:Value("HX:" .. full) or "") ~= ""
+end
+
+function HF:CanHide()
+    return ns.Sync:CanWrite("HX:" .. (Me() or "x"))
+end
+
+function HF:SetHidden(full, hidden)
+    return ns.Sync:Set("HX:" .. full, hidden and "1" or "")
 end
 
 function HF:Publish()
@@ -201,6 +276,7 @@ end
 function HF:For(full, period, nowMonth)
     local r = HF.Decode(ns.Sync:Value("HF:" .. full))
     if not r then return nil end
+    if not HF.Plausible(r) then return nil end
     if period == "all" then return r.all end
     nowMonth = nowMonth or HF.Month()
     if period == "month" then
@@ -213,11 +289,223 @@ function HF:For(full, period, nowMonth)
     return {}
 end
 
+------------------------------------------------------------------------
+-- Leaderboards (shared by the Hall of Fame tab and the champions)
+------------------------------------------------------------------------
+-- Every guildmate's numbers for a period, one entry per person: their main
+-- and alts are added up (a person counts once on every card, their time and
+-- kills add together). Members left out by officers or whose numbers break
+-- the limits aren't listed.
+-- { people, sharing, noAddon, hidden, flagged, totals, boards = { key = { { e, n, key }... } } }
+function HF:Boards(period, month)
+    month = month or HF.Month()
+    local groups, order = {}, {}
+    for _, e in ipairs(ns.Roster.members) do
+        local key = e.main or e.full
+        local g = groups[key]
+        if not g then
+            g = { chars = {} }
+            groups[key] = g
+            order[#order + 1] = key
+        end
+        g.chars[#g.chars + 1] = e
+        if e.full == key then g.e = e end
+    end
+    local wins = self:Wins(period, month)
+    local boards, totals, sharing, noAddon, hidden, flagged = {}, {}, 0, 0, 0, 0
+    for _, s in ipairs(self.STATS) do boards[s.key] = {} end
+    for _, key in ipairs(order) do
+        local g = groups[key]
+        g.e = g.e or g.chars[1] -- main not in the guild: their first alt
+        local sum, any, hasAddon, isHidden, isFlagged = {}, false, false, false, false
+        for _, c in ipairs(g.chars) do
+            if c.hasAddon then hasAddon = true end
+            if self:Hidden(c.full) then isHidden = true end
+            if self:Implausible(c.full) then isFlagged = true end
+        end
+        if isHidden then
+            hidden = hidden + 1
+        elseif isFlagged then
+            flagged = flagged + 1
+        else
+            for _, c in ipairs(g.chars) do
+                local t = self:For(c.full, period, month)
+                if t then
+                    any = true
+                    for k, n in pairs(t) do sum[k] = (sum[k] or 0) + n end
+                end
+            end
+            sum.champs = wins[key]
+            if sum.champs then any = true end
+        end
+        if not hasAddon then noAddon = noAddon + 1 end
+        if any then
+            sharing = sharing + 1
+            for k, n in pairs(sum) do
+                if n > 0 and boards[k] then
+                    table.insert(boards[k], { e = g.e, n = n, key = key })
+                    totals[k] = (totals[k] or 0) + n
+                end
+            end
+        end
+    end
+    for _, list in pairs(boards) do
+        table.sort(list, function(a, b)
+            if a.n ~= b.n then return a.n > b.n end
+            return a.e.short < b.e.short
+        end)
+    end
+    return { people = #order, sharing = sharing, noAddon = noAddon, hidden = hidden, flagged = flagged,
+             totals = totals, boards = boards }
+end
+
+-- Last month's champion of each card: winner takes all, and a tie makes
+-- everyone at the top a champion. { key = { n = best, winners = { { e, n, key }... } } }
+function HF:Champions(month)
+    month = month or HF.Month()
+    local data = self:Boards("last", month)
+    local out = {}
+    for _, s in ipairs(self.STATS) do
+        if not s.noChampion then
+            local list = data.boards[s.key]
+            local top = list[1] and list[1].n or 0
+            if top > 0 then
+                local winners = {}
+                for _, p in ipairs(list) do
+                    if p.n == top then winners[#winners + 1] = p else break end
+                end
+                out[s.key] = { n = top, winners = winners }
+            end
+        end
+    end
+    return out
+end
+
+------------------------------------------------------------------------
+-- Champion titles, recorded by officers (HW:<month> = "quests=Name,Name;kills=Name")
+-- A few days into a month (when everyone's numbers for the month before
+-- have had time to arrive) the first officer's copy online writes down that
+-- month's champions. Only officers may write it, so a modified copy can't
+-- give itself titles; Most Champion Wins counts these records.
+------------------------------------------------------------------------
+HF.RECORD_ON_DAY = 3 -- UTC day of the month
+
+function HF.EncodeChampions(champs)
+    local parts = {}
+    for _, s in ipairs(HF.STATS) do
+        local c = champs[s.key]
+        if c then
+            local names = {}
+            for i, p in ipairs(c.winners) do names[i] = p.key end
+            parts[#parts + 1] = s.key .. "=" .. table.concat(names, ",")
+        end
+    end
+    return table.concat(parts, ";")
+end
+
+-- "quests=A,B;kills=C" -> { quests = { "A", "B" }, kills = { "C" } }
+function HF.DecodeChampions(v)
+    local out = {}
+    for k, names in (v or ""):gmatch("(%w+)=([^;]*)") do
+        if HF.BY_KEY[k] and not HF.BY_KEY[k].noChampion then
+            out[k] = {}
+            for n in names:gmatch("[^,]+") do out[k][#out[k] + 1] = n end
+        end
+    end
+    return out
+end
+
+function HF:RecordChampions(now)
+    now = now or ns.DB:Now()
+    if not (ns.IsOfficer() and ns.Sync.readyFor) then return false end
+    if tonumber(date("!%d", now)) < self.RECORD_ON_DAY then return false end
+    local last = HF.PrevMonth(HF.Month(now))
+    local key = "HW:" .. last
+    if ns.Sync:Get(key) then return false end -- already recorded
+    local champs = self:Champions(HF.Month(now))
+    if not next(champs) then return false end
+    return ns.Sync:Set(key, HF.EncodeChampions(champs))
+end
+
+-- Titles per person for a period: "all" (every recorded month), "month"
+-- (titles handed out this month, i.e. last month's champions) or "last".
+-- { [person] = count }
+function HF:Wins(period, month)
+    month = month or HF.Month()
+    local want
+    if period == "month" then want = HF.PrevMonth(month)
+    elseif period == "last" then want = HF.PrevMonth(HF.PrevMonth(month)) end
+    local out = {}
+    for key, rec in pairs(ns.Sync:Store("guild") or {}) do
+        local m = key:match("^HW:(%d+)$")
+        if m and (not want or tonumber(m) == want) then
+            for _, names in pairs(HF.DecodeChampions(rec.v)) do
+                for _, n in ipairs(names) do out[n] = (out[n] or 0) + 1 end
+            end
+        end
+    end
+    return out
+end
+
+------------------------------------------------------------------------
+-- Social Butterfly: time in guild chat conversations
+-- The day is cut into 15-minute blocks. A block counts when you said
+-- something in guild chat AND another guildmate did too (talking to
+-- yourself doesn't count), at most 8 blocks per (UTC) day. Ten messages in a
+-- row count once, so spamming gets nothing. Kept per character on this
+-- computer: Settings().hof[character].social = { total, day, today, block, me, them, counted }.
+------------------------------------------------------------------------
+HF.SOCIAL_BLOCK = 900
+HF.SOCIAL_DAY_CAP = 8
+
+local function SocialState()
+    local st = MyState()
+    st.social = st.social or { total = 0 }
+    return st.social
+end
+
+-- `fromMe`: you said it; otherwise a guildmate did. `now` for tests.
+function HF:SocialNote(fromMe, now)
+    now = now or time()
+    local s = SocialState()
+    local block = math.floor(now / self.SOCIAL_BLOCK)
+    if s.block ~= block then
+        s.block, s.me, s.them, s.counted = block, false, false, false
+    end
+    local day = tonumber(date("!%Y%m%d", now))
+    if s.day ~= day then s.day, s.today = day, 0 end
+    if fromMe then s.me = true else s.them = true end
+    if s.me and s.them and not s.counted and (s.today or 0) < self.SOCIAL_DAY_CAP then
+        s.counted = true
+        s.today = (s.today or 0) + 1
+        s.total = (s.total or 0) + 1
+        self.dirty = true
+    end
+end
+
+function HF:SocialTotal()
+    local me = Me()
+    local st = me and (ns.DB:Settings().hof or {})[me]
+    return st and st.social and st.social.total or 0
+end
+
+function HF:OnGuildChat(_, _, sender)
+    if issecretvalue and issecretvalue(sender) then return end
+    local who = ns.NormalizeName(sender)
+    if not who then return end
+    self:SocialNote(who == Me())
+end
+
 function HF:Init()
     -- the statistics change with nearly every kill: note it, and share at
     -- most every 10 minutes
     ns:RegisterEvent("CRITERIA_UPDATE", function() HF.dirty = true end)
+    ns:RegisterEvent("CHAT_MSG_GUILD", function(...) HF:OnGuildChat(...) end)
     local publish = ns.Safe(function() HF:Publish() end, "HallOfFame")
     C_Timer.After(30, publish)
+    -- officers: last month's champions, once guildmates' numbers have synced
+    local record = ns.Safe(function() HF:RecordChampions() end, "HallOfFame")
+    C_Timer.After(120, record)
+    C_Timer.NewTicker(3600, record)
     C_Timer.NewTicker(self.PUBLISH_EVERY, function() if HF.dirty then publish() end end)
 end

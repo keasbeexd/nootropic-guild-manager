@@ -59,6 +59,10 @@ Local changes are sent together 15 seconds after the first one (a **batch**, whi
 | `RP:<member>:<professionID>` | `profession;id,id,...` (base-36 recipe spell IDs) | guild | the member only |
 | `RR:<member>` | completed readiness checks (`ony,brooch`, or `-`) | guild | the member only |
 | `HF:<member>` | `1;month;all time;this month;last month id;last month` (each `key=n,...`; month as `202611`, UTC) | guild | the member only |
+
+Hall of Fame extras (Services/HallOfFame.lua): `social` is a count of 15-minute guild chat blocks (you and someone else spoke; 8 a day max), tracked from `CHAT_MSG_GUILD` per character in `Settings().hof[character].social`. Champion titles (`champs`) are never self-reported: officers' copies write `HW:<month>` from `HF:Champions` and every copy counts those. `HF.Plausible` drops records whose numbers beat a per-statistic daily rate since launch (all time), 31 days of it (a month), or all time (a month).
+| `HX:<member>` | left out of the Hall of Fame (`1`, or empty = shown) | guild | officers |
+| `HW:<month>` | that month's champions, `quests=Name,Name;kills=Name` (written once, from the 3rd of the next month) | guild | officers |
 | `IR:<member>` | when they were reminded to install the addon (the time; the record's author is who reminded them; kept 30 days) | guild | anyone in the guild |
 | `PS:<member>` | sharing choices others must respect (`together` = leave me out of Play Together) | guild | the member only |
 | `DN:<player>` | `time;what they said` ("" = removed) | guild | anyone adds; removing needs **recruit** |
