@@ -426,7 +426,13 @@ function HF:RecordChampions(now)
     if ns.Sync:Get(key) then return false end -- already recorded
     local champs = self:Champions(HF.Month(now))
     if not next(champs) then return false end
-    return ns.Sync:Set(key, HF.EncodeChampions(champs))
+    local ok = ns.Sync:Set(key, HF.EncodeChampions(champs))
+    if ok then
+        -- your copy crowned them: tell you they're ready to announce
+        ns:Print(("|cffffd100%s's Hall of Fame champions have been crowned!|r You can now announce the winners: "
+            .. "|cffffffff/ngm hof|r, then |cffffd100Announce Champions|r."):format(HF.MonthName(last)))
+    end
+    return ok
 end
 
 -- Titles per person for a period: "all" (every recorded month), "month"

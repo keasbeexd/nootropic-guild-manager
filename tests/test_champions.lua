@@ -93,7 +93,11 @@ assert(os.date("!%Y%m%d", dec1) == "20261201")
 assert(not HF:RecordChampions(dec5), "not an officer")
 iAmOfficer = true
 assert(not HF:RecordChampions(dec1), "the 1st: numbers still being tallied")
+local printed = {}
+ns.Print = function(_, m) printed[#printed + 1] = m end
 assert(HF:RecordChampions(dec1 + 86400), "the 2nd")
+assert(#printed == 1 and printed[1]:find("November's Hall of Fame champions have been crowned", 1, true)
+  and printed[1]:find("Announce Champions", 1, true), "the officer who crowned them is told")
 assert(guild.sync.guild["HW:202611"].v == "quests=Marc Priest,Probably Shawn;kills=Marc Priest,Probably Shawn;deaths=Grud Sama,Probably Shawn",
   guild.sync.guild["HW:202611"].v)
 assert(not HF:RecordChampions(dec5), "written once")
