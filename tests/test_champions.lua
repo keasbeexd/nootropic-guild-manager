@@ -101,6 +101,26 @@ assert(#printed == 1 and printed[1]:find("November's Hall of Fame champions have
 assert(guild.sync.guild["HW:202611"].v == "quests=Marc Priest,Probably Shawn;kills=Marc Priest,Probably Shawn;deaths=Grud Sama,Probably Shawn",
   guild.sync.guild["HW:202611"].v)
 assert(not HF:RecordChampions(dec5), "written once")
+-- recount (until 00:00 UTC on the 3rd): late numbers can change a winner
+local dec2 = 1796083200 + 86400
+printed = {}
+put("Grud Sama", { quests = 80, kills = 50, deaths = 9 })      -- Grud's late numbers arrive
+assert(not HF:RecordChampions(dec5), "after the recount day nothing changes")
+assert(HF:RecordChampions(dec2 + 3600), "recount on the 2nd")
+local champsNow = HF.DecodeChampions(guild.sync.guild["HW:202611"].v)
+assert(#champsNow.quests == 1 and champsNow.quests[1] == "Grud Sama", "Grud takes Quests")
+assert(champsNow.kills[1] == "Marc Priest" and #champsNow.deaths == 2, "other titles untouched")
+assert(#printed == 1 and printed[1]:find("Recount:", 1, true) and printed[1]:find("Quests completed: Grud Sama (was Marc Priest & Probably Shawn)", 1, true), printed[1])
+-- an officer whose copy is missing Grud's numbers can't undo it
+local saved = guild.sync.guild["HF:Grud Sama"]
+guild.sync.guild["HF:Grud Sama"] = nil
+assert(not HF:RecordChampions(dec2 + 7200), "missing numbers never undo a correction")
+assert(HF.DecodeChampions(guild.sync.guild["HW:202611"].v).quests[1] == "Grud Sama")
+guild.sync.guild["HF:Grud Sama"] = saved
+-- put things back for the checks below (Grud's earlier numbers, original champions)
+put("Grud Sama", { kills = 50, deaths = 9 })
+guild.sync.guild["HW:202611"].v = "quests=Marc Priest,Probably Shawn;kills=Marc Priest,Probably Shawn;deaths=Grud Sama,Probably Shawn"
+
 st = HF:CrownStatus(dec5)
 assert(st.state == "crowned" and st.nextWon == 202612 and st.nextAt == HF.CrownTime(202701))
 local rc = HF:RecordedChampions(month)

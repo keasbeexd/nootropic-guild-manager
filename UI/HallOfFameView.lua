@@ -188,7 +188,8 @@ function HV.CrownText(c)
     elseif c.state == "due" then
         return ("|cffffd100%s's points are tallied.|r Champions will be crowned as soon as an officer logs in."):format(won)
     elseif c.state == "crowned" then
-        return ("|cffffd100%s's champions have been crowned!|r Next: %s's, %s (%s)."):format(won, nextWon, HV.When(c.nextAt), HV.In(c.nextAt))
+        local recount = HF:InRecount() and (" Late numbers can still change them until %s."):format(HV.When(c.at + HF.RECOUNT)) or ""
+        return ("|cffffd100%s's champions have been crowned!|r%s Next: %s's, %s (%s)."):format(won, recount, nextWon, HV.When(c.nextAt), HV.In(c.nextAt))
     end
     return ("Next champions (%s's) crowned %s (%s)."):format(nextWon, HV.When(c.nextAt), HV.In(c.nextAt))
 end
@@ -262,6 +263,10 @@ function HV:Build(frame)
         local t, by = HF:LastAnnounced(won)
         if t then
             GameTooltip:AddLine(("Last announced %s by %s."):format(ns.FormatAgo(t), ns.ShortName(by or "?")), 0.6, 0.6, 0.6)
+            local crowned = ns.Sync:Get("HW:" .. won)
+            if crowned and crowned.t > t then
+                GameTooltip:AddLine("The champions changed in the recount after that announcement.", 1, 0.5, 0.3, true)
+            end
         end
         GameTooltip:Show()
     end)

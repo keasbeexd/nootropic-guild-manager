@@ -423,7 +423,7 @@ function HF:RecordChampions(now)
     if tonumber(date("!%d", now)) < self.RECORD_ON_DAY then return false end
     local last = HF.PrevMonth(HF.Month(now))
     local key = "HW:" .. last
-    if ns.Sync:Get(key) then return false end -- already recorded
+    if ns.Sync:Get(key) then return self:Recount(now) end -- already crowned: maybe a recount
     local champs = self:Champions(HF.Month(now))
     if not next(champs) then return false end
     local ok = ns.Sync:Set(key, HF.EncodeChampions(champs))
@@ -431,6 +431,78 @@ function HF:RecordChampions(now)
         -- your copy crowned them: tell you they're ready to announce
         ns:Print(("|cffffd100%s's Hall of Fame champions have been crowned!|r You can now announce the winners: "
             .. "|cffffffff/ngm hof|r, then |cffffd100Announce Champions|r."):format(HF.MonthName(last)))
+    end
+    return ok
+end
+
+-- Recount: for a day after crowning (until 00:00 UTC on the 3rd), late
+-- numbers can still change a winner. A category only changes when someone
+-- not crowned has caught up with or passed the crowned number, so an officer
+-- whose copy is missing numbers (which only ever makes them lower) can never
+-- undo another officer's correction. The officer whose copy corrects it is
+-- told, so they can announce the correction.
+HF.RECOUNT = 86400
+
+function HF:InRecount(now)
+    now = now or ns.DB:Now()
+    local at = HF.CrownTime(HF.Month(now))
+    return now >= at and now < at + self.RECOUNT
+end
+
+function HF:Recount(now)
+    now = now or ns.DB:Now()
+    if not (ns.IsOfficer() and ns.Sync.readyFor and self:InRecount(now)) then return false end
+    local month = HF.Month(now)
+    local last = HF.PrevMonth(month)
+    local key = "HW:" .. last
+    local rec = ns.Sync:Get(key)
+    if not rec then return false end
+    local recorded = HF.DecodeChampions(rec.v)
+    local live = self:Champions(month)
+    local data = self:Boards("last", month)
+    local changed, notes = false, {}
+    local final = {}
+    for _, s in ipairs(self.STATS) do
+        if not s.noChampion then
+            local names = recorded[s.key] or {}
+            local crownedN = -1
+            local isWinner = {}
+            for _, n in ipairs(names) do
+                isWinner[n] = true
+                for _, p in ipairs(data.boards[s.key] or {}) do
+                    if p.key == n and p.n > crownedN then crownedN = p.n end
+                end
+            end
+            -- crowned, but this copy has no numbers for any of the winners:
+            -- it can't judge, so it leaves the category alone
+            local caught = false
+            if #names == 0 or crownedN >= 0 then
+                for _, p in ipairs(data.boards[s.key] or {}) do
+                    if not isWinner[p.key] and p.n > 0 and p.n >= crownedN then caught = true break end
+                end
+            end
+            if caught and live[s.key] then
+                final[s.key] = live[s.key]
+                local was, now_ = {}, {}
+                for i, n in ipairs(names) do was[i] = ns.ShortName(n) end
+                for i, p in ipairs(live[s.key].winners) do now_[i] = ns.ShortName(p.key) end
+                local w, nw = table.concat(was, " & "), table.concat(now_, " & ")
+                if w ~= nw then
+                    changed = true
+                    notes[#notes + 1] = ("%s: %s (was %s)"):format(s.label, nw, w ~= "" and w or "nobody")
+                end
+            elseif #names > 0 then
+                local winners = {}
+                for i, n in ipairs(names) do winners[i] = { key = n } end
+                final[s.key] = { winners = winners }
+            end
+        end
+    end
+    if not changed then return false end
+    local ok = ns.Sync:Set(key, HF.EncodeChampions(final))
+    if ok then
+        ns:Print(("|cffffd100Recount:|r late numbers changed %s's Hall of Fame champions. %s. You may want to announce the correction (|cffffffff/ngm hof|r, |cffffd100Announce Champions|r)."):format(
+            HF.MonthName(last), table.concat(notes, "; ")))
     end
     return ok
 end
@@ -684,5 +756,9 @@ function HF:Init()
     local record = ns.Safe(function() HF:RecordChampions() end, "HallOfFame")
     C_Timer.After(120, record)
     C_Timer.NewTicker(3600, record)
+    -- recount day: re-check soon after guildmates' late numbers arrive
+    ns:On("HALL_OF_FAME_CHANGED", function()
+        if ns.IsOfficer() and HF:InRecount() then ns.Debounce("hofrecount", 60, record) end
+    end)
     C_Timer.NewTicker(self.PUBLISH_EVERY, function() if HF.dirty then publish() end end)
 end
