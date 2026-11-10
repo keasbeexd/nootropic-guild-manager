@@ -50,6 +50,8 @@
                            leave me out of Play Together (Services/Sharing.lua)   the member only
       SC:<member>          usual online hours: 168 bits (Monday 00:00 UTC
                            onward) as 42 hex digits   the member only
+      IR:<member>          reminded to install the addon: "" (the time and who
+                           are the record's own; kept 30 days)   anyone in the guild
       HF:<member>          Hall of Fame: their character statistics, all time,
                            this month and last (Services/HallOfFame.lua)   the member only
 
@@ -96,6 +98,7 @@ S.TYPES = {
     RR = { scope = "guild",   selfOnly = true, noAudit = true, label = "Raid readiness" },
     PS = { scope = "guild",   selfOnly = true, noAudit = true, label = "Sharing choices" },
     HF = { scope = "guild",   selfOnly = true, noAudit = true, low = true, label = "Hall of Fame" },
+    IR = { scope = "guild",   anyone = true, noAudit = true, ttl = 30 * 86400, label = "Install reminder" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
 }
@@ -690,6 +693,9 @@ function S:Materialize(typ, key, member, rec)
         return
     elseif typ == "HF" then
         ns.Debounce("hofchanged", 0.5, function() ns:Fire("HALL_OF_FAME_CHANGED") end)
+        return
+    elseif typ == "IR" then
+        ns.Debounce("reminderschanged", 0.3, function() ns:Fire("MEMBER_CHANGED") end)
         return
     elseif typ == "DN" or typ == "RS" then
         -- Do Not Whisper entries are about people outside the guild: no member record

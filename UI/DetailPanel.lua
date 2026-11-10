@@ -209,6 +209,26 @@ function DP:Build()
     self.footer:SetJustifyH("LEFT")
     self.footer:SetWordWrap(false)
 
+    -- members without the addon: a one-click reminder (Services/InstallReminder.lua)
+    local remind = W.Button(f, "Remind to install", 118, 20)
+    remind:SetPoint("BOTTOMRIGHT", -10, 5)
+    remind:SetMotionScriptsWhileDisabled(true)
+    remind:SetScript("OnClick", function()
+        if DP.entry then ns.InstallReminder:Send(DP.entry) end
+        DP:Refresh()
+    end)
+    remind:SetScript("OnEnter", function(btn)
+        GameTooltip:SetOwner(btn, "ANCHOR_TOP")
+        GameTooltip:AddLine("Remind to install the addon")
+        local ok, why = ns.InstallReminder:Can(DP.entry)
+        GameTooltip:AddLine(ok and "Whispers them why it's worth having and where to get it. Once per 30 days, for the whole guild."
+            or why, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    remind:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    remind:Hide()
+    self.remindButton = remind
+
     local function refresh()
         if f:IsShown() then ns.Debounce("detail", 0.05, function() DP:Refresh() end) end
     end
@@ -266,11 +286,15 @@ function DP:RefreshHeader(e)
     local spec = e.spec and ((specIcon and ("|T" .. specIcon .. ":12:12:0:0:64:64:5:59:5:59|t ") or "") .. e.spec .. " ") or ""
     local roles = (e.roleList and #e.roleList > 0) and ("  |cff9d9d9d-|r  " .. table.concat(e.roleList, ", ")) or ""
     h.Sub:SetText(("Level %d %s%s  |cff9d9d9d-|r  %s%s"):format(e.level, spec, e.className, e.rank, roles))
+    local status
     if e.online then
-        h.Status:SetText("|cff40ff40Online|r  " .. (e.zone ~= "" and e.zone or ""))
+        status = "|cff40ff40Online|r  " .. (e.zone ~= "" and e.zone or "")
     else
-        h.Status:SetText("|cff9d9d9dOffline - last seen " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r")
+        status = "|cff9d9d9dOffline - last seen " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r"
     end
+    -- On Discord: a Discord name on their profile (or their main's)
+    if e.discord then status = status .. "  " .. ns.Profile.DISCORD_BADGE end
+    h.Status:SetText(status)
 end
 
 ------------------------------------------------------------------------
@@ -348,7 +372,7 @@ function DP:BuildContactBox(parent)
     s.Discord = TextLink(s, function()
         local e = DP.entry
         local discord = e and ns.Profile:Contact(e.full)
-        if discord and discord ~= "" then StaticPopup_Show("NOOTROPICGM_COPY", nil, nil, { text = discord }) end
+        if discord and discord ~= "" then StaticPopup_Show("NOOTROPICGM_COPY", nil, nil, { text = (discord:gsub("^@+", "")) }) end
     end)
     s.Discord:SetPoint("LEFT", s.Label, "RIGHT", 6, 0)
     W.Tooltip(s.Discord, "Discord", "Click to copy.")
@@ -366,7 +390,7 @@ function DP:RefreshContactBox(e)
     s.Label:SetShown(hasDiscord)
     s.Discord:SetShown(hasDiscord)
     if hasDiscord then
-        s.Discord:SetLabel(discord)
+        s.Discord:SetLabel(ns.Profile.DiscordLabel(discord))
         y = -16
     end
     s.Note:ClearAllPoints()
@@ -1453,11 +1477,15 @@ function DP:Refresh(forceText)
     end
     self:RefreshProfs(e)
 
+    local canRemind = not e.hasAddon and not e.isSelf
+    self.remindButton:SetShown(canRemind)
+    self.footer:SetPoint("BOTTOMRIGHT", canRemind and -134 or -14, 10)
     if e.hasAddon then
         self.footer:SetText("|TInterface\\RaidFrame\\ReadyCheck-Ready:12|t Uses the addon"
             .. (e.version and (" (" .. e.version .. ")") or "") .. " - synced " .. ns.FormatAgo(e.syncedAt))
     else
-        self.footer:SetText("Not running Nootropic Guild Manager. Spec and professions can be set by hand.")
+        self.footer:SetText(ns.InstallReminder:StatusLine(e) or "Doesn't use the addon yet.")
+        self.remindButton:SetEnabled((ns.InstallReminder:Can(e)))
     end
 
     self:Layout(self:VisibleSections(e))

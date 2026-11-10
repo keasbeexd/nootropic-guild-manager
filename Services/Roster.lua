@@ -10,6 +10,7 @@
       main:markpri           a main and all of their alts
       is:alt  is:main        only alts / only mains
       is:addon               only members running Nootropic Guild Manager
+      is:missing             only members without it
       is:online              only members online now
       role:tank              tank / healer / damage, as set on their profile
       level>=50              numeric filter
@@ -252,9 +253,9 @@ function R:Decorate(e)
     s.note  = ((e.note or "") .. "\n" .. e.publicNote .. "\n" .. e.officerNote .. "\n" .. logText):lower()
     s.main  = (e.mainShort or e.short):lower()
     local discord, contactNote = ns.Profile:Contact(e.full)
-    e.discord = (discord and discord ~= "") and discord or nil
+    e.discord = (discord and discord ~= "") and ns.Profile.DiscordLabel(discord) or nil
     s.contact = ((discord or "") .. "\n" .. (contactNote or "")):lower()
-    s.is    = (e.isAlt and "alt" or "main") .. (e.hasAddon and "\naddon" or "") .. (e.online and "\nonline" or "")
+    s.is    = (e.isAlt and "alt" or "main") .. (e.hasAddon and "\naddon" or "\nmissing") .. (e.online and "\nonline" or "")
 end
 
 ------------------------------------------------------------------------

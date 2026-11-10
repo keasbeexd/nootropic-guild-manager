@@ -145,6 +145,8 @@ function GR:AddTooltip(e)
         Pair("Professions", table.concat(parts, ", "))
     end
     if e.discord then Pair("Discord", e.discord) end
+    local reminded = ns.InstallReminder:StatusLine(e)
+    if reminded then GameTooltip:AddLine(reminded, 0.6, 0.6, 0.6) end
     local PF = ns.Profile
     local hours = PF:Hours(e.full)
     local summary = hours and PF.Summary(hours)
@@ -203,6 +205,11 @@ function GR:AddMenu(owner, root, contextData)
     root:CreateDivider()
     root:CreateTitle("Nootropic Guild Manager")
     root:CreateButton("Profile", function() GR:OpenProfile(ns.Roster.byName[full]) end)
+    local remind = ns.InstallReminder:MenuItem(e)
+    if remind then
+        local b = root:CreateButton(remind.text, remind.func)
+        if remind.disabled and b.SetEnabled then b:SetEnabled(false) end
+    end
     if ns.DB:CanEditLinks() then
         local sub = root:CreateButton("Main / Alt")
         local cur = ns.Roster.byName[full]

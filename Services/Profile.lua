@@ -18,6 +18,7 @@ local PF = {}
 ns.Profile = PF
 
 PF.DISCORD_MAX = 32
+PF.DISCORD_BADGE = "|cff8c9effOn Discord|r"
 PF.CONTACT_NOTE_MAX = 80
 
 local function Me() return ns.PlayerFullName() end
@@ -52,6 +53,12 @@ function PF:Contact(full)
     return nil
 end
 
+-- "keasbeexd" -> "@keasbeexd" for display (a leading @ typed by hand isn't doubled).
+function PF.DiscordLabel(name)
+    if not name or name == "" then return name end
+    return "@" .. (name:gsub("^@+", ""))
+end
+
 function PF:CanEditContact(full)
     return full ~= nil and ns.Sync:CanWrite("CN:" .. full)
 end
@@ -61,7 +68,8 @@ function PF:SetContact(full, discord, note)
     if not (full and ns.DB:Guild()) then return nil, "You are not in a guild." end
     if not self:CanEditContact(full) then return nil, "Only officers can change someone else's contact info." end
     local curD, curN = self:OwnContact(full)
-    discord = discord == nil and curD or ns.Trim((discord:gsub("[;\r\n]", ""))):sub(1, self.DISCORD_MAX)
+    -- saved without a leading @ (it's added when shown)
+    discord = discord == nil and curD or ns.Trim((discord:gsub("[;\r\n]", ""))):gsub("^@+", ""):sub(1, self.DISCORD_MAX)
     note = note == nil and curN or ns.Trim((note:gsub("[\r\n]+", " "))):sub(1, self.CONTACT_NOTE_MAX)
     local v = (discord == "" and note == "") and "" or (discord .. ";" .. note)
     return ns.Sync:Set("CN:" .. full, v)

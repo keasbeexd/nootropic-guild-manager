@@ -59,19 +59,21 @@ function HV:Boards()
         g.chars[#g.chars + 1] = e
         if e.full == key then g.e = e end
     end
-    local boards, totals, sharing = {}, {}, 0
+    local boards, totals, sharing, noAddon = {}, {}, 0, 0
     for _, s in ipairs(ns.HallOfFame.STATS) do boards[s.key] = {} end
     for _, key in ipairs(order) do
         local g = groups[key]
         g.e = g.e or g.chars[1] -- main not in the guild: their first alt
-        local sum, any = {}, false
+        local sum, any, hasAddon = {}, false, false
         for _, c in ipairs(g.chars) do
+            if c.hasAddon then hasAddon = true end
             local t = ns.HallOfFame:For(c.full, period, month)
             if t then
                 any = true
                 for k, n in pairs(t) do sum[k] = (sum[k] or 0) + n end
             end
         end
+        if not hasAddon then noAddon = noAddon + 1 end
         if any then
             sharing = sharing + 1
             for k, n in pairs(sum) do
@@ -92,7 +94,7 @@ function HV:Boards()
     local me = Me()
     local myEntry = me and ns.Roster.byName[me]
     if myEntry then mine = alts and myEntry.full or (myEntry.main or myEntry.full) end
-    return { people = #order, sharing = sharing, totals = totals, boards = boards, mine = mine }
+    return { people = #order, sharing = sharing, noAddon = noAddon, totals = totals, boards = boards, mine = mine }
 end
 
 ------------------------------------------------------------------------
@@ -246,6 +248,14 @@ function HV:Build(frame)
     self.totals = content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     self.totals:SetPoint("TOPLEFT", 0, 0)
     self.totals:SetJustifyH("LEFT")
+    -- who's missing from the board: guildmates without the addon
+    self.gap = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    self.gap:SetPoint("TOPLEFT", self.totals, "BOTTOMLEFT", 0, -6)
+    self.gap:SetJustifyH("LEFT")
+    self.gapButton = W.Button(content, "List them", 80, 18)
+    self.gapButton:SetPoint("LEFT", self.gap, "RIGHT", 8, 0)
+    self.gapButton:SetScript("OnClick", function() ns.UI:SetSearch("is:missing") end)
+    W.Tooltip(self.gapButton, "Not on the board yet", "Lists them on the Find tab. Right-click someone there (or open their profile) to remind them to install the addon.")
     self.cards = {}
     self.note = content:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     self.note:SetJustifyH("LEFT")
@@ -281,6 +291,16 @@ function HV:Refresh()
     self.totals:SetWidth(width)
     self.totals:SetText("Together: " .. table.concat(parts, GRAY .. "  ·  |r"))
     local top = math.max(16, self.totals:GetStringHeight()) + 12
+    local who = ns.DB:Settings().hofAlts and (data.noAddon == 1 and "character" or "characters")
+        or (data.noAddon == 1 and "guildmate" or "guildmates")
+    self.gap:SetShown(data.noAddon > 0)
+    self.gapButton:SetShown(data.noAddon > 0)
+    if data.noAddon > 0 then
+        local text = ("%d %s aren't on the board yet: no addon."):format(data.noAddon, who)
+        if data.noAddon == 1 then text = text:gsub("aren't", "isn't") end
+        self.gap:SetText(text)
+        top = top + 24
+    end
 
     local cols = math.max(1, math.floor((width + CARD_GAP) / (CARD_W + CARD_GAP)))
     local cardW = math.floor((width - (cols - 1) * CARD_GAP) / cols)
