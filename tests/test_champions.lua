@@ -77,6 +77,16 @@ assert(not champs.hugs and not champs.champs, "no title without numbers, none fo
 local b = HF:Boards("last", month)
 assert(#b.boards.quests == 2 and b.boards.quests[1].n == 60, "Marc listed once (main + alt)")
 
+-- crowning schedule: 00:00 UTC on the 2nd
+assert(HF.UTCDay(2026, 12, 1) == 1796083200 and HF.UTCDay(2027, 3, 1) == 1803859200)
+assert(HF.CrownTime(202612) == 1796083200 + 86400)
+assert(HF.CrownTime(202603) == HF.UTCDay(2026, 3, 2), "leap-year-safe")
+local st = HF:CrownStatus(1796083200 + 3600) -- 1 Dec, 01:00 UTC
+assert(st.state == "tallying" and st.won == 202611 and st.at == 1796083200 + 86400, st.state)
+st = HF:CrownStatus(1796083200 + 86400 + 60) -- the 2nd, no officer yet
+assert(st.state == "due", st.state)
+assert(HF:RecordedChampions(month) == nil, "nothing official before they're recorded")
+
 -- titles are recorded by officers only, from the 2nd of the month
 local dec1, dec5 = 1796083200 + 3600, 1796083200 + 4 * 86400 -- 1 and 5 Dec 2026 UTC
 assert(os.date("!%Y%m%d", dec1) == "20261201")
@@ -87,6 +97,10 @@ assert(HF:RecordChampions(dec1 + 86400), "the 2nd")
 assert(guild.sync.guild["HW:202611"].v == "quests=Marc Priest,Probably Shawn;kills=Marc Priest,Probably Shawn;deaths=Grud Sama,Probably Shawn",
   guild.sync.guild["HW:202611"].v)
 assert(not HF:RecordChampions(dec5), "written once")
+st = HF:CrownStatus(dec5)
+assert(st.state == "crowned" and st.nextWon == 202612 and st.nextAt == HF.CrownTime(202701))
+local rc = HF:RecordedChampions(month)
+assert(rc.quests.n == 60 and #rc.quests.winners == 2 and rc.deaths.n == 9, "recorded champions with their numbers")
 local wins = HF:Wins("all", month)
 assert(wins["Marc Priest"] == 2 and wins["Probably Shawn"] == 3 and wins["Grud Sama"] == 1)
 assert(HF:Wins("month", month)["Probably Shawn"] == 3, "this month's titles = last month's champions")

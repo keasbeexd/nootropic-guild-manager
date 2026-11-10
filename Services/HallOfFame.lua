@@ -499,6 +499,81 @@ function HF:OnGuildChat(_, _, sender)
 end
 
 ------------------------------------------------------------------------
+-- When champions are crowned: 00:00 UTC on the 2nd of each month.
+------------------------------------------------------------------------
+-- Seconds since 1970 for a UTC date (no time zone involved).
+local function UTCDay(y, m, d)
+    y = (m <= 2) and (y - 1) or y
+    local era = math.floor(y / 400)
+    local yoe = y - era * 400
+    local mp = (m + 9) % 12
+    local doy = math.floor((153 * mp + 2) / 5) + d - 1
+    local doe = yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy
+    return (era * 146097 + doe - 719468) * 86400
+end
+HF.UTCDay = UTCDay
+
+-- When `month`'s champions-of-the-month-before are crowned.
+function HF.CrownTime(month)
+    return UTCDay(math.floor(month / 100), month % 100, HF.RECORD_ON_DAY)
+end
+
+-- Where the crowning stands now:
+-- { state = "waiting" | "tallying" | "due" | "crowned", won = month being
+--   judged, at = crowning time (this month's), nextAt = the next one }
+-- tallying: the month is over, champions are crowned at `at`;
+-- due: crowning time has passed but no officer's addon has recorded them yet.
+function HF:CrownStatus(now)
+    now = now or ns.DB:Now()
+    local month = HF.Month(now)
+    local won = HF.PrevMonth(month)
+    local at = HF.CrownTime(month)
+    local y, m = math.floor(month / 100), month % 100
+    local nextMonth = (m == 12) and ((y + 1) * 100 + 1) or (month + 1)
+    local nextAt = HF.CrownTime(nextMonth)
+    local recorded = ns.Sync:Get("HW:" .. won) ~= nil
+    if recorded then
+        return { state = "crowned", won = won, at = at, nextAt = nextAt, nextWon = month }
+    end
+    if now < at then
+        return { state = "tallying", won = won, at = at, nextAt = at, nextWon = won }
+    end
+    -- a month with nobody's numbers never gets a record: treat it as crowned
+    if not next(self:Champions(month)) then
+        return { state = "waiting", won = won, at = at, nextAt = nextAt, nextWon = month }
+    end
+    return { state = "due", won = won, at = at, nextAt = nextAt, nextWon = month }
+end
+
+-- The champions officers recorded for last month, in HF:Champions' shape
+-- (each winner with their number for that month), or nil before they're
+-- recorded. Cards show these, so they always match the titles.
+function HF:RecordedChampions(month)
+    month = month or HF.Month()
+    local rec = ns.Sync:Get("HW:" .. HF.PrevMonth(month))
+    if not rec then return nil end
+    local data = self:Boards("last", month)
+    local out = {}
+    for key, names in pairs(HF.DecodeChampions(rec.v)) do
+        local winners, best = {}, 0
+        for _, name in ipairs(names) do
+            local p
+            for _, q in ipairs(data.boards[key] or {}) do
+                if q.key == name then p = q break end
+            end
+            local e = ns.Roster.byName[name]
+            if not p and e then p = { e = e, n = 0, key = name } end
+            if p then
+                winners[#winners + 1] = p
+                if p.n > best then best = p.n end
+            end
+        end
+        if #winners > 0 then out[key] = { n = best, winners = winners } end
+    end
+    return out
+end
+
+------------------------------------------------------------------------
 -- Champion titles: last month's recorded champions hold them all month.
 ------------------------------------------------------------------------
 HF.MONTH_NAMES = { "January", "February", "March", "April", "May", "June", "July",
