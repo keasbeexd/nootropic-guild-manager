@@ -267,6 +267,13 @@ function O:BuildMain()
     tour:SetPoint("TOPLEFT", 18, wy)
     tour:SetScript("OnClick", function() ns.Welcome:Open() end)
     W.Tooltip(tour, "Welcome tour", "The first-launch walkthrough again: what each tab does, your sharing choices, your profile basics (and permissions, for the Guild Master). Also /ngm welcome.")
+    local reminder = W.Button(L.panel, "Install Reminder Text...", 190, 24)
+    reminder:SetPoint("LEFT", tour, "RIGHT", 8, 0)
+    reminder:SetScript("OnClick", function()
+        W.Prompt("The whisper sent by \"Remind to install the addon\".\n$first, $name and $guild are filled in. Leave it empty for the default.",
+            ns.InstallReminder:Text(), function(text) ns.InstallReminder:SetText(text) end, 255)
+    end)
+    W.Tooltip(reminder, "Install reminder", "What guildmates without the addon get when you click \"Remind to install the addon\" on their profile or right-click menu. Your own text; each person is reminded at most once per 30 days, guild-wide.")
     L:Space(4)
 
     L:Header("Minimap Button")

@@ -930,7 +930,7 @@ function RV:InitRow(row, e)
     row.Rank:SetText(e.rank)
     if row.cells.version:IsShown() then
         if not e.hasAddon then
-            row.Version:SetText("|cff6d6d6d-|r")
+            row.Version:SetText(ns.InstallReminder:Reminded(e.full) and "|cff6d6d6d(reminded)|r" or "|cff6d6d6d(missing)|r")
         elseif ns.Roster:IsOutdated(e) then
             -- red: someone in the guild has a newer version
             row.Version:SetText("|cffff4040" .. (e.version or "old") .. "|r")
@@ -986,6 +986,10 @@ function RV:ShowRowTooltip(row, e, hint)
     if e.discord then Pair("Discord", e.discord) end
     if e.hasAddon then
         Pair("Addon version", e.version or "|cffff40401.10 or older|r (never reported a version)")
+    else
+        Pair("Addon version", "|cff9d9d9d(missing)|r")
+        local reminded = ns.InstallReminder:StatusLine(e)
+        if reminded then GameTooltip:AddLine(reminded, 0.6, 0.6, 0.6) end
     end
     if e.note then
         GameTooltip:AddLine(" ")
@@ -1031,6 +1035,8 @@ function RV:ShowRowMenu(row, e)
             elseif InviteUnit then InviteUnit(target) end
         end },
     }) do items[#items + 1] = it end
+    local remind = ns.InstallReminder:MenuItem(e)
+    if remind then items[#items + 1] = remind end
     W.ShowMenu(row, items)
 end
 

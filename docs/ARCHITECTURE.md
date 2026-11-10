@@ -59,6 +59,7 @@ Local changes are sent together 15 seconds after the first one (a **batch**, whi
 | `RP:<member>:<professionID>` | `profession;id,id,...` (base-36 recipe spell IDs) | guild | the member only |
 | `RR:<member>` | completed readiness checks (`ony,brooch`, or `-`) | guild | the member only |
 | `HF:<member>` | `1;month;all time;this month;last month id;last month` (each `key=n,...`; month as `202611`, UTC) | guild | the member only |
+| `IR:<member>` | when they were reminded to install the addon (the time; the record's author is who reminded them; kept 30 days) | guild | anyone in the guild |
 | `PS:<member>` | sharing choices others must respect (`together` = leave me out of Play Together) | guild | the member only |
 | `DN:<player>` | `time;what they said` ("" = removed) | guild | anyone adds; removing needs **recruit** |
 | `RS:<player>` | `whispered;replied;invited;reply` (kept 14 days) | guild | anyone in the guild |

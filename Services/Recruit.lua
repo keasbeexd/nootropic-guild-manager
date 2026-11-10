@@ -528,6 +528,7 @@ local function SendWhisper(msg, target)
         SendChatMessage(msg, "WHISPER", nil, target)
     end
 end
+RC.SendWhisper = SendWhisper
 
 function RC:Whisper(full, customText)
     local p = self:Get(full)
