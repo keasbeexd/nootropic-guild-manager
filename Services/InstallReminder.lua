@@ -80,12 +80,20 @@ function IR:Send(e)
     return true
 end
 
+-- The tooltip text for the button and menu entry: why it's unavailable, or
+-- the exact whisper they'd get.
+function IR:Preview(e)
+    local ok, why = self:Can(e)
+    if not ok then return why end
+    return "They'll get:\n|cffff80ff" .. self:Message(e) .. "|r\n\nOnce per 30 days, for the whole guild. Change the text in Options > Install Reminder."
+end
+
 -- Menu items for a member (Find tab and the game's roster), or nil when
 -- they already use the addon.
 function IR:MenuItem(e)
     if not e or e.hasAddon or e.isSelf then return nil end
     local ok, why = self:Can(e)
     return { text = "Remind to install the addon", disabled = not ok,
-             tooltip = { title = "Remind to install the addon", text = why or "Whispers them why it's worth having and where to get it. Once per 30 days, for the whole guild." },
+             tooltip = { title = "Remind to install the addon", text = self:Preview(e) },
              func = function() IR:Send(e) end }
 end

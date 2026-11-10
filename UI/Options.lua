@@ -267,13 +267,39 @@ function O:BuildMain()
     tour:SetPoint("TOPLEFT", 18, wy)
     tour:SetScript("OnClick", function() ns.Welcome:Open() end)
     W.Tooltip(tour, "Welcome tour", "The first-launch walkthrough again: what each tab does, your sharing choices, your profile basics (and permissions, for the Guild Master). Also /ngm welcome.")
-    local reminder = W.Button(L.panel, "Install Reminder Text...", 190, 24)
-    reminder:SetPoint("LEFT", tour, "RIGHT", 8, 0)
-    reminder:SetScript("OnClick", function()
-        W.Prompt("The whisper sent by \"Remind to install the addon\".\n$first, $name and $guild are filled in. Leave it empty for the default.",
-            ns.InstallReminder:Text(), function(text) ns.InstallReminder:SetText(text) end, 255)
+    L:Space(4)
+
+    -- Install reminder: the whisper "Remind to install the addon" sends
+    L:Header("Install Reminder")
+    L:Text("What guildmates without the addon get when you click |cffffd100Remind to install the addon|r on their profile or right-click menu. "
+        .. "|cffffd100$first|r, |cffffd100$name|r and |cffffd100$guild|r are filled in. Add your Discord invite if you'd like it to cover that too. Saved as you type.")
+    local ry = L:Row(84)
+    local ef, box = W.ScrollEditor(L.panel, 255)
+    ef:SetPoint("TOPLEFT", 22, ry)
+    ef:SetSize(TEXT_W - 8, 70)
+    box:SetFontObject("GameFontHighlightSmall")
+    box:SetWidth(TEXT_W - 26)
+    self.reminderBox = box
+    local count = L.panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    count:SetJustifyH("LEFT")
+    self.reminderCount = count
+    local function update()
+        count:SetText(ns.Recruit:LengthText(box:GetText() ~= "" and box:GetText() or ns.InstallReminder.DEFAULT)
+            .. (box:GetText() == "" and "  (empty: the default text is used)" or ""))
+    end
+    box:HookScript("OnTextChanged", function(eb, user)
+        if user then ns.InstallReminder:SetText(eb:GetText()) end
+        update()
     end)
-    W.Tooltip(reminder, "Install reminder", "What guildmates without the addon get when you click \"Remind to install the addon\" on their profile or right-click menu. Your own text; each person is reminded at most once per 30 days, guild-wide.")
+    local cy = L:Row(26)
+    local default = W.Button(L.panel, "Default Text", 110, 22)
+    default:SetPoint("TOPLEFT", 18, cy)
+    default:SetScript("OnClick", function()
+        ns.InstallReminder:SetText("")
+        box:SetText(ns.InstallReminder.DEFAULT)
+        box:ClearFocus()
+    end)
+    count:SetPoint("LEFT", default, "RIGHT", 10, 0)
     L:Space(4)
 
     L:Header("Minimap Button")
@@ -641,6 +667,7 @@ function O:Refresh()
     self.shareRecipesCheck:SetChecked(ns.Sharing:Get("recipes"))
     self.togetherCheck:SetChecked(ns.Sharing:Get("together"))
     self.statsCheck:SetChecked(ns.Sharing:Get("stats"))
+    if not self.reminderBox:HasFocus() then self.reminderBox:SetText(ns.InstallReminder:Text()) end
     self.minimapCheck:SetChecked(not s.minimap.hide)
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end
     local st = ns.Sync.stats

@@ -2,6 +2,11 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.8.1
+
+- **Remind to install** shows the exact whisper (with their name filled in) when you hover the button on a profile or the right-click menu entry.
+- The reminder text is now edited in a multi-line box under **Options > Install Reminder**, saved as you type, with a length counter (whispers top out at 255 characters) and a **Default Text** button. Add your Discord invite to it if you'd like the reminder to cover that too.
+
 ## 2.8.0
 
 - **Social Butterfly** on the Hall of Fame: hours spent in guild chat conversations. The day is split into 15-minute blocks; a block counts when you and at least one guildmate both spoke in it, at most 8 blocks a day, so ten messages in a row count once and talking to yourself counts for nothing. Only the time is shared, never what was said (part of **Share my statistics**).
