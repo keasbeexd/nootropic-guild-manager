@@ -334,7 +334,7 @@ The [architecture guide](docs/ARCHITECTURE.md) covers the sync protocol, every s
 
 ## Names in WoW: Forever
 
-Forever characters have a first and second name (e.g. "Audrey Pichhale") and no realms. The addon whispers and invites by the plain name, never "Name-Realm", and shows the two names in separate roster columns.
+Forever characters have a first and second name (e.g. "Audrey Pichhale") and no realms. The addon whispers and invites by the plain name, never "Name-Realm", and shows the two names in separate roster columns. The game quietly tags each name with the server shard that player lives on, so the addon ignores those tags and knows everyone by their plain name (before 2.7.2, guildmates on different shards didn't see each other's data).
 
 ## Credits
 

@@ -166,6 +166,111 @@ function S.ParseKey(key)
     return typ, member, rest
 end
 
+------------------------------------------------------------------------
+-- Names without shard tags (WoW: Forever; see ns.NormalizeName)
+-- Older copies of the addon still send "Name-<shard>"; every key, author
+-- and name inside a value is brought to the plain name before it's checked
+-- or stored, so everyone's copy keeps one record per person.
+------------------------------------------------------------------------
+local function CN(name)
+    if not name or name == "" then return name end
+    return ns.NormalizeName(name) or name
+end
+S.CanonName = CN
+
+-- key -> the same key with plain names
+function S.CanonKey(key)
+    if not ns.NO_REALMS then return key end
+    local typ, rest = key:match("^(%u+):(.*)$")
+    if not typ or NO_MEMBER[typ] then return key end
+    if typ == "L" or typ == "RP" then
+        local member, tail = rest:match("^([^:]+):(.*)$")
+        if not member then return key end
+        return typ .. ":" .. CN(member) .. ":" .. tail
+    end
+    return typ .. ":" .. CN(rest)
+end
+
+-- Names inside values: mains, who invited or promoted, audit entries.
+function S.CanonValue(typ, v)
+    if not ns.NO_REALMS or not v or v == "" then return v end
+    if typ == "M" then return CN(v) end
+    if typ == "JN" then
+        local t, by = v:match("^(%d+);(.*)$")
+        if t then return t .. ";" .. (by ~= "" and CN(by) or "") end
+    elseif typ == "RK" then
+        local t, rank, by = v:match("^(%d+);([^;]*);(.*)$")
+        if t then return t .. ";" .. rank .. ";" .. (by ~= "" and CN(by) or "") end
+    elseif typ == "A" then
+        local f = ns.Split(v, US)
+        if #f >= 4 then
+            f[1] = CN(f[1])
+            if f[2] == "M" then f[3], f[4] = CN(f[3]), CN(f[4]) end
+            return table.concat(f, US)
+        end
+    end
+    return v
+end
+
+-- (key, rec) -> plain-name key and the record with its author and values tidied
+function S.Canon(key, rec)
+    if not ns.NO_REALMS then return key, rec end
+    local ck = S.CanonKey(key)
+    local typ = ck:match("^(%u+):")
+    rec.a = CN(rec.a)
+    rec.v = S.CanonValue(typ, rec.v)
+    return ck, rec
+end
+
+-- One pass over saved data from before 2.7.2: records, private notes,
+-- recruit history and your own per-character settings move to plain names.
+-- Where two records become one, the newer wins (the same rule as sync), so
+-- every copy ends up identical.
+function S:CanonicalizeSaved()
+    local g = ns.DB:Guild()
+    if not ns.NO_REALMS or not g or g.realmless then return 0 end
+    local moved = 0
+    for _, scope in ipairs({ "guild", "officer" }) do
+        local store = self:Store(scope)
+        local out = {}
+        for key, rec in pairs(store) do
+            local before = key .. "\0" .. tostring(rec.a) .. "\0" .. tostring(rec.v)
+            local ck, r = S.Canon(key, rec)
+            if ck .. "\0" .. tostring(r.a) .. "\0" .. tostring(r.v) ~= before then moved = moved + 1 end
+            local cur = out[ck]
+            if not cur or S.Newer(r, cur) then out[ck] = r end
+        end
+        for k in pairs(store) do store[k] = nil end
+        for k, r in pairs(out) do store[k] = r end
+    end
+    local function rekey(t, merge)
+        if type(t) ~= "table" then return end
+        local keys = {}
+        for k in pairs(t) do if type(k) == "string" then keys[#keys + 1] = k end end
+        for _, k in ipairs(keys) do
+            local ck = CN(k)
+            if ck ~= k then
+                local v = t[k]
+                t[k] = nil
+                if t[ck] == nil then t[ck] = v elseif merge then merge(t[ck], v) end
+                moved = moved + 1
+            end
+        end
+    end
+    rekey(g.members, function(cur, m)
+        if m.note and m.note ~= "" and m.note ~= cur.note then
+            cur.note = (cur.note and cur.note ~= "") and (cur.note .. " / " .. m.note) or m.note
+        end
+    end)
+    if g.recruit then rekey(g.recruit.people) end
+    local s = ns.DB:Settings()
+    rekey(s.schedules)
+    rekey(s.hof)
+    g.realmless = true
+    self.auditCache = nil
+    return moved
+end
+
 -- When a record stops being kept (server time), or nil when it never expires.
 function S:ExpiresAt(key, rec)
     local typ = S.ParseKey(key)
@@ -923,6 +1028,7 @@ function S:OnMessage(msg, channel, sender)
         if key:find("[|%c]") or (author or ""):find("[|%c]") then return end
         local value = table.concat(f, FS, 7):gsub("|", "/")
         local rec = { v = value, t = t, a = author, b = (batch ~= "" and batch) or nil }
+        key, rec = S.Canon(key, rec)
         self:Apply(key, rec, { origin = "remote", channel = channel, sender = who })
         self:Notify("member") -- schedule a flush
     elseif kind == "D" then
@@ -1124,6 +1230,7 @@ function S:Init()
         if not key or S.readyFor == key or not ns.DB:Guild() then return end
         S.readyFor = key
         S:Migrate()
+        S:CanonicalizeSaved()
         S:PurgeUnknown()
         S:PruneAudit()
         S:PruneExpired()

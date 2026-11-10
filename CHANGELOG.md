@@ -2,6 +2,11 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.7.2
+
+- **Fix: syncing between guildmates on different server shards.** WoW: Forever quietly tags every name with the shard the player lives on (for example `-CAMWOWUS1Realm2PvP` for one guildmate and `-CAMWOWUS2Realm2PvP` for another), so each copy of the addon filed the same person under a different name. Shared data did arrive, but landed on a name that wasn't on the roster: guildmates didn't show as using the addon, their spec, hours and Hall of Fame numbers were missing, and some of their changes were refused. Names are now stored without the tag, data from older copies is tidied as it arrives, and your saved data is tidied once when you log in (duplicates merged, the newer record kept, private notes combined).
+- **Everyone should update.** 2.7.2 reads data from older versions, but older versions can't read what 2.7.2 sends.
+
 ## 2.7.1
 
 - Overview: the counts and percentages next to each bar no longer run into the bar.
