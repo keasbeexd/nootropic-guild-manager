@@ -85,7 +85,7 @@ end
 function IR:Preview(e)
     local ok, why = self:Can(e)
     if not ok then return why end
-    return "They'll get:\n|cffff80ff" .. self:Message(e) .. "|r\n\nOnce per 30 days, for the whole guild. Change the text in Options > Install Reminder Text."
+    return "They'll get:\n|cffff80ff" .. self:Message(e) .. "|r\n\nOnce per 30 days, for the whole guild. Change the text in Options > Install Reminder."
 end
 
 -- Menu items for a member (Find tab and the game's roster), or nil when

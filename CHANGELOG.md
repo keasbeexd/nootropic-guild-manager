@@ -4,7 +4,8 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 
 ## 2.8.1
 
-- **Remind to install** shows the exact whisper (with their name filled in) when you hover the button on a profile or the right-click menu entry, and Options > Install Reminder Text shows the current text on hover. Add your Discord invite to the text if you'd like the reminder to cover it too.
+- **Remind to install** shows the exact whisper (with their name filled in) when you hover the button on a profile or the right-click menu entry.
+- The reminder text is now edited in a multi-line box under **Options > Install Reminder**, saved as you type, with a length counter (whispers top out at 255 characters) and a **Default Text** button. Add your Discord invite to it if you'd like the reminder to cover that too.
 
 ## 2.8.0
 
