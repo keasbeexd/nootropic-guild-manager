@@ -67,7 +67,10 @@ function IconMixin:Apply()
     local style = D:IconStyle(key)
     self.Icon:SetTexture(style.icon or D.DEFAULT_ICON)
     if style.fullArt then
-        self.Icon:SetTexCoord(0, 1, 0, 1)
+        -- `crop`: trim the medallion's own gold ring where the host already
+        -- draws a round border (the minimap button), so there's one ring
+        local c = self.crop or 0
+        self.Icon:SetTexCoord(c, 1 - c, c, 1 - c)
     else
         self.Icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- trim a game icon's border
     end
@@ -77,13 +80,14 @@ end
     host:  frame the textures are drawn on (so they layer with its own art)
     size:  icon size in pixels
     point: { point, relativeTo, relativePoint, x, y } for the icon's top-left
-    opts:  layer (default ARTWORK), round (default true), style (fixed style)
+    opts:  layer (default ARTWORK), round (default true), style (fixed style),
+           crop (0-0.5: trim that much off each edge of the medallion art)
 ]]
 function Brand:Attach(host, size, point, opts)
     opts = opts or {}
     local layer = opts.layer or "ARTWORK"
     local s = size / 60
-    local icon = { host = host, size = size, fixedStyle = opts.style }
+    local icon = { host = host, size = size, fixedStyle = opts.style, crop = opts.crop }
     for k, v in pairs(IconMixin) do icon[k] = v end
 
     -- Reference square everything is placed against.
