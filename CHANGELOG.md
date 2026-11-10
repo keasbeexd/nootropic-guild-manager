@@ -6,7 +6,10 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 
 - **Social Butterfly** on the Hall of Fame: hours spent in guild chat conversations. The day is split into 15-minute blocks; a block counts when you and at least one guildmate both spoke in it, at most 8 blocks a day, so ten messages in a row count once and talking to yourself counts for nothing. Only the time is shared, never what was said (part of **Share my statistics**).
 - **Champions:** each Hall of Fame card shows last month's champion at the bottom. Winner takes all; a tie makes everyone at the top a champion.
-- **Most Champion Wins**, a new card: titles won, all time and by month. Each member's addon tallies their own and shares the count with their statistics.
+- **Most Champion Wins**, a new card: titles won, all time and by month. Titles are written down by an officer's copy of the addon on the 3rd of each month (once everyone's numbers have arrived), so nobody can award themselves one.
+- **Mains and alts always count as one person** on every Hall of Fame card and for champions: their numbers (and Social Butterfly hours) add up. The Hall of Fame's "Count alts" box is gone (Overview keeps its own).
+- **Harder to cheat:** the game only lets an addon read its own player's statistics, so an edited copy could lie about its own numbers. Every statistic now has a generous ceiling (per day of play since WoW: Forever opened, and per month), a month can never beat all time, and anyone whose shared numbers break a limit is left out of the Hall of Fame. Officers can also **Hide from Hall of Fame** (right-click on Find) anyone whose numbers look wrong; it's shared and audited.
+- Install reminders can only be sent in your own name and only about guildmates (an edited copy could otherwise have blocked reminders for the whole guild).
 
 ## 2.7.3
 

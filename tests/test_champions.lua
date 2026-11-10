@@ -13,11 +13,14 @@ function ns.Debounce(_, _, fn) fn() end
 function ns.Safe(fn) return fn end
 function ns.Split(s, sep) local t = {} for p in (s .. sep):gmatch("(.-)" .. sep) do t[#t + 1] = p end return t end
 function ns.Trim(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end
-function ns.IsOfficer() return false end
+iAmOfficer = false
+function ns.IsOfficer() return iAmOfficer end
 local me = "Marc Priest"
 function ns.PlayerFullName() return me end
 function ns.NormalizeName(n) return n end
 ns.DB = { PERM_BY_TYPE = {} }
+function ns.DB:PermRanks() return nil end
+function ns.DB:PermDef() return {} end
 function ns.DB:Guild() return guild end
 function ns.DB:Now() return NOW end
 function ns.DB:Settings() return settings end
@@ -55,9 +58,9 @@ assert(HF.Format(HF.BY_KEY.quests, 12345) == "12,345")
 
 -- last month's numbers from guildmates (records written last month)
 local month = 202612
-HF.Month = function() return month end
-local function put(full, this, all)
-  guild.sync.guild["HF:" .. full] = { v = HF.Encode(202611, all or this, this, 0, {}), t = 1, a = full }
+HF.Month = function(t) if t then return tonumber(os.date("!%Y%m", t)) end return month end
+local function put(full, this, all, m)
+  guild.sync.guild["HF:" .. full] = { v = HF.Encode(m or 202611, all or this, this, 0, {}), t = 1, a = full }
 end
 put("Marc Priest", { quests = 40, kills = 100 })
 put("Marc Druid", { quests = 20, deaths = 3 })          -- added to Marc's 40
@@ -69,22 +72,52 @@ assert(keys(champs.quests) == "Marc Priest,Probably Shawn" and champs.quests.n =
 assert(keys(champs.kills) == "Marc Priest,Probably Shawn")
 assert(keys(champs.deaths) == "Grud Sama,Probably Shawn")
 assert(not champs.hugs and not champs.champs, "no title without numbers, none for the wins card itself")
+local b = HF:Boards("last", month)
+assert(#b.boards.quests == 2 and b.boards.quests[1].n == 60, "Marc listed once (main + alt)")
 
--- Marc's wins: two titles last month, tallied on this computer and shared
-HF:UpdateWins()
-assert(settings.hofWins["Marc Priest"][202611] == 2)
-assert(HF:WinsTotal() == 2)
-HF.Available = function() return false end -- no GetStatistic: social and wins still shared
-local mine = HF:ReadMine()
-assert(mine.champs == 2 and mine.social == 9)
--- both of Marc's characters report 2 wins: counted once for the person
-guild.sync.guild["HF:Marc Priest"] = { v = HF.Encode(month, { champs = 2 }, {}, 0, {}), t = 2, a = "Marc Priest" }
-guild.sync.guild["HF:Marc Druid"] = { v = HF.Encode(month, { champs = 2 }, {}, 0, {}), t = 2, a = "Marc Druid" }
-local all = HF:Boards("all", false, month)
-assert(all.boards.champs[1].key == "Marc Priest" and all.boards.champs[1].n == 2, "max, not 4")
-assert(all.noAddon == 1)
--- a later month keeps the earlier titles
-month = 202701
-HF:UpdateWins()
-assert(HF:WinsTotal() == 2, "January has no December data here, November's titles stay")
+-- titles are recorded by officers only, from the 3rd of the month
+local dec2, dec5 = 1796083200 + 86400, 1796083200 + 4 * 86400 -- 2 and 5 Dec 2026 UTC
+assert(os.date("!%Y%m%d", dec2) == "20261202")
+assert(not HF:RecordChampions(dec5), "not an officer")
+iAmOfficer = true
+assert(not HF:RecordChampions(dec2), "too early in the month")
+assert(HF:RecordChampions(dec5))
+assert(guild.sync.guild["HW:202611"].v == "quests=Marc Priest,Probably Shawn;kills=Marc Priest,Probably Shawn;deaths=Grud Sama,Probably Shawn",
+  guild.sync.guild["HW:202611"].v)
+assert(not HF:RecordChampions(dec5), "written once")
+local wins = HF:Wins("all", month)
+assert(wins["Marc Priest"] == 2 and wins["Probably Shawn"] == 3 and wins["Grud Sama"] == 1)
+assert(HF:Wins("month", month)["Probably Shawn"] == 3, "this month's titles = last month's champions")
+assert(not next(HF:Wins("last", month)))
+b = HF:Boards("all", month)
+assert(b.boards.champs[1].key == "Probably Shawn" and b.boards.champs[1].n == 3)
+
+-- a member can't award themselves titles: champs in their own record is ignored
+put("Grud Sama", { kills = 50, deaths = 9 }, { kills = 50, deaths = 9, champs = 99 })
+assert(not HF.Decode(guild.sync.guild["HF:Grud Sama"].v).all.champs)
+assert(HF:Boards("all", month).boards.champs[3].n == 1)
+-- nor send titles as a non-officer: refused by the sync
+iAmOfficer = false
+ns.Sync:OnMessage(table.concat({ ns.Sync.PROTO, "R", "HW:202610", "1", "Grud Sama", "", "quests=Grud Sama" }, "\t"), "GUILD", "Grud Sama")
+assert(not guild.sync.guild["HW:202610"], "only officers write champion titles")
+
+-- plausibility: absurd numbers leave the whole person out
+put("Grud Sama", { kills = 50 }, { kills = 50, quests = 999999 })
+b = HF:Boards("all", month)
+assert(b.flagged == 1)
+for _, p in ipairs(b.boards.kills) do assert(p.key ~= "Grud Sama", "flagged member listed") end
+put("Grud Sama", { quests = 31 * 150 + 1 }, { quests = 99999 })
+assert(HF:Implausible("Grud Sama"), "a month over 31 days of play")
+put("Grud Sama", { quests = 10 }, { quests = 5 })
+assert(HF:Implausible("Grud Sama"), "a month bigger than all time")
+put("Grud Sama", { social = 9 }, { social = 9 })
+assert(not HF:Implausible("Grud Sama"))
+put("Grud Sama", { kills = 50 }, { kills = 50 })
+assert(not HF:Implausible("Grud Sama"))
+
+-- officers can leave someone out
+guild.sync.guild["HX:Probably Shawn"] = { v = "1", t = 1, a = "Marc Priest" }
+b = HF:Boards("all", month)
+assert(b.hidden == 1)
+for _, p in ipairs(b.boards.champs) do assert(p.key ~= "Probably Shawn") end
 print("OK")

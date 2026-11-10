@@ -50,6 +50,9 @@
                            leave me out of Play Together (Services/Sharing.lua)   the member only
       SC:<member>          usual online hours: 168 bits (Monday 00:00 UTC
                            onward) as 42 hex digits   the member only
+      HX:<member>          left out of the Hall of Fame: "1" ("" = shown)   officers
+      HW:<month>           that month's Hall of Fame champions:
+                           "quests=Name,Name;kills=Name" (Services/HallOfFame.lua)   officers
       IR:<member>          reminded to install the addon: "" (the time and who
                            are the record's own; kept 30 days)   anyone in the guild
       HF:<member>          Hall of Fame: their character statistics, all time,
@@ -99,6 +102,8 @@ S.TYPES = {
     PS = { scope = "guild",   selfOnly = true, noAudit = true, label = "Sharing choices" },
     HF = { scope = "guild",   selfOnly = true, noAudit = true, low = true, label = "Hall of Fame" },
     IR = { scope = "guild",   anyone = true, noAudit = true, ttl = 30 * 86400, label = "Install reminder" },
+    HX = { scope = "guild",   officer = true, label = "Hidden from Hall of Fame" },
+    HW = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame champions" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
 }
@@ -117,7 +122,7 @@ function S.EventSig(typ, member, new)
 end
 local CHANNEL = { guild = "GUILD", officer = "OFFICER" }
 -- Types whose key is not about one member.
-local NO_MEMBER = { A = true, GS = true }
+local NO_MEMBER = { A = true, GS = true, HW = true }
 
 S.officers = {} -- players seen sending on the officer channel this session
 S.stats = { sent = 0, received = 0, applied = 0, retries = 0, dropped = 0, refused = 0 }
@@ -412,6 +417,10 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     if typ == "DN" and (rec.v or "") == "" then
         return self:RankMay(author, "recruit") and (Same(sender, author) or self:KnownOfficer(sender))
     end
+    -- install reminders say who sent them: only that person (or an officer
+    -- passing it on) may send one, so nobody can block reminders for the
+    -- whole guild in someone else's name
+    if typ == "IR" then return Same(sender, author) or self:KnownOfficer(sender) end
     if def.anyone then return true end
     if typ == "GS" and rest:sub(1, 5) == "perm_" then
         return IsGuildMaster(author) and (Same(sender, author) or self:KnownOfficer(sender))
@@ -436,6 +445,13 @@ local newKeys = {}            -- sender -> { count, since }
 
 function S:WithinLimits(typ, member, rest, rec, ctx, store)
     if #(rec.v or "") > self.MAX_VALUE then return false end
+    if typ == "HW" and not rest:match("^%d%d%d%d%d%d$") then return false end
+    -- reminders only about guildmates, holding the time they were sent
+    if typ == "IR" then
+        if not RosterEntry(member) then return false end
+        local v = rec.v or ""
+        if v ~= "" and not (v:match("^%d+$") and math.abs(tonumber(v) - rec.t) < 86400) then return false end
+    end
     if typ == "RP" then
         if not rest:match("^[^:]+:%d+$") then return false end
         if not store[ctx.key] then
@@ -691,7 +707,7 @@ function S:Materialize(typ, key, member, rec)
     elseif typ == "RP" then
         ns.Debounce("recipeschanged", 0.3, function() ns:Fire("RECIPES_CHANGED") end)
         return
-    elseif typ == "HF" then
+    elseif typ == "HF" or typ == "HX" or typ == "HW" then
         ns.Debounce("hofchanged", 0.5, function() ns:Fire("HALL_OF_FAME_CHANGED") end)
         return
     elseif typ == "IR" then

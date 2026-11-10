@@ -56,6 +56,16 @@ assert(IR:StatusLine(grud):find("^Reminded to install by Marc Priest"))
 -- another guildmate's reminder arrives; 31 days later it's gone
 ns.Sync:OnMessage(table.concat({ ns.Sync.PROTO, "R", "IR:Offline Guy", tostring(NOW - 31 * 86400), "Grud Sama", "", tostring(NOW - 31 * 86400) }, "\t"), "GUILD", "Grud Sama")
 assert(not IR:Reminded("Offline Guy"), "expired after 30 days")
+-- forged reminders are refused: in someone else's name, about a stranger, or with a junk time
+local function forge(sender, member, author, v)
+  ns.Sync:OnMessage(table.concat({ ns.Sync.PROTO, "R", "IR:" .. member, tostring(NOW - 5), author, "", v or tostring(NOW - 5) }, "\t"), "GUILD", sender)
+  return guild.sync.guild["IR:" .. member]
+end
+assert(not forge("Grud Sama", "Probably Shawn", "Marc Priest"), "in someone else's name")
+assert(not forge("Grud Sama", "Total Stranger", "Grud Sama"), "not a guildmate")
+assert(not forge("Grud Sama", "Probably Shawn", "Grud Sama", "999999999999"), "junk time")
+assert(forge("Grud Sama", "Probably Shawn", "Grud Sama"), "their own reminder is fine")
+
 -- custom text
 IR:SetText("Yo $first, grab the addon!")
 assert(IR:Message(grud) == "Yo Grud, grab the addon!")

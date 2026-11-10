@@ -4,7 +4,7 @@
     (Services/HallOfFame.lua): one card per statistic with the top five,
     guild totals on top. All time, this month or last month
     (Settings().hofPeriod). People count once, their characters added up,
-    unless "Count alts" is on (Settings().hofAlts).
+    always: a person counts once on every card.
 ]]
 local _, ns = ...
 local W = ns.Widgets
@@ -46,12 +46,11 @@ end
 -- ns.HallOfFame:Boards for the chosen period, plus which entry is you and
 -- last month's champions: { ..., mine = person key, champions = { key = {...} } }
 function HV:Boards()
-    local alts = ns.DB:Settings().hofAlts
     local month = ns.HallOfFame.Month()
-    local data = ns.HallOfFame:Boards(self:Period(), alts, month)
+    local data = ns.HallOfFame:Boards(self:Period(), month)
     local me = Me()
     local myEntry = me and ns.Roster.byName[me]
-    if myEntry then data.mine = alts and myEntry.full or (myEntry.main or myEntry.full) end
+    if myEntry then data.mine = myEntry.main or myEntry.full end
     data.champions = ns.HallOfFame:Champions(month)
     return data
 end
@@ -204,20 +203,6 @@ function HV:Build(frame)
     W.Tooltip(periodBtn, "Period", "All time, or just this month or last month (UTC). A member's first month counts from when they installed the addon.")
     self.periodButton = periodBtn
 
-    local alts = CreateFrame("CheckButton", nil, page, "UICheckButtonTemplate")
-    alts:SetSize(22, 22)
-    alts:SetPoint("RIGHT", periodBtn, "LEFT", -110, 0)
-    local label = alts.Text or alts.text or alts:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    label:ClearAllPoints()
-    label:SetPoint("LEFT", alts, "RIGHT", 2, 1)
-    label:SetFontObject("GameFontHighlightSmall")
-    label:SetText("Count alts")
-    alts:SetScript("OnClick", function(cb)
-        ns.DB:Settings().hofAlts = cb:GetChecked() and true or nil
-        HV:Refresh()
-    end)
-    W.Tooltip(alts, "Count alts", "Off: each person's characters are added up under their main. On: every character on its own.")
-    self.altsCheck = alts
 
     local inset = frame.Inset
     local scroll = W.TryCreate("ScrollFrame", "NootropicGMHallOfFameScroll", page, "ScrollFrameTemplate", "UIPanelScrollFrameTemplate")
@@ -263,9 +248,7 @@ function HV:Refresh()
     self.data = data
     local period = self:Period()
     self.periodButton:SetText(PeriodText(period))
-    self.altsCheck:SetChecked(ns.DB:Settings().hofAlts and true or false)
-    local who = ns.DB:Settings().hofAlts and "characters" or "people"
-    self.title:SetText(("Hall of Fame  " .. GRAY .. "- %d of %d %s sharing|r"):format(data.sharing, data.people, who))
+    self.title:SetText(("Hall of Fame  " .. GRAY .. "- %d of %d people sharing|r"):format(data.sharing, data.people))
 
     local width = math.max(300, math.floor(self.scroll:GetWidth()))
     local parts = {}
@@ -276,8 +259,7 @@ function HV:Refresh()
     self.totals:SetWidth(width)
     self.totals:SetText("Together: " .. table.concat(parts, GRAY .. "  ·  |r"))
     local top = math.max(16, self.totals:GetStringHeight()) + 12
-    local who = ns.DB:Settings().hofAlts and (data.noAddon == 1 and "character" or "characters")
-        or (data.noAddon == 1 and "guildmate" or "guildmates")
+    local who = data.noAddon == 1 and "guildmate" or "guildmates"
     self.gap:SetShown(data.noAddon > 0)
     self.gapButton:SetShown(data.noAddon > 0)
     if data.noAddon > 0 then
@@ -311,8 +293,15 @@ function HV:Refresh()
         note = "From the game's own statistics (the Statistics page of the achievement window), shared by each member's addon. "
             .. "Members without the addon, or who turned off \"Share my statistics\" (Options > Sharing), aren't listed. Gold is never shared."
     end
+    note = note .. " A person's main and alts count as one."
     if period ~= "all" then
         note = note .. " Months run in UTC; a member's first month counts from when they installed the addon."
+    end
+    if (data.hidden or 0) > 0 then
+        note = note .. (" %d left out by officers."):format(data.hidden)
+    end
+    if (data.flagged or 0) > 0 then
+        note = note .. (" %d left out because their numbers are out of range (an edited addon, or a bug: tell the author)."):format(data.flagged)
     end
     self.note:ClearAllPoints()
     self.note:SetPoint("TOPLEFT", 0, -y)
