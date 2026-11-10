@@ -2,8 +2,12 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
-## Unreleased
+## 2.9.0
 
+- **Champion titles:** last month's Hall of Fame champions carry their title all month, in gold on their profile and in tooltips (Find, Play Together and the game's guild roster): "November's Champion: Quests completed, Kills". A person's alts show their main's titles.
+- **Champions are recorded on the 2nd** of each month (a day for everyone's numbers to arrive), by the first officer's copy online.
+- **Announce Champions** (officers, top of the Hall of Fame tab): one click posts last month's champions to guild chat, split into lines if needed. Hover first to see exactly what will be posted and who announced them last.
+- **Checking Hall of Fame numbers:** when an officer inspects a guildmate, their copy quietly compares the guildmate's real game statistics (the game's statistics comparison) with what the guildmate's addon shares. Officers see the result in that person's tooltip: "match the game", or which numbers are higher than the game says. Nothing happens automatically; an officer can **Hide from Hall of Fame**. Each guildmate is checked at most every 6 hours, only when you inspect them.
 - The minimap button no longer shows two rings: the medallion's own gold ring is trimmed there, so the minimap's border is the only one. (Other icon styles and the window portrait are unchanged.)
 
 ## 2.8.2

@@ -16,7 +16,9 @@
     last month's champions (HF:Champions; titles written down by officers as
     HW:<month>), plausibility limits on everyone's numbers (HF.Plausible),
     and officers leaving someone out (HX:<member>). A person's main and alts
-    always count as one.
+    always count as one. Champion titles (HF:TitleText) and announcing them
+    in guild chat (HF:Announce, HA:<month>). Checks against the game's
+    statistics comparison live in Services/HofCheck.lua.
 
     Statistic IDs were read from the Forever client's own catalogue
     (build 1.60.1, Interface 16001), the Wrath-era set plus Forever additions.
