@@ -128,6 +128,8 @@ function GR:AddTooltip(e)
     end
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Nootropic Guild Manager", 0.6, 0.6, 0.6)
+    local title = ns.HallOfFame:TitleText(e.full)
+    if title then GameTooltip:AddLine(title, 1, 1, 1, true) end
     if e.isAlt then
         Pair("Alt of", e.mainShort)
     elseif e.alts and #e.alts > 0 then
@@ -147,6 +149,8 @@ function GR:AddTooltip(e)
     if e.discord then Pair("Discord", e.discord) end
     local reminded = ns.InstallReminder:StatusLine(e)
     if reminded then GameTooltip:AddLine(reminded, 0.6, 0.6, 0.6) end
+    local check = ns.HofCheck:TooltipLine(e.full) -- officers only
+    if check then GameTooltip:AddLine(check, 1, 1, 1, true) end
     local PF = ns.Profile
     local hours = PF:Hours(e.full)
     local summary = hours and PF.Summary(hours)

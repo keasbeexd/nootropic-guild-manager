@@ -272,6 +272,13 @@ function DP:BuildHeader(parent)
     h.Status:SetJustifyH("LEFT")
     h.Status:SetWordWrap(false)
 
+    -- champion titles held this month (Hall of Fame), when there are any
+    h.Champion = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    h.Champion:SetPoint("TOPLEFT", 0, -49)
+    h.Champion:SetPoint("RIGHT", 0, 0)
+    h.Champion:SetJustifyH("LEFT")
+    h.Champion:SetWordWrap(false)
+
     self.header = h
 end
 
@@ -293,6 +300,10 @@ function DP:RefreshHeader(e)
     -- On Discord: a Discord name on their profile (or their main's)
     if e.discord then status = status .. "  " .. ns.Profile.DISCORD_BADGE end
     h.Status:SetText(status)
+    local title = ns.HallOfFame:TitleText(e.full)
+    h.Champion:SetText(title or "")
+    h.Champion:SetShown(title ~= nil)
+    h:SetHeight(title and 64 or 48)
 end
 
 ------------------------------------------------------------------------

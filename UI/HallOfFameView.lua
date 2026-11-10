@@ -203,6 +203,36 @@ function HV:Build(frame)
     W.Tooltip(periodBtn, "Period", "All time, or just this month or last month (UTC). A member's first month counts from when they installed the addon.")
     self.periodButton = periodBtn
 
+    -- officers: post last month's champions to guild chat (one click, never automatic)
+    local announce = W.Button(page, "Announce Champions", 150, 22)
+    announce:SetPoint("RIGHT", periodBtn, "LEFT", -8, 0)
+    announce:SetMotionScriptsWhileDisabled(true)
+    announce:SetScript("OnClick", function()
+        local ok, why = ns.HallOfFame:Announce()
+        if not ok and why then ns:Print(why) end
+        HV:Refresh()
+    end)
+    announce:SetScript("OnEnter", function(btn)
+        local HF = ns.HallOfFame
+        local won = HF.PrevMonth(HF.Month())
+        GameTooltip:SetOwner(btn, "ANCHOR_BOTTOM")
+        GameTooltip:AddLine("Announce " .. HF.MonthName(won) .. "'s champions")
+        local lines = HF:AnnounceLines(won)
+        if lines then
+            GameTooltip:AddLine("Posts to guild chat:", 1, 1, 1)
+            for _, l in ipairs(lines) do GameTooltip:AddLine(l, 0.25, 1, 0.25, true) end
+        else
+            GameTooltip:AddLine("Not recorded yet: an officer's addon writes down last month's champions on the 2nd.", 1, 1, 1, true)
+        end
+        local t, by = HF:LastAnnounced(won)
+        if t then
+            GameTooltip:AddLine(("Last announced %s by %s."):format(ns.FormatAgo(t), ns.ShortName(by or "?")), 0.6, 0.6, 0.6)
+        end
+        GameTooltip:Show()
+    end)
+    announce:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    self.announceButton = announce
+
 
     local inset = frame.Inset
     local scroll = W.TryCreate("ScrollFrame", "NootropicGMHallOfFameScroll", page, "ScrollFrameTemplate", "UIPanelScrollFrameTemplate")
@@ -248,6 +278,9 @@ function HV:Refresh()
     self.data = data
     local period = self:Period()
     self.periodButton:SetText(PeriodText(period))
+    local HF = ns.HallOfFame
+    self.announceButton:SetShown(HF:CanAnnounce())
+    self.announceButton:SetEnabled(HF:AnnounceLines(HF.PrevMonth(HF.Month())) ~= nil)
     self.title:SetText(("Hall of Fame  " .. GRAY .. "- %d of %d people sharing|r"):format(data.sharing, data.people))
 
     local width = math.max(300, math.floor(self.scroll:GetWidth()))

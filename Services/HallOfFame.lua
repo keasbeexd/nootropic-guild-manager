@@ -383,12 +383,12 @@ end
 
 ------------------------------------------------------------------------
 -- Champion titles, recorded by officers (HW:<month> = "quests=Name,Name;kills=Name")
--- A few days into a month (when everyone's numbers for the month before
--- have had time to arrive) the first officer's copy online writes down that
+-- On the 2nd of a month (a day for everyone's numbers for the month before
+-- to arrive) the first officer's copy online writes down that
 -- month's champions. Only officers may write it, so a modified copy can't
 -- give itself titles; Most Champion Wins counts these records.
 ------------------------------------------------------------------------
-HF.RECORD_ON_DAY = 3 -- UTC day of the month
+HF.RECORD_ON_DAY = 2 -- UTC day of the month: a day's lag so last month's numbers are all in
 
 function HF.EncodeChampions(champs)
     local parts = {}
@@ -494,6 +494,100 @@ function HF:OnGuildChat(_, _, sender)
     local who = ns.NormalizeName(sender)
     if not who then return end
     self:SocialNote(who == Me())
+end
+
+------------------------------------------------------------------------
+-- Champion titles: last month's recorded champions hold them all month.
+------------------------------------------------------------------------
+HF.MONTH_NAMES = { "January", "February", "March", "April", "May", "June", "July",
+                   "August", "September", "October", "November", "December" }
+
+function HF.MonthName(m)
+    return HF.MONTH_NAMES[m % 100] or tostring(m)
+end
+
+-- The titles `full`'s person holds this month: list of stat labels, and the
+-- month they were won in. Empty until officers have recorded them (the 2nd).
+function HF:TitlesFor(full, month)
+    month = month or HF.Month()
+    local e = full and ns.Roster.byName[full]
+    local person = e and (e.main or e.full) or full
+    local won = HF.PrevMonth(month)
+    local out = {}
+    local rec = person and ns.Sync:Get("HW:" .. won)
+    if not rec then return out, won end
+    local champs = HF.DecodeChampions(rec.v)
+    for _, s in ipairs(self.STATS) do
+        for _, n in ipairs(champs[s.key] or {}) do
+            if n == person then out[#out + 1] = s.label break end
+        end
+    end
+    return out, won
+end
+
+-- "November's Champion: Quests completed, Kills" (gold), or nil.
+function HF:TitleText(full)
+    local titles, won = self:TitlesFor(full)
+    if #titles == 0 then return nil end
+    return ("|cffffd100%s's Champion:|r %s"):format(HF.MonthName(won), table.concat(titles, ", "))
+end
+
+------------------------------------------------------------------------
+-- Announcing the champions in guild chat (officers, by click)
+-- HA:<month> = "<time>" remembers who last announced that month's champions
+-- (the record's author), shared so every officer can see it.
+------------------------------------------------------------------------
+HF.CHAT_MAX = 255
+
+-- Guild chat lines for `won`'s champions (people's short names), each under 255.
+function HF:AnnounceLines(won)
+    local rec = ns.Sync:Get("HW:" .. won)
+    if not rec then return nil end
+    local champs = HF.DecodeChampions(rec.v)
+    local parts = {}
+    for _, s in ipairs(self.STATS) do
+        local names = champs[s.key]
+        if names and #names > 0 then
+            local short = {}
+            for i, n in ipairs(names) do short[i] = ns.ShortName(n) end
+            parts[#parts + 1] = s.label .. ": " .. table.concat(short, " & ")
+        end
+    end
+    if #parts == 0 then return nil end
+    local lines = {}
+    local cur = ("Congrats to %s's Hall of Fame champions! "):format(HF.MonthName(won))
+    for i, part in ipairs(parts) do
+        local piece = part .. (i < #parts and "; " or ".")
+        if #cur + #piece > self.CHAT_MAX then
+            lines[#lines + 1] = ns.Trim(cur)
+            cur = ""
+        end
+        cur = cur .. piece
+    end
+    lines[#lines + 1] = ns.Trim(cur)
+    return lines
+end
+
+function HF:LastAnnounced(won)
+    local rec = ns.Sync:Get("HA:" .. won)
+    if not rec or (rec.v or "") == "" then return nil end
+    return rec.t, rec.a
+end
+
+function HF:CanAnnounce()
+    return ns.IsOfficer() and ns.Sync:CanWrite("HA:" .. HF.PrevMonth(HF.Month()))
+end
+
+-- Sends the lines to guild chat (call from a click). true, or false and why.
+function HF:Announce()
+    local won = HF.PrevMonth(HF.Month())
+    if not self:CanAnnounce() then return false, "Officers only." end
+    local lines = self:AnnounceLines(won)
+    if not lines then return false, "Last month's champions aren't recorded yet (an officer's addon does it on the 2nd)." end
+    local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+    for _, line in ipairs(lines) do send(line, "GUILD") end
+    ns.Sync:Set("HA:" .. won, tostring(ns.DB:Now()))
+    return true
 end
 
 function HF:Init()

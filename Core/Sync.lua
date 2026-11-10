@@ -53,6 +53,11 @@
       HX:<member>          left out of the Hall of Fame: "1" ("" = shown)   officers
       HW:<month>           that month's Hall of Fame champions:
                            "quests=Name,Name;kills=Name" (Services/HallOfFame.lua)   officers
+      HA:<month>           that month's champions were announced in guild chat:
+                           "<time>" (the author announced them)   officers
+      HC:<member>          their Hall of Fame numbers checked against the game:
+                           "<time>;ok" or "<time>;bad;key=claimed/real,..."
+                           (Services/HofCheck.lua)   officers
       IR:<member>          reminded to install the addon: "" (the time and who
                            are the record's own; kept 30 days)   anyone in the guild
       HF:<member>          Hall of Fame: their character statistics, all time,
@@ -104,6 +109,8 @@ S.TYPES = {
     IR = { scope = "guild",   anyone = true, noAudit = true, ttl = 30 * 86400, label = "Install reminder" },
     HX = { scope = "guild",   officer = true, label = "Hidden from Hall of Fame" },
     HW = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame champions" },
+    HA = { scope = "guild",   officer = true, noAudit = true, label = "Champions announced" },
+    HC = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame check" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
 }
@@ -122,7 +129,7 @@ function S.EventSig(typ, member, new)
 end
 local CHANNEL = { guild = "GUILD", officer = "OFFICER" }
 -- Types whose key is not about one member.
-local NO_MEMBER = { A = true, GS = true, HW = true }
+local NO_MEMBER = { A = true, GS = true, HW = true, HA = true }
 
 S.officers = {} -- players seen sending on the officer channel this session
 S.stats = { sent = 0, received = 0, applied = 0, retries = 0, dropped = 0, refused = 0 }
@@ -445,7 +452,7 @@ local newKeys = {}            -- sender -> { count, since }
 
 function S:WithinLimits(typ, member, rest, rec, ctx, store)
     if #(rec.v or "") > self.MAX_VALUE then return false end
-    if typ == "HW" and not rest:match("^%d%d%d%d%d%d$") then return false end
+    if (typ == "HW" or typ == "HA") and not rest:match("^%d%d%d%d%d%d$") then return false end
     -- reminders only about guildmates, holding the time they were sent
     if typ == "IR" then
         if not RosterEntry(member) then return false end
@@ -707,7 +714,7 @@ function S:Materialize(typ, key, member, rec)
     elseif typ == "RP" then
         ns.Debounce("recipeschanged", 0.3, function() ns:Fire("RECIPES_CHANGED") end)
         return
-    elseif typ == "HF" or typ == "HX" or typ == "HW" then
+    elseif typ == "HF" or typ == "HX" or typ == "HW" or typ == "HA" or typ == "HC" then
         ns.Debounce("hofchanged", 0.5, function() ns:Fire("HALL_OF_FAME_CHANGED") end)
         return
     elseif typ == "IR" then
