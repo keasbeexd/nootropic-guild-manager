@@ -90,4 +90,10 @@ S.NEW_KEYS_PER_WINDOW = 3
 for i = 1, 5 do rec("Bob Member-R", "DN:Flood" .. i .. "-R", "Bob Member-R", "1;x") end
 check("flood: 4th new entry in the window refused", guild.sync.guild["DN:Flood4-R"], nil)
 check("officer repair isn't rate-limited", rec("Mira Officer-R", "DN:Relay9-R", "Bob Member-R", "1;y"), "1;y")
-print("refused:", S.stats.refused); print("OK")
+print("refused:", S.stats.refused); -- control characters (fake tooltip lines) are stripped; batch ids must be ours
+S.NEW_KEYS_PER_WINDOW = 500
+S:OnMessage(table.concat({ P, "R", "CN:Ann Member-R", tostring(NOW - 5), "Ann Member-R", ("z"):rep(300), "discord;hi\nGuild Master\0x" }, "\t"), "GUILD", "Ann Member-R")
+local cn = guild.sync.guild["CN:Ann Member-R"]
+check("line breaks and NUL stripped from received values", cn and not cn.v:find("[%c]") and true, true)
+check("an oversized batch id is dropped", cn and cn.b, nil)
+print("OK")

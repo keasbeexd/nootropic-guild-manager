@@ -983,6 +983,8 @@ function RV:ShowRowTooltip(row, e, hint)
     local PF = ns.Profile
     GameTooltip:AddLine(e.short, ns.ClassColor(e.classFile))
     GameTooltip:AddLine(("Level %d %s"):format(e.level, e.className), 1, 1, 1)
+    local title = ns.HallOfFame:TitleText(e.full)
+    if title then GameTooltip:AddLine(title, 1, 1, 1, true) end
     local hours = PF:Hours(e.full) -- local or server time, as your game clock is set
     local summary = hours and PF.Summary(hours)
     if summary then
@@ -1020,6 +1022,8 @@ function RV:ShowRowTooltip(row, e, hint)
         local reminded = ns.InstallReminder:StatusLine(e)
         if reminded then GameTooltip:AddLine(reminded, 0.6, 0.6, 0.6) end
     end
+    local check = ns.HofCheck:TooltipLine(e.full) -- officers only
+    if check then GameTooltip:AddLine(check, 1, 1, 1, true) end
     if e.note then
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine(e.note, 0.85, 0.85, 0.85, true)

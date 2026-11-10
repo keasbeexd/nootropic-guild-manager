@@ -18,6 +18,8 @@ function ns.IsOfficer() return iAmOfficer end
 local me = "Marc Priest"
 function ns.PlayerFullName() return me end
 function ns.NormalizeName(n) return n end
+function ns.ShortName(n) return n end
+function ns.FormatAgo(t) return "just now" end
 ns.DB = { PERM_BY_TYPE = {} }
 function ns.DB:PermRanks() return nil end
 function ns.DB:PermDef() return {} end
@@ -75,22 +77,104 @@ assert(not champs.hugs and not champs.champs, "no title without numbers, none fo
 local b = HF:Boards("last", month)
 assert(#b.boards.quests == 2 and b.boards.quests[1].n == 60, "Marc listed once (main + alt)")
 
--- titles are recorded by officers only, from the 3rd of the month
-local dec2, dec5 = 1796083200 + 86400, 1796083200 + 4 * 86400 -- 2 and 5 Dec 2026 UTC
-assert(os.date("!%Y%m%d", dec2) == "20261202")
+-- crowning schedule: 00:00 UTC on the 2nd
+assert(HF.UTCDay(2026, 12, 1) == 1796083200 and HF.UTCDay(2027, 3, 1) == 1803859200)
+assert(HF.CrownTime(202612) == 1796083200 + 86400)
+assert(HF.CrownTime(202603) == HF.UTCDay(2026, 3, 2), "leap-year-safe")
+local st = HF:CrownStatus(1796083200 + 3600) -- 1 Dec, 01:00 UTC
+assert(st.state == "tallying" and st.won == 202611 and st.at == 1796083200 + 86400, st.state)
+st = HF:CrownStatus(1796083200 + 86400 + 60) -- the 2nd, no officer yet
+assert(st.state == "due", st.state)
+assert(HF:RecordedChampions(month) == nil, "nothing official before they're recorded")
+
+-- titles are recorded by officers only, from the 2nd of the month
+local dec1, dec5 = 1796083200 + 3600, 1796083200 + 4 * 86400 -- 1 and 5 Dec 2026 UTC
+assert(os.date("!%Y%m%d", dec1) == "20261201")
 assert(not HF:RecordChampions(dec5), "not an officer")
 iAmOfficer = true
-assert(not HF:RecordChampions(dec2), "too early in the month")
-assert(HF:RecordChampions(dec5))
+assert(not HF:RecordChampions(dec1), "the 1st: numbers still being tallied")
+local printed = {}
+ns.Print = function(_, m) printed[#printed + 1] = m end
+assert(HF:RecordChampions(dec1 + 86400), "the 2nd")
+assert(#printed == 1 and printed[1]:find("November's Hall of Fame champions have been crowned", 1, true)
+  and printed[1]:find("Announce Champions", 1, true), "the officer who crowned them is told")
 assert(guild.sync.guild["HW:202611"].v == "quests=Marc Priest,Probably Shawn;kills=Marc Priest,Probably Shawn;deaths=Grud Sama,Probably Shawn",
   guild.sync.guild["HW:202611"].v)
 assert(not HF:RecordChampions(dec5), "written once")
+-- recount (until 00:00 UTC on the 3rd): late numbers can change a winner
+local dec2 = 1796083200 + 86400
+printed = {}
+put("Grud Sama", { quests = 80, kills = 50, deaths = 9 })      -- Grud's late numbers arrive
+assert(not HF:RecordChampions(dec5), "after the recount day nothing changes")
+assert(HF:RecordChampions(dec2 + 3600), "recount on the 2nd")
+local champsNow = HF.DecodeChampions(guild.sync.guild["HW:202611"].v)
+assert(#champsNow.quests == 1 and champsNow.quests[1] == "Grud Sama", "Grud takes Quests")
+assert(champsNow.kills[1] == "Marc Priest" and #champsNow.deaths == 2, "other titles untouched")
+assert(#printed == 1 and printed[1]:find("Recount:", 1, true) and printed[1]:find("Quests completed: Grud Sama (was Marc Priest & Probably Shawn)", 1, true), printed[1])
+-- an officer whose copy is missing Grud's numbers can't undo it
+local saved = guild.sync.guild["HF:Grud Sama"]
+guild.sync.guild["HF:Grud Sama"] = nil
+assert(not HF:RecordChampions(dec2 + 7200), "missing numbers never undo a correction")
+assert(HF.DecodeChampions(guild.sync.guild["HW:202611"].v).quests[1] == "Grud Sama")
+guild.sync.guild["HF:Grud Sama"] = saved
+-- put things back for the checks below (Grud's earlier numbers, original champions)
+put("Grud Sama", { kills = 50, deaths = 9 })
+guild.sync.guild["HW:202611"].v = "quests=Marc Priest,Probably Shawn;kills=Marc Priest,Probably Shawn;deaths=Grud Sama,Probably Shawn"
+
+st = HF:CrownStatus(dec5)
+assert(st.state == "crowned" and st.nextWon == 202612 and st.nextAt == HF.CrownTime(202701))
+local rc = HF:RecordedChampions(month)
+assert(rc.quests.n == 60 and #rc.quests.winners == 2 and rc.deaths.n == 9, "recorded champions with their numbers")
 local wins = HF:Wins("all", month)
 assert(wins["Marc Priest"] == 2 and wins["Probably Shawn"] == 3 and wins["Grud Sama"] == 1)
 assert(HF:Wins("month", month)["Probably Shawn"] == 3, "this month's titles = last month's champions")
 assert(not next(HF:Wins("last", month)))
 b = HF:Boards("all", month)
 assert(b.boards.champs[1].key == "Probably Shawn" and b.boards.champs[1].n == 3)
+
+-- titles held this month, shown in tooltips and on profiles
+local titles, won = HF:TitlesFor("Marc Druid", month) -- an alt shows their person's titles
+assert(won == 202611 and #titles == 2 and titles[1] == "Quests completed" and titles[2] == "Kills")
+assert(HF:TitleText("Grud Sama"):find("November's Champion:|r Deaths", 1, true))
+assert(HF:TitleText("No Addon") == nil)
+assert(#HF:TitlesFor("Marc Priest", 202701) == 0, "a month later the titles are gone")
+
+-- announcing them: lines under 255, who announced last
+local lines = HF:AnnounceLines(202611)
+assert(lines and #lines == 1 and lines[1]:find("^Congrats to November's Hall of Fame champions! Quests completed: Marc Priest & Probably Shawn;"), lines[1])
+for _, l in ipairs(lines) do assert(#l <= 255) end
+local said = {}
+SendChatMessage = function(msg, chan) said[#said + 1] = chan .. ":" .. msg end
+assert(HF:Announce())
+assert(#said == 1 and said[1]:find("^GUILD:Congrats"))
+local at, by = HF:LastAnnounced(202611)
+assert(at == NOW and by == "Marc Priest")
+assert(HF:Announce() and #said == 2, "officers can announce again (not greyed out)")
+-- Shawn announced; then a recount by Marc changed them: every officer sees it
+guild.sync.guild["HA:202611"] = { v = tostring(NOW - 3600), t = NOW - 3600, a = "Probably Shawn" }
+local hw = guild.sync.guild["HW:202611"]
+local savedT, savedA = hw.t, hw.a
+hw.t, hw.a = NOW - 60, "Marc Priest"
+local status = HF:AnnounceStatus(202611)
+assert(status.text:find("Corrected", 1, true) and status.text:find("by Marc Priest, AFTER Probably Shawn last announced", 1, true), status.text)
+hw.t, hw.a = NOW - 7200, savedA
+assert(HF:AnnounceStatus(202611).text:find("^Last announced .- by Probably Shawn%.$"), "crowned before the announcement: no correction")
+hw.t = savedT
+-- many winners: split into several lines, each under 255
+local many = {}
+for _, st in ipairs(HF.STATS) do if not st.noChampion then many[st.key] = { winners = {
+  { key = "Abcdefghijkl Abcdefghijkl" }, { key = "Bbcdefghijkl Abcdefghijkl" } } } end end
+guild.sync.guild["HW:202610"] = { v = HF.EncodeChampions(many), t = 1, a = "Marc Priest" }
+ns.Roster.byName["Abcdefghijkl Abcdefghijkl"] = { full = "Abcdefghijkl Abcdefghijkl", short = "Abcdefghijkl Abcdefghijkl" }
+ns.Roster.byName["Bbcdefghijkl Abcdefghijkl"] = { full = "Bbcdefghijkl Abcdefghijkl", short = "Bbcdefghijkl Abcdefghijkl" }
+lines = HF:AnnounceLines(202610)
+assert(#lines > 1)
+for _, l in ipairs(lines) do assert(#l <= 255, #l) end
+-- names that aren't guildmates never reach guild chat
+guild.sync.guild["HW:202610"].v = "quests=Visit my site,Marc Priest"
+lines = HF:AnnounceLines(202610)
+assert(#lines == 1 and not lines[1]:find("Visit", 1, true) and lines[1]:find("Quests completed: Marc Priest", 1, true))
+guild.sync.guild["HW:202610"] = nil
 
 -- a member can't award themselves titles: champs in their own record is ignored
 put("Grud Sama", { kills = 50, deaths = 9 }, { kills = 50, deaths = 9, champs = 99 })

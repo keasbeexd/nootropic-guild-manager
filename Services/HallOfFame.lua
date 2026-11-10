@@ -16,7 +16,9 @@
     last month's champions (HF:Champions; titles written down by officers as
     HW:<month>), plausibility limits on everyone's numbers (HF.Plausible),
     and officers leaving someone out (HX:<member>). A person's main and alts
-    always count as one.
+    always count as one. Champion titles (HF:TitleText) and announcing them
+    in guild chat (HF:Announce, HA:<month>). Checks against the game's
+    statistics comparison live in Services/HofCheck.lua.
 
     Statistic IDs were read from the Forever client's own catalogue
     (build 1.60.1, Interface 16001), the Wrath-era set plus Forever additions.
@@ -383,12 +385,12 @@ end
 
 ------------------------------------------------------------------------
 -- Champion titles, recorded by officers (HW:<month> = "quests=Name,Name;kills=Name")
--- A few days into a month (when everyone's numbers for the month before
--- have had time to arrive) the first officer's copy online writes down that
+-- On the 2nd of a month (a day for everyone's numbers for the month before
+-- to arrive) the first officer's copy online writes down that
 -- month's champions. Only officers may write it, so a modified copy can't
 -- give itself titles; Most Champion Wins counts these records.
 ------------------------------------------------------------------------
-HF.RECORD_ON_DAY = 3 -- UTC day of the month
+HF.RECORD_ON_DAY = 2 -- UTC day of the month: a day's lag so last month's numbers are all in
 
 function HF.EncodeChampions(champs)
     local parts = {}
@@ -421,10 +423,88 @@ function HF:RecordChampions(now)
     if tonumber(date("!%d", now)) < self.RECORD_ON_DAY then return false end
     local last = HF.PrevMonth(HF.Month(now))
     local key = "HW:" .. last
-    if ns.Sync:Get(key) then return false end -- already recorded
+    if ns.Sync:Get(key) then return self:Recount(now) end -- already crowned: maybe a recount
     local champs = self:Champions(HF.Month(now))
     if not next(champs) then return false end
-    return ns.Sync:Set(key, HF.EncodeChampions(champs))
+    local ok = ns.Sync:Set(key, HF.EncodeChampions(champs))
+    if ok then
+        -- your copy crowned them: tell you they're ready to announce
+        ns:Print(("|cffffd100%s's Hall of Fame champions have been crowned!|r You can now announce the winners: "
+            .. "|cffffffff/ngm hof|r, then |cffffd100Announce Champions|r."):format(HF.MonthName(last)))
+    end
+    return ok
+end
+
+-- Recount: for a day after crowning (until 00:00 UTC on the 3rd), late
+-- numbers can still change a winner. A category only changes when someone
+-- not crowned has caught up with or passed the crowned number, so an officer
+-- whose copy is missing numbers (which only ever makes them lower) can never
+-- undo another officer's correction. The officer whose copy corrects it is
+-- told, so they can announce the correction.
+HF.RECOUNT = 86400
+
+function HF:InRecount(now)
+    now = now or ns.DB:Now()
+    local at = HF.CrownTime(HF.Month(now))
+    return now >= at and now < at + self.RECOUNT
+end
+
+function HF:Recount(now)
+    now = now or ns.DB:Now()
+    if not (ns.IsOfficer() and ns.Sync.readyFor and self:InRecount(now)) then return false end
+    local month = HF.Month(now)
+    local last = HF.PrevMonth(month)
+    local key = "HW:" .. last
+    local rec = ns.Sync:Get(key)
+    if not rec then return false end
+    local recorded = HF.DecodeChampions(rec.v)
+    local live = self:Champions(month)
+    local data = self:Boards("last", month)
+    local changed, notes = false, {}
+    local final = {}
+    for _, s in ipairs(self.STATS) do
+        if not s.noChampion then
+            local names = recorded[s.key] or {}
+            local crownedN = -1
+            local isWinner = {}
+            for _, n in ipairs(names) do
+                isWinner[n] = true
+                for _, p in ipairs(data.boards[s.key] or {}) do
+                    if p.key == n and p.n > crownedN then crownedN = p.n end
+                end
+            end
+            -- crowned, but this copy has no numbers for any of the winners:
+            -- it can't judge, so it leaves the category alone
+            local caught = false
+            if #names == 0 or crownedN >= 0 then
+                for _, p in ipairs(data.boards[s.key] or {}) do
+                    if not isWinner[p.key] and p.n > 0 and p.n >= crownedN then caught = true break end
+                end
+            end
+            if caught and live[s.key] then
+                final[s.key] = live[s.key]
+                local was, now_ = {}, {}
+                for i, n in ipairs(names) do was[i] = ns.ShortName(n) end
+                for i, p in ipairs(live[s.key].winners) do now_[i] = ns.ShortName(p.key) end
+                local w, nw = table.concat(was, " & "), table.concat(now_, " & ")
+                if w ~= nw then
+                    changed = true
+                    notes[#notes + 1] = ("%s: %s (was %s)"):format(s.label, nw, w ~= "" and w or "nobody")
+                end
+            elseif #names > 0 then
+                local winners = {}
+                for i, n in ipairs(names) do winners[i] = { key = n } end
+                final[s.key] = { winners = winners }
+            end
+        end
+    end
+    if not changed then return false end
+    local ok = ns.Sync:Set(key, HF.EncodeChampions(final))
+    if ok then
+        ns:Print(("|cffffd100Recount:|r late numbers changed %s's Hall of Fame champions. %s. You may want to announce the correction (|cffffffff/ngm hof|r, |cffffd100Announce Champions|r)."):format(
+            HF.MonthName(last), table.concat(notes, "; ")))
+    end
+    return ok
 end
 
 -- Titles per person for a period: "all" (every recorded month), "month"
@@ -496,6 +576,192 @@ function HF:OnGuildChat(_, _, sender)
     self:SocialNote(who == Me())
 end
 
+------------------------------------------------------------------------
+-- When champions are crowned: 00:00 UTC on the 2nd of each month.
+------------------------------------------------------------------------
+-- Seconds since 1970 for a UTC date (no time zone involved).
+local function UTCDay(y, m, d)
+    y = (m <= 2) and (y - 1) or y
+    local era = math.floor(y / 400)
+    local yoe = y - era * 400
+    local mp = (m + 9) % 12
+    local doy = math.floor((153 * mp + 2) / 5) + d - 1
+    local doe = yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy
+    return (era * 146097 + doe - 719468) * 86400
+end
+HF.UTCDay = UTCDay
+
+-- When `month`'s champions-of-the-month-before are crowned.
+function HF.CrownTime(month)
+    return UTCDay(math.floor(month / 100), month % 100, HF.RECORD_ON_DAY)
+end
+
+-- Where the crowning stands now:
+-- { state = "waiting" | "tallying" | "due" | "crowned", won = month being
+--   judged, at = crowning time (this month's), nextAt = the next one }
+-- tallying: the month is over, champions are crowned at `at`;
+-- due: crowning time has passed but no officer's addon has recorded them yet.
+function HF:CrownStatus(now)
+    now = now or ns.DB:Now()
+    local month = HF.Month(now)
+    local won = HF.PrevMonth(month)
+    local at = HF.CrownTime(month)
+    local y, m = math.floor(month / 100), month % 100
+    local nextMonth = (m == 12) and ((y + 1) * 100 + 1) or (month + 1)
+    local nextAt = HF.CrownTime(nextMonth)
+    local recorded = ns.Sync:Get("HW:" .. won) ~= nil
+    if recorded then
+        return { state = "crowned", won = won, at = at, nextAt = nextAt, nextWon = month }
+    end
+    if now < at then
+        return { state = "tallying", won = won, at = at, nextAt = at, nextWon = won }
+    end
+    -- a month with nobody's numbers never gets a record: treat it as crowned
+    if not next(self:Champions(month)) then
+        return { state = "waiting", won = won, at = at, nextAt = nextAt, nextWon = month }
+    end
+    return { state = "due", won = won, at = at, nextAt = nextAt, nextWon = month }
+end
+
+-- The champions officers recorded for last month, in HF:Champions' shape
+-- (each winner with their number for that month), or nil before they're
+-- recorded. Cards show these, so they always match the titles.
+function HF:RecordedChampions(month)
+    month = month or HF.Month()
+    local rec = ns.Sync:Get("HW:" .. HF.PrevMonth(month))
+    if not rec then return nil end
+    local data = self:Boards("last", month)
+    local out = {}
+    for key, names in pairs(HF.DecodeChampions(rec.v)) do
+        local winners, best = {}, 0
+        for _, name in ipairs(names) do
+            local p
+            for _, q in ipairs(data.boards[key] or {}) do
+                if q.key == name then p = q break end
+            end
+            local e = ns.Roster.byName[name]
+            if not p and e then p = { e = e, n = 0, key = name } end
+            if p then
+                winners[#winners + 1] = p
+                if p.n > best then best = p.n end
+            end
+        end
+        if #winners > 0 then out[key] = { n = best, winners = winners } end
+    end
+    return out
+end
+
+------------------------------------------------------------------------
+-- Champion titles: last month's recorded champions hold them all month.
+------------------------------------------------------------------------
+HF.MONTH_NAMES = { "January", "February", "March", "April", "May", "June", "July",
+                   "August", "September", "October", "November", "December" }
+
+function HF.MonthName(m)
+    return HF.MONTH_NAMES[m % 100] or tostring(m)
+end
+
+-- The titles `full`'s person holds this month: list of stat labels, and the
+-- month they were won in. Empty until officers have recorded them (the 2nd).
+function HF:TitlesFor(full, month)
+    month = month or HF.Month()
+    local e = full and ns.Roster.byName[full]
+    local person = e and (e.main or e.full) or full
+    local won = HF.PrevMonth(month)
+    local out = {}
+    local rec = person and ns.Sync:Get("HW:" .. won)
+    if not rec then return out, won end
+    local champs = HF.DecodeChampions(rec.v)
+    for _, s in ipairs(self.STATS) do
+        for _, n in ipairs(champs[s.key] or {}) do
+            if n == person then out[#out + 1] = s.label break end
+        end
+    end
+    return out, won
+end
+
+-- "November's Champion: Quests completed, Kills" (gold), or nil.
+function HF:TitleText(full)
+    local titles, won = self:TitlesFor(full)
+    if #titles == 0 then return nil end
+    return ("|cffffd100%s's Champion:|r %s"):format(HF.MonthName(won), table.concat(titles, ", "))
+end
+
+------------------------------------------------------------------------
+-- Announcing the champions in guild chat (officers, by click)
+-- HA:<month> = "<time>" remembers who last announced that month's champions
+-- (the record's author), shared so every officer can see it.
+------------------------------------------------------------------------
+HF.CHAT_MAX = 255
+
+-- Guild chat lines for `won`'s champions (people's short names), each under 255.
+function HF:AnnounceLines(won)
+    local rec = ns.Sync:Get("HW:" .. won)
+    if not rec then return nil end
+    local champs = HF.DecodeChampions(rec.v)
+    local parts = {}
+    for _, s in ipairs(self.STATS) do
+        -- only current guildmates' names go into guild chat
+        local short = {}
+        for _, n in ipairs(champs[s.key] or {}) do
+            local e = ns.Roster.byName[n]
+            if e then short[#short + 1] = e.short end
+        end
+        if #short > 0 then parts[#parts + 1] = s.label .. ": " .. table.concat(short, " & ") end
+    end
+    if #parts == 0 then return nil end
+    local lines = {}
+    local cur = ("Congrats to %s's Hall of Fame champions! "):format(HF.MonthName(won))
+    for i, part in ipairs(parts) do
+        local piece = part .. (i < #parts and "; " or ".")
+        if #cur + #piece > self.CHAT_MAX then
+            lines[#lines + 1] = ns.Trim(cur)
+            cur = ""
+        end
+        cur = cur .. piece
+    end
+    lines[#lines + 1] = ns.Trim(cur)
+    return lines
+end
+
+function HF:LastAnnounced(won)
+    local rec = ns.Sync:Get("HA:" .. won)
+    if not rec or (rec.v or "") == "" then return nil end
+    return rec.t, rec.a
+end
+
+-- The announcement's state for the Announce tooltip, the same on every
+-- officer's copy (both records are shared): { text, r, g, b } or nil.
+--   "Last announced 2 Dec, 7 pm by Shawn."
+--   "Corrected 2 Dec, 9 pm by Marc, AFTER Shawn last announced on 2 Dec, 7 pm. Announce again to post the correction."
+function HF:AnnounceStatus(won)
+    local t, by = self:LastAnnounced(won)
+    if not t then return nil end
+    local when = (ns.HallOfFameView and ns.HallOfFameView.When) or ns.FormatAgo
+    local crowned = ns.Sync:Get("HW:" .. won)
+    if crowned and crowned.t > t then
+        return { text = ("Corrected %s by %s, AFTER %s last announced on %s. Announce again to post the correction."):format(
+            when(crowned.t), ns.ShortName(crowned.a or "?"), ns.ShortName(by or "?"), when(t)), r = 1, g = 0.5, b = 0.3 }
+    end
+    return { text = ("Last announced %s by %s."):format(when(t), ns.ShortName(by or "?")), r = 0.6, g = 0.6, b = 0.6 }
+end
+
+function HF:CanAnnounce()
+    return ns.IsOfficer() and ns.Sync:CanWrite("HA:" .. HF.PrevMonth(HF.Month()))
+end
+
+-- Sends the lines to guild chat (call from a click). true, or false and why.
+function HF:Announce()
+    local won = HF.PrevMonth(HF.Month())
+    if not self:CanAnnounce() then return false, "Officers only." end
+    local lines = self:AnnounceLines(won)
+    if not lines then return false, "Last month's champions aren't recorded yet (an officer's addon does it on the 2nd)." end
+    local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+    for _, line in ipairs(lines) do send(line, "GUILD") end
+    ns.Sync:Set("HA:" .. won, tostring(ns.DB:Now()))
+    return true
+end
+
 function HF:Init()
     -- the statistics change with nearly every kill: note it, and share at
     -- most every 10 minutes
@@ -505,7 +771,13 @@ function HF:Init()
     C_Timer.After(30, publish)
     -- officers: last month's champions, once guildmates' numbers have synced
     local record = ns.Safe(function() HF:RecordChampions() end, "HallOfFame")
-    C_Timer.After(120, record)
+    -- 2 to 3 minutes after login (staggered, so two officers logging in
+    -- together don't both crown: the first one's record reaches the other)
+    C_Timer.After(120 + math.random() * 60, record)
     C_Timer.NewTicker(3600, record)
+    -- recount day: re-check soon after guildmates' late numbers arrive
+    ns:On("HALL_OF_FAME_CHANGED", function()
+        if ns.IsOfficer() and HF:InRecount() then ns.Debounce("hofrecount", 60, record) end
+    end)
     C_Timer.NewTicker(self.PUBLISH_EVERY, function() if HF.dirty then publish() end end)
 end
