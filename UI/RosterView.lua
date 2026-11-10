@@ -824,6 +824,27 @@ local function BuildRow(row)
     row.Version = Text(cells.version)
     row.Version:SetPoint("LEFT", 6, 0)
     row.Version:SetPoint("RIGHT", -4, 0)
+    -- "(missing)" is a button while they can be reminded: one click whispers
+    -- them the install reminder (Services/InstallReminder.lua)
+    local remind = CreateFrame("Button", nil, cells.version)
+    remind:SetPoint("TOPLEFT", 0, 0)
+    remind:SetPoint("BOTTOMRIGHT", 0, 0)
+    remind:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    remind:SetScript("OnClick", function(btn)
+        local e = btn:GetParent():GetParent():GetParent().entry
+        if e then ns.InstallReminder:Send(e) end
+        RV:Refresh()
+    end)
+    remind:SetScript("OnEnter", function(btn)
+        local e = btn:GetParent():GetParent():GetParent().entry
+        GameTooltip:SetOwner(btn, "ANCHOR_RIGHT")
+        GameTooltip:AddLine("Click to remind them to install the addon")
+        GameTooltip:AddLine(ns.InstallReminder:Preview(e), 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    remind:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    remind:Hide()
+    row.Remind = remind
 
     row:SetScript("OnClick", function(self, button)
         local e = self.entry
@@ -929,8 +950,16 @@ function RV:InitRow(row, e)
 
     row.Rank:SetText(e.rank)
     if row.cells.version:IsShown() then
+        local canRemind = not e.hasAddon and ns.InstallReminder:Can(e)
+        row.Remind:SetShown(canRemind and true or false)
         if not e.hasAddon then
-            row.Version:SetText(ns.InstallReminder:Reminded(e.full) and "|cff6d6d6d(reminded)|r" or "|cff6d6d6d(missing)|r")
+            if ns.InstallReminder:Reminded(e.full) then
+                row.Version:SetText("|cff6d6d6d(reminded)|r")
+            elseif canRemind then
+                row.Version:SetText("|cff66bbff(missing)|r") -- clickable: online, not reminded yet
+            else
+                row.Version:SetText("|cff6d6d6d(missing)|r")
+            end
         elseif ns.Roster:IsOutdated(e) then
             -- red: someone in the guild has a newer version
             row.Version:SetText("|cffff4040" .. (e.version or "old") .. "|r")

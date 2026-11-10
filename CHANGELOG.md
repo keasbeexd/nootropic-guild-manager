@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.8.2
+
+- On the Find tab, **(missing)** in the Addon Version column is a button (blue) while someone can be reminded: one click whispers them the install reminder, and it turns into a grey **(reminded)**. Hover it first to see the exact whisper. Offline members show a grey (missing), since whispers need them online.
+
 ## 2.8.1
 
 - **Remind to install** shows the exact whisper (with their name filled in) when you hover the button on a profile or the right-click menu entry.
