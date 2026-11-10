@@ -5,10 +5,10 @@
       settings = { minimap, iconStyle, communitiesButton, titleUseGuild,
                    auditDays, onlineOnly, sortKey, sortAsc, hiddenColumns,
                    columnWidths, frameSize, framePos }
-      guilds["<Guild>-<Realm>"] = {
+      guilds["<Guild>"] = {     -- "<Guild>-<Realm>" outside WoW: Forever
           syncVersion = 2,
           sync    = { guild = { [key] = record }, officer = { ... } }, -- see Core/Sync.lua
-          members = { ["Name-Realm"] = { note = "private, never shared", + fields built from sync records } },
+          members = { ["First Second"] = { note = "private, never shared", + fields built from sync records } },
           recruit = { ... },                                           -- see Services/Recruit.lua
       }
 
@@ -130,16 +130,65 @@ function DB:GuildKey()
     if not IsInGuild() then return nil end
     local name, _, _, realm = GetGuildInfo("player")
     if not name or name == "" then return nil end
+    if ns.NO_REALMS then return name end -- see ns.NormalizeName
     if not realm or realm == "" then realm = ns.PlayerRealm() end
     return name .. "-" .. realm
+end
+
+-- 2.7.2: on WoW: Forever the guild was saved as "<Guild>-<shard>"; it's
+-- now just "<Guild>". Adopts the old entries (the biggest as the base, the
+-- rest merged in; Core/Sync.lua then tidies the names inside).
+local function Count(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
+
+local function MergeGuild(into, from)
+    local newer = ns.Sync and ns.Sync.Newer
+    for _, scope in ipairs({ "guild", "officer" }) do
+        into.sync[scope] = into.sync[scope] or {}
+        for k, rec in pairs((from.sync or {})[scope] or {}) do
+            local cur = into.sync[scope][k]
+            if not cur or (newer and newer(rec, cur)) then into.sync[scope][k] = rec end
+        end
+    end
+    for full, m in pairs(from.members or {}) do
+        local cur = into.members[full]
+        if not cur then
+            into.members[full] = m
+        elseif m.note and m.note ~= "" and m.note ~= cur.note then
+            cur.note = (cur.note and cur.note ~= "") and (cur.note .. " / " .. m.note) or m.note
+        end
+    end
+    if from.recruit and not into.recruit then into.recruit = from.recruit end
+end
+
+function DB:AdoptShardGuilds(key)
+    local found = {}
+    for k, g in pairs(self.sv.guilds) do
+        if k ~= key and k:sub(1, #key + 1) == key .. "-" and type(g) == "table" then found[#found + 1] = k end
+    end
+    if #found == 0 then return nil end
+    table.sort(found, function(a, b)
+        local na = Count((self.sv.guilds[a].sync or {}).guild) + Count((self.sv.guilds[a].sync or {}).officer)
+        local nb = Count((self.sv.guilds[b].sync or {}).guild) + Count((self.sv.guilds[b].sync or {}).officer)
+        if na ~= nb then return na > nb end
+        return a < b
+    end)
+    local base = self.sv.guilds[found[1]]
+    base.members = base.members or {}
+    base.sync = base.sync or { guild = {}, officer = {} }
+    for i = 2, #found do MergeGuild(base, self.sv.guilds[found[i]]) end
+    for _, k in ipairs(found) do self.sv.guilds[k] = nil end
+    base.realmless = nil -- names inside still carry shard tags: Sync tidies them
+    self.sv.guilds[key] = base
+    return base
 end
 
 function DB:Guild()
     local key = self:GuildKey()
     if not key then return nil end
     local g = self.sv.guilds[key]
+    if not g and ns.NO_REALMS then g = self:AdoptShardGuilds(key) end
     if not g then
-        g = { members = {}, syncVersion = 2, sync = { guild = {}, officer = {} } }
+        g = { members = {}, syncVersion = 2, sync = { guild = {}, officer = {} }, realmless = ns.NO_REALMS or nil }
         self.sv.guilds[key] = g
     end
     return g

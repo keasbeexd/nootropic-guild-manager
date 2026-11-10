@@ -87,6 +87,7 @@ Your private notes never leave your computer. Officer data goes only over the of
 - **Guild invites from addons are blocked**, in every form: `C_GuildInfo.Invite`, `/ginvite` from a secure macro button, and `/ginvite` put in the chat box by the addon (opening the chat box from addon code taints it). Only `/ginvite` the player types or pastes works, so the Invite prompt shows the command to copy. **Don't open the chat box from addon code**: it would also taint the player's own `/ginvite` for the rest of the session.
 - `/who` must run from a hardware event: the Search button is a secure macro button (`W.SecureOverlay`) placed over the visible one.
 - Names have two parts and no realms in chat: whisper and invite by `ns.ChatName(full)`.
+- The game still tags names with the server shard each player lives on (`Name-CAMWOWUS2Realm2PvP`), different for different guildmates and left off for your own shard. Since 2.7.2 every name is stored plain (`ns.NormalizeName` drops the tag when `ns.NO_REALMS`), records from older copies are tidied on arrival (`Sync.Canon`), and saved data from before is tidied once (`Sync:CanonicalizeSaved`, `DB:AdoptShardGuilds`).
 - Whispers are capped at 255 bytes: `RC:Format` uses first names and cuts at whole words when needed.
 - `C_Calendar.AddEvent` is restricted; reading the calendar is fine.
 - The window templates' close button calls `HideUIPanel`, which does nothing in combat. Every window calls `W.CombatSafeClose(f)` right after it's created so its X hides it directly.

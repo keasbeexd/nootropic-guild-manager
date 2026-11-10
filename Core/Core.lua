@@ -145,8 +145,22 @@ function ns.PlayerRealm()
     return realm
 end
 
+-- WoW: Forever has no realms players can see, but the game still tags
+-- names with the server shard each player happens to live on
+-- ("Name-CAMWOWUS1Realm2PvP" for one guildmate, "...US2..." for another),
+-- and leaves the tag off names on your own shard. Keyed that way, the same
+-- person ended up under two names on different computers, so their shared
+-- data never reached their roster row. On Forever a character is known by
+-- its name alone (first and second names are unique), so the tag is dropped.
+local toc = GetBuildInfo and select(4, GetBuildInfo())
+ns.NO_REALMS = (toc and toc >= 16000 and toc < 17000) and true or false
+
 function ns.NormalizeName(name)
     if not name or name == "" then return nil end
+    if ns.NO_REALMS then
+        local base = ns.Trim(name:match("^([^%-]*)") or name)
+        return base ~= "" and base or nil
+    end
     if name:find("-", 1, true) then return name end
     return name .. "-" .. ns.PlayerRealm()
 end

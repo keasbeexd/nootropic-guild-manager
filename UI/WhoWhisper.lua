@@ -64,18 +64,34 @@ function WI:Results()
     return out
 end
 
--- Our own windows also list names (the recruit list); never touch them.
-local function IsOurs(frame)
+-- Windows that list players with their zone and class but aren't /who:
+-- the guild roster (your own row there used to get a button after a /who
+-- that included you), the friends list, and our own windows (the recruit
+-- list). Rows inside them never get a button.
+local NOT_WHO = { CommunitiesFrame = true, GuildFrame = true, FriendsListFrame = true,
+                  CommunitiesGuildMemberDetailFrame = true, GuildMemberDetailFrame = true }
+
+local function Excluded(frame)
     local f, depth = frame, 0
     while f and depth < 20 do
         local name = f.GetName and f:GetName()
-        if name and name:find("^NootropicGM") then return true end
+        if name and (name:find("^NootropicGM") or NOT_WHO[name]) then return true end
         if f == GameTooltip then return true end
         f = f:GetParent()
         depth = depth + 1
     end
     return false
 end
+WI.Excluded = Excluded
+
+-- You and your guildmates are never recruited: no button for them at all.
+local function Recruitable(info)
+    local full = info and ns.NormalizeName(info.name)
+    if not full then return false end
+    if full == ns.PlayerFullName() or ns.Roster.byName[full] then return false end
+    return true
+end
+WI.Recruitable = Recruitable
 
 -- Visible text of a frame's own font strings, lower case, colors removed.
 local function Texts(obj, out)
@@ -220,6 +236,7 @@ end
 function WI:UpdateButton(row)
     local b = self.buttons[row]
     local info = self:Enabled() and self.results and row:IsVisible() and RowInfo(row, self.results, self.deep)
+    if info and (not Recruitable(info) or Excluded(row)) then info = nil end
     if not info then
         if b then b:Hide() end
         return
@@ -289,7 +306,7 @@ function WI:Scan()
                 if not RowInfo(frame, results, deep) then return false end
                 return not deep or NamesInChildren(frame, results) <= 1
             end)
-            if ok and isRow and not IsOurs(frame) then
+            if ok and isRow and not Excluded(frame) then
                 found = found + 1
                 local parent = frame:GetParent()
                 if parent and parent ~= UIParent then self.containers[parent] = true end
