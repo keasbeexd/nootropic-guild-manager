@@ -2,6 +2,12 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.8.0
+
+- **Social Butterfly** on the Hall of Fame: hours spent in guild chat conversations. The day is split into 15-minute blocks; a block counts when you and at least one guildmate both spoke in it, at most 8 blocks a day, so ten messages in a row count once and talking to yourself counts for nothing. Only the time is shared, never what was said (part of **Share my statistics**).
+- **Champions:** each Hall of Fame card shows last month's champion at the bottom. Winner takes all; a tie makes everyone at the top a champion.
+- **Most Champion Wins**, a new card: titles won, all time and by month. Each member's addon tallies their own and shares the count with their statistics.
+
 ## 2.7.3
 
 - **Remind to install:** guildmates without the addon show **(missing)** in the Addon Version column. Right-click them on Find, on the game's guild roster, or use the button on their profile, to send a one-click whisper saying why the addon is worth having and where to get it. Shared with the whole guild: each person is reminded at most once per 30 days, and the column then shows **(reminded)** with who did it. Edit the text in **Options > Install Reminder Text** (`$first`, `$name` and `$guild` are filled in). Search `is:missing` lists everyone without the addon.

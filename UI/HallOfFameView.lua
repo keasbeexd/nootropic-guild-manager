@@ -17,7 +17,7 @@ local PERIODS = { { "all", "All time" }, { "month", "This month" }, { "last", "L
 local TOP = 5
 local ROW_H = 16
 local CARD_W, CARD_GAP = 230, 12
-local CARD_H = 26 + TOP * ROW_H + 20
+local CARD_H = 26 + TOP * ROW_H + 20 + 16 -- title, rows, last month's champion, footer
 local TOTALS = { "quests", "kills", "bosses", "deaths" }
 
 local function Me() return ns.PlayerFullName() end
@@ -43,58 +43,17 @@ end
 ------------------------------------------------------------------------
 -- Data
 ------------------------------------------------------------------------
--- { people, sharing, totals = { key = n }, boards = { key = { { e, n }... } }, mine = person key }
+-- ns.HallOfFame:Boards for the chosen period, plus which entry is you and
+-- last month's champions: { ..., mine = person key, champions = { key = {...} } }
 function HV:Boards()
-    local period, alts = self:Period(), ns.DB:Settings().hofAlts
+    local alts = ns.DB:Settings().hofAlts
     local month = ns.HallOfFame.Month()
-    local groups, order = {}, {}
-    for _, e in ipairs(ns.Roster.members) do
-        local key = alts and e.full or (e.main or e.full)
-        local g = groups[key]
-        if not g then
-            g = { chars = {} }
-            groups[key] = g
-            order[#order + 1] = key
-        end
-        g.chars[#g.chars + 1] = e
-        if e.full == key then g.e = e end
-    end
-    local boards, totals, sharing, noAddon = {}, {}, 0, 0
-    for _, s in ipairs(ns.HallOfFame.STATS) do boards[s.key] = {} end
-    for _, key in ipairs(order) do
-        local g = groups[key]
-        g.e = g.e or g.chars[1] -- main not in the guild: their first alt
-        local sum, any, hasAddon = {}, false, false
-        for _, c in ipairs(g.chars) do
-            if c.hasAddon then hasAddon = true end
-            local t = ns.HallOfFame:For(c.full, period, month)
-            if t then
-                any = true
-                for k, n in pairs(t) do sum[k] = (sum[k] or 0) + n end
-            end
-        end
-        if not hasAddon then noAddon = noAddon + 1 end
-        if any then
-            sharing = sharing + 1
-            for k, n in pairs(sum) do
-                if n > 0 and boards[k] then
-                    table.insert(boards[k], { e = g.e, n = n, key = key })
-                    totals[k] = (totals[k] or 0) + n
-                end
-            end
-        end
-    end
-    for _, list in pairs(boards) do
-        table.sort(list, function(a, b)
-            if a.n ~= b.n then return a.n > b.n end
-            return a.e.short < b.e.short
-        end)
-    end
-    local mine
+    local data = ns.HallOfFame:Boards(self:Period(), alts, month)
     local me = Me()
     local myEntry = me and ns.Roster.byName[me]
-    if myEntry then mine = alts and myEntry.full or (myEntry.main or myEntry.full) end
-    return { people = #order, sharing = sharing, noAddon = noAddon, totals = totals, boards = boards, mine = mine }
+    if myEntry then data.mine = alts and myEntry.full or (myEntry.main or myEntry.full) end
+    data.champions = ns.HallOfFame:Champions(month)
+    return data
 end
 
 ------------------------------------------------------------------------
@@ -134,6 +93,11 @@ local function Card(parent)
         r.Name:SetPoint("RIGHT", r.Value, "LEFT", -6, 0)
         c.rows[i] = r
     end
+    c.Champ = c:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    c.Champ:SetPoint("TOPLEFT", 10, -28 - TOP * ROW_H - 4)
+    c.Champ:SetPoint("RIGHT", -10, 0)
+    c.Champ:SetJustifyH("LEFT")
+    c.Champ:SetWordWrap(false)
     c.You = c:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     c.You:SetPoint("BOTTOMLEFT", 10, 7)
     c.You:SetPoint("BOTTOMRIGHT", -10, 7)
@@ -160,7 +124,7 @@ function HV:FillCard(c, stat, data)
         if p then
             r.Rank:SetText(i .. ".")
             r.Name:SetText(NameText(p, data.mine))
-            r.Value:SetText(HV.Number(p.n))
+            r.Value:SetText(ns.HallOfFame.Format(stat, p.n))
         else
             r.Rank:SetText("")
             r.Name:SetText(i == 1 and (GRAY .. "Nobody yet|r") or "")
@@ -170,14 +134,29 @@ function HV:FillCard(c, stat, data)
     local you = ""
     for i, p in ipairs(list) do
         if p.key == data.mine then
-            if i > TOP then you = ("You: #%d with %s"):format(i, HV.Number(p.n)) end
+            if i > TOP then you = ("You: #%d with %s"):format(i, ns.HallOfFame.Format(stat, p.n)) end
             break
         end
     end
     if you == "" and #list > 0 then
-        you = ("Guild: %s"):format(HV.Number(data.totals[stat.key] or 0))
+        you = ("Guild: %s"):format(ns.HallOfFame.Format(stat, data.totals[stat.key] or 0))
     end
     c.You:SetText(you)
+    -- last month's champion(s): winner takes all, ties share it
+    local champ = data.champions and data.champions[stat.key]
+    c.champ = champ
+    if stat.noChampion then
+        c.Champ:SetText(GRAY .. "Titles won, all time and by month.|r")
+    elseif champ then
+        local names = {}
+        for i, p in ipairs(champ.winners) do
+            if i > 2 then names[#names + 1] = ("+%d"):format(#champ.winners - 2) break end
+            names[#names + 1] = NameText(p, data.mine)
+        end
+        c.Champ:SetText(GOLD .. "Last month:|r " .. table.concat(names, ", ") .. GRAY .. " (" .. ns.HallOfFame.Format(stat, champ.n) .. ")|r")
+    else
+        c.Champ:SetText(GRAY .. "Last month: no champion yet|r")
+    end
 end
 
 function HV:ShowCardTip(c)
@@ -188,10 +167,16 @@ function HV:ShowCardTip(c)
     local mine = self.data and self.data.mine
     for i, p in ipairs(c.list or {}) do
         if i > 15 then GameTooltip:AddLine(("...and %d more"):format(#c.list - 15), 0.6, 0.6, 0.6) break end
-        GameTooltip:AddDoubleLine(i .. ". " .. NameText(p, mine), HV.Number(p.n), 1, 1, 1, 1, 1, 1)
+        GameTooltip:AddDoubleLine(i .. ". " .. NameText(p, mine), ns.HallOfFame.Format(c.stat, p.n), 1, 1, 1, 1, 1, 1)
     end
     if self.data and self.data.totals[c.stat.key] then
-        GameTooltip:AddDoubleLine("Guild total", HV.Number(self.data.totals[c.stat.key]), 0.6, 0.6, 0.6, 0.6, 0.6, 0.6)
+        GameTooltip:AddDoubleLine("Guild total", ns.HallOfFame.Format(c.stat, self.data.totals[c.stat.key]), 0.6, 0.6, 0.6, 0.6, 0.6, 0.6)
+    end
+    if c.champ then
+        local names = {}
+        for i, p in ipairs(c.champ.winners) do names[i] = p.e.short end
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine((#names > 1 and "Last month's champions (tied): " or "Last month's champion: ") .. table.concat(names, ", "), 1, 0.82, 0, true)
     end
     GameTooltip:Show()
 end

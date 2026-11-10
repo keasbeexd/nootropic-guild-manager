@@ -25,6 +25,11 @@ HF.PUBLISH_EVERY = 600 -- shared again at most every 10 minutes (and at login)
 
 -- key, statistic id(s), label, icon. A list of ids is added up.
 HF.STATS = {
+    { key = "champs",   label = "Most Champion Wins", icon = "Interface\\Icons\\INV_Crown_01", merge = "max", noChampion = true,
+      tip = "Months spent at the top of a Hall of Fame card. Each card's leader for a month (all of them, on a tie) is its champion; every title counts." },
+    { key = "social",   label = "Social Butterfly", icon = "Interface\\Icons\\Spell_Holy_MindVision",
+      format = function(n) return ("%.1f h"):format(n / 4) end,
+      tip = "Hours spent in guild chat conversations: 15-minute blocks where you and at least one guildmate both spoke (8 blocks a day at most). Only the count is shared, never what was said." },
     { key = "quests",   id = 98,   label = "Quests completed",  icon = "Interface\\Icons\\INV_Misc_Note_01" },
     { key = "kills",    id = 1197, label = "Kills",             icon = "Interface\\Icons\\Ability_DualWield" },
     { key = "bosses",   label = "Dungeon & raid bosses",         icon = "Interface\\Icons\\INV_Misc_Head_Dragon_01",
@@ -43,6 +48,14 @@ HF.STATS = {
 }
 HF.BY_KEY = {}
 for _, s in ipairs(HF.STATS) do HF.BY_KEY[s.key] = s end
+
+-- Formats a statistic's value for display.
+function HF.Format(stat, n)
+    if stat and stat.format then return stat.format(n or 0) end
+    local s = tostring(math.floor(n or 0))
+    local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+    return (out:gsub("^,", ""))
+end
 
 -- Final-boss kill statistics, one per dungeon or raid.
 HF.BOSS_IDS = {
@@ -89,8 +102,12 @@ end
 
 -- { key = n } for every statistic the game answered (nil when it can't).
 function HF:ReadMine()
-    if not self:Available() then return nil end
     local out, any = {}, false
+    local social = self:SocialTotal()
+    if social > 0 then out.social, any = social, true end
+    local champs = self:WinsTotal()
+    if champs > 0 then out.champs, any = champs, true end
+    if not self:Available() then return any and out or nil end
     for _, s in ipairs(self.STATS) do
         local n
         if s.id then
@@ -185,6 +202,7 @@ end
 function HF:Publish()
     if not (IsInGuild() and ns.DB:Guild() and ns.Sync.readyFor) then return end
     if not ns.Sharing:Get("stats") then return end
+    self:UpdateWins()
     local cur = self:ReadMine()
     if not cur then return end
     self.dirty = false
@@ -213,11 +231,184 @@ function HF:For(full, period, nowMonth)
     return {}
 end
 
+------------------------------------------------------------------------
+-- Leaderboards (shared by the Hall of Fame tab and the champions)
+------------------------------------------------------------------------
+-- Every guildmate's numbers for a period, people with their characters added
+-- up under their main (or each character on its own with `alts`):
+-- { people, sharing, noAddon, totals = { key = n }, boards = { key = { { e, n, key }... } } }
+-- Most Champion Wins takes a person's best character instead of the sum
+-- (every character of a person reports the same wins).
+function HF:Boards(period, alts, month)
+    month = month or HF.Month()
+    local groups, order = {}, {}
+    for _, e in ipairs(ns.Roster.members) do
+        local key = alts and e.full or (e.main or e.full)
+        local g = groups[key]
+        if not g then
+            g = { chars = {} }
+            groups[key] = g
+            order[#order + 1] = key
+        end
+        g.chars[#g.chars + 1] = e
+        if e.full == key then g.e = e end
+    end
+    local boards, totals, sharing, noAddon = {}, {}, 0, 0
+    for _, s in ipairs(self.STATS) do boards[s.key] = {} end
+    for _, key in ipairs(order) do
+        local g = groups[key]
+        g.e = g.e or g.chars[1] -- main not in the guild: their first alt
+        local sum, any, hasAddon = {}, false, false
+        for _, c in ipairs(g.chars) do
+            if c.hasAddon then hasAddon = true end
+            local t = self:For(c.full, period, month)
+            if t then
+                any = true
+                for k, n in pairs(t) do
+                    local s = self.BY_KEY[k]
+                    if s and s.merge == "max" then sum[k] = math.max(sum[k] or 0, n)
+                    else sum[k] = (sum[k] or 0) + n end
+                end
+            end
+        end
+        if not hasAddon then noAddon = noAddon + 1 end
+        if any then
+            sharing = sharing + 1
+            for k, n in pairs(sum) do
+                if n > 0 and boards[k] then
+                    table.insert(boards[k], { e = g.e, n = n, key = key })
+                    totals[k] = (totals[k] or 0) + n
+                end
+            end
+        end
+    end
+    for _, list in pairs(boards) do
+        table.sort(list, function(a, b)
+            if a.n ~= b.n then return a.n > b.n end
+            return a.e.short < b.e.short
+        end)
+    end
+    return { people = #order, sharing = sharing, noAddon = noAddon, totals = totals, boards = boards }
+end
+
+-- Last month's champion of each card (people, not characters): winner takes
+-- all, and a tie makes everyone at the top a champion.
+-- { key = { n = best, winners = { { e, n, key }... } } }
+function HF:Champions(month)
+    month = month or HF.Month()
+    local data = self:Boards("last", false, month)
+    local out = {}
+    for _, s in ipairs(self.STATS) do
+        if not s.noChampion then
+            local list = data.boards[s.key]
+            local top = list[1] and list[1].n or 0
+            if top > 0 then
+                local winners = {}
+                for _, p in ipairs(list) do
+                    if p.n == top then winners[#winners + 1] = p else break end
+                end
+                out[s.key] = { n = top, winners = winners }
+            end
+        end
+    end
+    return out
+end
+
+-- Your champion titles, kept per person (your main) and month on this
+-- computer: Settings().hofWins[person][month] = number of titles. Worked out
+-- again each time your numbers are shared, so late arrivals still count.
+local function MyPerson()
+    local me = Me()
+    local e = me and ns.Roster.byName[me]
+    return e and (e.main or e.full) or me
+end
+
+HF.WINS_AFTER = 100 -- seconds after login: guildmates' numbers have synced by then
+
+function HF:UpdateWins()
+    -- right after login only your own numbers are here, and you'd top every card
+    if self.startedAt and GetTime() - self.startedAt < self.WINS_AFTER then return end
+    local person = MyPerson()
+    if not person or not ns.Roster.members or #ns.Roster.members == 0 then return end
+    local month = HF.Month()
+    local last = HF.PrevMonth(month)
+    local wins = 0
+    for _, c in pairs(self:Champions(month)) do
+        for _, p in ipairs(c.winners) do
+            if p.key == person then wins = wins + 1 break end
+        end
+    end
+    local s = ns.DB:Settings()
+    s.hofWins = s.hofWins or {}
+    s.hofWins[person] = s.hofWins[person] or {}
+    s.hofWins[person][last] = wins > 0 and wins or nil
+end
+
+function HF:WinsTotal()
+    local person = MyPerson()
+    local mine = person and (ns.DB:Settings().hofWins or {})[person]
+    local n = 0
+    for _, w in pairs(mine or {}) do n = n + w end
+    return n
+end
+
+------------------------------------------------------------------------
+-- Social Butterfly: time in guild chat conversations
+-- The day is cut into 15-minute blocks. A block counts when you said
+-- something in guild chat AND another guildmate did too (talking to
+-- yourself doesn't count), at most 8 blocks per (UTC) day. Ten messages in a
+-- row count once, so spamming gets nothing. Kept per character on this
+-- computer: Settings().hof[character].social = { total, day, today, block, me, them, counted }.
+------------------------------------------------------------------------
+HF.SOCIAL_BLOCK = 900
+HF.SOCIAL_DAY_CAP = 8
+
+local function SocialState()
+    local st = MyState()
+    st.social = st.social or { total = 0 }
+    return st.social
+end
+
+-- `fromMe`: you said it; otherwise a guildmate did. `now` for tests.
+function HF:SocialNote(fromMe, now)
+    now = now or time()
+    local s = SocialState()
+    local block = math.floor(now / self.SOCIAL_BLOCK)
+    if s.block ~= block then
+        s.block, s.me, s.them, s.counted = block, false, false, false
+    end
+    local day = tonumber(date("!%Y%m%d", now))
+    if s.day ~= day then s.day, s.today = day, 0 end
+    if fromMe then s.me = true else s.them = true end
+    if s.me and s.them and not s.counted and (s.today or 0) < self.SOCIAL_DAY_CAP then
+        s.counted = true
+        s.today = (s.today or 0) + 1
+        s.total = (s.total or 0) + 1
+        self.dirty = true
+    end
+end
+
+function HF:SocialTotal()
+    local me = Me()
+    local st = me and (ns.DB:Settings().hof or {})[me]
+    return st and st.social and st.social.total or 0
+end
+
+function HF:OnGuildChat(_, _, sender)
+    if issecretvalue and issecretvalue(sender) then return end
+    local who = ns.NormalizeName(sender)
+    if not who then return end
+    self:SocialNote(who == Me())
+end
+
 function HF:Init()
     -- the statistics change with nearly every kill: note it, and share at
     -- most every 10 minutes
     ns:RegisterEvent("CRITERIA_UPDATE", function() HF.dirty = true end)
+    ns:RegisterEvent("CHAT_MSG_GUILD", function(...) HF:OnGuildChat(...) end)
     local publish = ns.Safe(function() HF:Publish() end, "HallOfFame")
+    self.startedAt = GetTime()
     C_Timer.After(30, publish)
+    C_Timer.After(self.WINS_AFTER + 20, publish) -- champion wins, once guildmates' numbers are in
     C_Timer.NewTicker(self.PUBLISH_EVERY, function() if HF.dirty then publish() end end)
 end
