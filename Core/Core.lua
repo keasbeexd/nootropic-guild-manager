@@ -238,7 +238,7 @@ function ns.Safe(fn, where)
     end
 end
 
--- Officers are members whose rank can read officer notes.
+-- Officers are members whose rank the game marks Officer (Guild Control).
 -- The game's Officer setting for your rank (Guild Control).
 function ns.IsOfficer()
     if not IsInGuild() then return false end

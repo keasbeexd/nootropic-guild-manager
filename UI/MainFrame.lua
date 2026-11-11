@@ -411,14 +411,7 @@ end
 ------------------------------------------------------------------------
 -- Status
 ------------------------------------------------------------------------
--- "Nootropic Guild Manager", or "<Guild Name> Guild Manager" when that option is on.
-function UI:Title()
-    if ns.DB:Settings().titleUseGuild and IsInGuild() then
-        local guild = GetGuildInfo("player")
-        if guild and guild ~= "" then return guild .. " Guild Manager" end
-    end
-    return "Nootropic Guild Manager"
-end
+function UI:Title() return "Nootropic Guild Manager" end
 
 -- The window title, with the open tab's name ("Nootropic Guild Manager - Insights").
 function UI:UpdateTitle()

@@ -2,13 +2,15 @@
     Nootropic Guild Manager - Brand icon
     One renderer for the addon's icon wherever it appears (window portrait,
     minimap button, Guild & Communities shortcut, options previews).
-    Styles: the Nootropic medallion (Media/Logo.tga, the default), an ale
-    mug, a Brewfest stein, or your guild's emblem.
+    Styles: your guild's tabard (the default) or the Nootropic medallion
+    (Media/Logo.tga), which the tabard falls back to outside a guild or
+    without one.
 
-    The layout copies Blizzard's own guild portrait (CommunitiesFrame
+    Large icons copy Blizzard's own guild portrait (CommunitiesFrame
     PortraitOverlay): a 60x60 circle, the tabard background and border from
-    Interface\GuildFrame\GuildFrame, and a 56x64 emblem centered on top.
-    Everything scales from that 60px reference.
+    Interface\GuildFrame\GuildFrame, and a 56x64 emblem centered on top,
+    everything scaled from that 60px reference. Small ones (under 48px) get
+    the guild's background color and the emblem only (see ShowEmblem).
 
       ns.Brand:AttachPortrait(frame)                 -- window portrait
       ns.Brand:Attach(host, size, point, opts)       -- anywhere else
@@ -26,7 +28,7 @@ local BORDER_COORDS = { 0.63183594, 0.69238281, 0.74414063, 0.86523438 }
 Brand.icons = {}
 
 function Brand:Style()
-    return ns.DB:Settings().iconStyle or "nootropic"
+    return ns.DB:Settings().iconStyle or "emblem"
 end
 
 -- True when there's a guild tabard to draw.
