@@ -2,10 +2,14 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
-## 2.10.2
+## 2.11.0
 
-- `/ngm sync <name>` also shows which shard you and that guildmate are on, and how their messages arrive, to track down a guildmate whose data never reaches anyone.
-- `/ngm sync` also counts every addon message heard, and any that couldn't be read (with the reason), which were dropped silently before.
+- **New sync, simpler and stricter.** Every copy now checks, per author, the time of their newest record and a checksum over all of them, and asks for exactly that author's records since a time when something differs. A member's check names only themselves (a few dozen characters); officers' checks name everyone, since they pass everyone's data on. The old group checksums, record lists and re-send markers are gone.
+- **Members whose guild messages go nowhere.** Rarely, the game accepts someone's guild addon messages but delivers them to nobody, while their whispers still get through. Every guild message normally comes back to its sender, so a copy that hears none of its own back now whispers them to an online officer (2.11 or later), who passes on that member's own records, and only theirs. `/ngm sync` shows whether your guild channel works and who you're sending through.
+- **Officers recognised by rank.** Members can't see the officer channel, so they couldn't tell who the officers were, and refused data officers passed on, Hall of Fame champions officers recorded, and install reminders officers sent. The Guild Master's copy now records which ranks are officer ranks (only the Guild Master can), and every copy checks that against the roster.
+- **Tighter intake.** Only guild and officer addon messages are read, plus whispers from guildmates to an officer passing their data on. Party, raid and other whispered messages are ignored.
+- `/ngm sync <name>` shows what has arrived from that guildmate this session, which shard you and they are on, and how their messages arrive. `/ngm sync` also counts every addon message heard and any that couldn't be read, with the reason.
+- Older copies still receive live changes from 2.11 and send theirs, but they no longer repair gaps with it: everyone should update.
 
 ## 2.10.1
 

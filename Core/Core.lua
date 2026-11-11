@@ -412,6 +412,17 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns:Print(started and "Comparing data with guildmates now." or "A sync just ran; it repeats automatically every few minutes.")
         ns:Print(("Sync this session: %d sent, %d received, %d applied, %d refused, %d queued (%d own/live, %d passed on), %d dropped, %d held back by the game."):format(
             st.sent, st.received, st.applied, st.refused or 0, ns.Sync:QueueSize(), #ns.Sync.queues.high, #ns.Sync.queues.bulk, st.dropped, st.retries or 0))
+        local S2 = ns.Sync
+        if S2.guildEcho then
+            ns:Print("  Guild channel: working (your messages come back to you).")
+        elseif S2:GuildBroken() then
+            local relay = S2:PickRelay()
+            ns:Print(("  Guild channel: |cffff5555not delivering your messages|r. %s"):format(relay
+                and ("Sending through " .. relay .. " instead (" .. (st.relayed or 0) .. " so far).")
+                or "No officer with 2.11 or later is online to send them through; they'll go when one is."))
+        else
+            ns:Print("  Guild channel: checking...")
+        end
         ns:Print(("  Addon messages heard: %d, unreadable: %d%s."):format(st.heard or 0, st.unreadable or 0,
             ns.Sync.lastUnreadable and (" (last: " .. ns.Sync.lastUnreadable .. ")") or ""))
         local lr = ns.Sync.lastRefused
