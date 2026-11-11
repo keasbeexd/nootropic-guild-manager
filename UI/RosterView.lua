@@ -999,10 +999,11 @@ function RV:AddMemberLines(e)
     end
     if e.discord then Pair("Discord", e.discord) end
     -- the addon: their version, or whether they've been reminded to install it
+    -- (dark gray: less noticeable than the rest)
     if e.hasAddon then
-        Pair("Addon version", e.version or "?")
+        GameTooltip:AddDoubleLine("Addon version", e.version or "?", 0.5, 0.5, 0.5, 0.5, 0.5, 0.5)
     else
-        GameTooltip:AddLine(ns.InstallReminder:StatusLine(e) or "Not reminded to install the addon yet", 0.6, 0.6, 0.6)
+        GameTooltip:AddLine(ns.InstallReminder:StatusLine(e) or "Not reminded to install the addon yet", 0.5, 0.5, 0.5)
     end
     if e.note and e.note ~= "" then GameTooltip:AddLine(e.note, 0.85, 0.85, 0.85, true) end
 end
