@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## Unreleased
+
+- The minimap button with the Guild Tabard icon style shows one gold ring instead of two (the tabard's own border is left off there, as the medallion's ring already is).
+
 ## 2.11.0
 
 - **New sync, simpler and stricter.** Every copy now checks, per author, the time of their newest record and a checksum over all of them, and asks for exactly that author's records since a time when something differs. A member's check names only themselves (a few dozen characters); officers' checks name everyone, since they pass everyone's data on. The old group checksums, record lists and re-send markers are gone.

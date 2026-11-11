@@ -43,7 +43,9 @@ local IconMixin = {}
 
 function IconMixin:ShowEmblem(on)
     self.Bg:SetShown(on)
-    self.Border:SetShown(on)
+    -- where the host already draws a ring (the minimap button: `crop`), the
+    -- tabard's own border would be a second ring inside it
+    self.Border:SetShown(on and not self.crop)
     self.Emblem:SetShown(on)
     self.Icon:SetShown(not on)
 end
