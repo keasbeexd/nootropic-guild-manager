@@ -338,11 +338,13 @@ function O:BuildMain()
     syncNow:SetPoint("TOPLEFT", 18, y)
     syncNow:SetScript("OnClick", function()
         ns.Comm:Report()
-        local started = ns.Sync:Exchange(true)
-        ns:Print(started and "Comparing data with guildmates now." or "A sync just ran; it repeats automatically every few minutes.")
+        if ns.Sync:CheckAll() then
+            ns.Sync.reportLane = "guild"
+            ns:Print("Checking with your guild now...")
+        end
         O:Refresh()
     end)
-    W.Tooltip(syncNow, "Sync now", "Compares your data with guildmates running the addon. It also happens by itself every few minutes.")
+    W.Tooltip(syncNow, "Sync now", "Checks your data against your guildmates' and fetches anything you're missing. It also happens by itself each time you log in, and changes are sent as you make them.")
     local open = W.Button(L.panel, "Open Guild Manager", 170, 24)
     open:SetPoint("LEFT", syncNow, "RIGHT", 8, 0)
     open:SetScript("OnClick", function() ns.UI:OpenTab(ns.UI.TAB_ROSTER) end)
@@ -469,6 +471,33 @@ function O:PermMenu(owner, key)
     W.ShowMenu(owner, items)
 end
 
+-- Officer ranks: whose copies guildmates trust to pass on everyone's data.
+-- The Guild Master's addon fills this in by itself (ranks it sees on the
+-- officer channel); the Guild Master can correct it here.
+function O:OfficerRanksMenu(owner)
+    local S = ns.Sync
+    local items = { { text = "Officer ranks", isTitle = true } }
+    for _, r in ipairs(ns.DB:GuildRanks()) do
+        local gm = r.index == 0
+        items[#items + 1] = {
+            text = r.name .. (gm and "  |cff9d9d9d(always)|r" or ""),
+            checked = function()
+                if gm then return true end
+                local set = S:OfficerRanks()
+                return set ~= nil and set[r.name:lower()] == true
+            end,
+            func = function()
+                if gm then return end
+                local set = S:OfficerRanks() or {}
+                set[r.name:lower()] = not set[r.name:lower()] or nil
+                S:SetOfficerRanks(set)
+                O:Refresh()
+            end,
+        }
+    end
+    W.ShowMenu(owner, items)
+end
+
 function O:BuildPermControls(L)
     L:Header("Permissions  |cff9d9d9d(Guild Master, whole guild)|r")
     L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers (ranks that can read officer notes). Pick ranks to hand it to them instead; the Guild Master always can.")
@@ -487,6 +516,17 @@ function O:BuildPermControls(L)
         W.Tooltip(btn, perm.label, perm.hint)
         self.permRows[#self.permRows + 1] = { key = perm.key, btn = btn }
     end
+    local y = L:Row(28)
+    local label = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    label:SetPoint("TOPLEFT", 20, y - 4)
+    label:SetWidth(240)
+    label:SetJustifyH("LEFT")
+    label:SetText("Officer ranks")
+    self.officerRanksBtn = W.Button(L.panel, "", 200, 22)
+    self.officerRanksBtn:SetPoint("TOPLEFT", 270, y)
+    self.officerRanksBtn:SetScript("OnClick", function(btn) O:OfficerRanksMenu(btn) end)
+    W.Tooltip(self.officerRanksBtn, "Officer ranks",
+        "Guildmates' addons accept everyone's data passed on by these ranks (repairs, catching up, and members whose own messages don't get through). Your addon adds ranks it sees using the officer channel by itself, so a rank stays while it can use officer chat. After taking officer chat away from a rank in the game, untick it here.")
     self.permNote = L:Text("")
     L:Space(10)
 end
@@ -497,6 +537,12 @@ function O:RefreshPermControls()
         row.btn:SetText(ns.DB:PermText(row.key))
         row.btn:SetEnabled(gm)
         row.btn:SetAlpha(gm and 1 or 0.6)
+    end
+    if self.officerRanksBtn then
+        local v = ns.Sync:Value("GS:officers")
+        self.officerRanksBtn:SetText((v and v ~= "") and v:gsub(";", ", ") or "Not known yet")
+        self.officerRanksBtn:SetEnabled(gm)
+        self.officerRanksBtn:SetAlpha(gm and 1 or 0.6)
     end
     if self.permNote then
         self.permNote:SetText(gm and "" or "|cffff8080Only the Guild Master can change permissions.|r")
@@ -670,9 +716,7 @@ function O:Refresh()
     if not self.reminderBox:HasFocus() then self.reminderBox:SetText(ns.InstallReminder:Text()) end
     self.minimapCheck:SetChecked(not s.minimap.hide)
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end
-    local st = ns.Sync.stats
-    self.syncStatus:SetText(("|cffffd100Sync this session:|r %d sent, %d received, %d applied, %d waiting to send."):format(
-        st.sent, st.received, st.applied, ns.Sync:QueueSize()))
+    self.syncStatus:SetText("|cffffd100Sync:|r " .. select(2, ns.Sync:Health()))
 
     self:RefreshRecruiting()
 

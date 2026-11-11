@@ -1,6 +1,6 @@
--- Test: your addon version is announced once per session, only after the
--- roster has given your full name (the game first gives only "Deja"), and
--- re-sent even when unchanged so a lost broadcast heals at the next login.
+-- Test: your addon version is announced only after the roster has given
+-- your full name (the game first gives only "Deja"), once per session, and
+-- sent only when it changed (the login check finds anyone who missed it).
 -- Run with tests/run.sh (it passes the repo root as arg[1]).
 local ROOT = arg[1]
 local NOW = 1800000000
@@ -27,11 +27,11 @@ C_Timer = { After = function() end }
 GetTime = function() return 1 end
 IsInGuild = function() return true end
 C_ChatInfo = { RegisterAddonMessagePrefix = function() end }
-assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
+assert(loadfile(ROOT .. "/Core/Records.lua"))("NGM", ns) assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
 local S = ns.Sync
 local sent = {}
 S.QueueOutgoing = function(_, key) sent[#sent + 1] = key end
-S.Migrate, S.PurgeUnknown, S.PruneAudit, S.PruneExpired, S.RebuildAll = function() end, function() return 0 end, function() end, function() return 0 end, function() end
+S.PurgeUnknown, S.PruneAudit, S.PruneExpired, S.RebuildAll = function() end, function() return 0 end, function() end, function() return 0 end, function() end
 S:Init()                                   -- ready() runs: roster not loaded yet
 
 assert(guild.sync.guild["AV:Deja"] == nil, "no version under the first name only")
@@ -49,11 +49,19 @@ local before = #sent
 ns:Fire("ROSTER_UPDATED")
 assert(#sent == before, "once per session, not on every roster update")
 
--- next login: the record is unchanged, but it's still re-sent once
+-- next login, same version: nothing to send
 sent = {}
 S.readyFor = nil
 handlers = {}
 S:Init()
 ns:Fire("ROSTER_UPDATED")
-assert(#sent == 1 and sent[1] == "AV:Deja Rollupz", "re-sent even though unchanged")
+assert(#sent == 0, "not re-sent when unchanged")
+
+-- after an update: sent
+ns.version = "2.12.0"
+S.readyFor = nil
+handlers = {}
+S:Init()
+ns:Fire("ROSTER_UPDATED")
+assert(#sent == 1 and sent[1] == "AV:Deja Rollupz" and guild.sync.guild["AV:Deja Rollupz"].v == "2.12.0", "a new version is sent")
 print("OK")

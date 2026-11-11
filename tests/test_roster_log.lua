@@ -28,7 +28,7 @@ date = os.date
 C_Timer = { After = function() end }
 IsInGuild = function() return true end
 local function load(f) assert(loadfile(ROOT .. "/" .. f))("NGM", ns) end
-load("Core/Sync.lua"); load("Services/Audit.lua"); load("Services/RosterLog.lua")
+load("Core/Records.lua"); load("Core/Sync.lua"); load("Services/Audit.lua"); load("Services/RosterLog.lua")
 ns.Sync.readyFor = "g"
 ns.Sync.Broadcast = function() end
 ns.Sync.QueueOutgoing = function() end

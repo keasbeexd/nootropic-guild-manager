@@ -26,7 +26,7 @@ ns.Roster = { byName = {
 C_Timer = { After = function() end }
 GetTime = function() return 100 end
 IsInGuild = function() return true end
-assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
+assert(loadfile(ROOT .. "/Core/Records.lua"))("NGM", ns) assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
 local S = ns.Sync
 S.Pump = function() end
 local P = S.PROTO

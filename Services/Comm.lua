@@ -1,9 +1,7 @@
 --[[
     Nootropic Guild Manager - Self report
     The game doesn't let addons read another player's professions or talents,
-    so each member's addon publishes its own (record P:<member> in Core/Sync.lua).
-    Everything else about syncing lives in Core/Sync.lua; the functions at the
-    bottom are kept for the buttons and commands that call them.
+    so each member's addon publishes its own (record P:<member>, Core/Records.lua).
 ]]
 local _, ns = ...
 local C = {}
@@ -102,11 +100,6 @@ function C:Report()
     ns.DB:SetSelfReport(self:Snapshot())
 end
 
--- Kept for callers: publish our data and ask peers to reconcile now.
-function C:Broadcast()
-    self:Report()
-    ns.Sync:Exchange(true)
-end
 
 function C:Init()
     local function changed()

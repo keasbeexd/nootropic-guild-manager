@@ -8,7 +8,7 @@ The addon is plain Lua and Blizzard frames, no libraries. Files load in the orde
 
 | Folder | What's in it |
 | --- | --- |
-| `Core/` | `Core.lua` (namespace, events, helpers, slash commands, start-up), `Data.lua` (classes, specs, professions, roles, recruiting defaults, raid readiness checks, About links), `Database.lua` (saved data, settings, permissions), `Sync.lua` (shared records, repair, transport, security checks) |
+| `Core/` | `Core.lua` (namespace, events, helpers, slash commands, start-up), `Data.lua` (classes, specs, professions, roles, recruiting defaults, raid readiness checks, About links), `Database.lua` (saved data, settings, permissions), `Records.lua` (shared records: types, who may write what, limits, newest wins, working data), `Sync.lua` (carrying records between guildmates in game: checks, requests, bundles, relays, transport) |
 | `Services/` | Logic with no windows: `Roster.lua` (guild roster, search, sort), `Comm.lua` (your own spec and professions), `Profile.lua` (contact info, usual play hours), `Recruit.lua` (/who, whispers, lockouts, Do Not Whisper, invites), `Messages.lua` (custom recruitment messages), `Audit.lua` (audit text), `RosterLog.lua` (joins, leaves, promotions from the guild event log and roster), `Recipes.lua` (shared recipes), `Readiness.lua` (raid attunements and keys), `HallOfFame.lua` (your character statistics for the leaderboards), `Sharing.lua` (what you share: switches that stop and clear your shared data) |
 | `UI/` | Windows and hooks: `MainFrame.lua` (the window and its tabs), `RosterView.lua` (Find), `TogetherView.lua` (Play Together), `OverviewView.lua` (Overview: census and play-time heatmap), `HallOfFameView.lua` (Hall of Fame leaderboards), `RecruitView.lua` + `MessagesView.lua` (Recruitment), `AuditView.lua`, `DetailPanel.lua` (profiles), `RecipesView.lua` (Who Can Craft?), `DNWView.lua` (Do Not Whisper window and name menus), `InvitePrompt.lua`, `Options.lua`, `Welcome.lua` (first-launch tour), `GuildRoster.lua` + `Communities.lua` (hooks on the game's Guild & Communities window), `WhoWhisper.lua` (button on the game's /who results), `MinimapButton.lua`, and shared pieces (`Widgets.lua`, `Columns.lua`, `ScheduleGrid.lua`, `BrandIcon.lua`, `MemberPicker.lua`) |
 | `docs/` | This file |
@@ -29,37 +29,63 @@ Modules hang off the addon namespace (`ns.Sync`, `ns.Roster`, `ns.DB`...). `ADDO
 
 ## Sync
 
-Everything the guild shares is a **record**: `key -> { v = value, t = server time, a = author }`. The newest version of a record wins (ties broken by author, then value), so every copy ends up the same whatever order messages arrive in. Records are sent with `C_ChatInfo.SendAddonMessage` under the prefix `NootropicGM` on the **GUILD** channel, or on the **OFFICER** channel for officer-only data. Only those two channels are read, plus whispers to an officer from a guildmate whose guild channel doesn't deliver (below).
+Everything the guild shares is a **record**: `key -> { v = value, t = server time, a = author, b = batch }`. The newest version of a record wins (ties broken by author, then value), so every copy ends up the same whatever order changes arrive in.
 
-### Messages
+The code is in two layers:
 
-All messages start with the protocol number (`PROTO`, currently 5); other versions are ignored, and so are kinds a copy doesn't know. Fields are tab-separated.
+- **`Core/Records.lua`** is the data and its rules: record types, who may write what, limits, newest-wins, and turning records into the addon's working data. It knows nothing about how records travel.
+- **`Core/Sync.lua`** carries records between guildmates in game. It calls `S:Apply(key, rec, ctx)` for whatever arrives, and Records calls `S:Broadcast(key, rec)` for each change to send.
+
+Any other way of carrying records (the NGM Hub in 3.0) plugs in at the same two points, with the same rules: see [The NGM Hub (3.0)](#the-ngm-hub-30).
+
+Records go with `C_ChatInfo.SendAddonMessage` under the prefix `NootropicGM` on the **GUILD** channel, or **OFFICER** for officer-only data. Only those two channels are read, plus whispers to an officer from a guildmate whose guild channel doesn't deliver (below). Party, raid and other whispers are ignored.
+
+### Lanes
+
+| Lane | Channel | Records | Who takes part |
+| --- | --- | --- | --- |
+| guild | GUILD | guild records except recruitment statuses | everyone |
+| recruit | GUILD | recruitment statuses (`RS`) | members whose rank may recruit (others don't keep them) |
+| officer | OFFICER | officer records | officers |
+
+### Messages (protocol 6)
+
+All messages start with the protocol number; other numbers are ignored, except that a 2.11-or-older copy's version record (protocol 5) is read so it shows. Fields are tab-separated.
 
 | Kind | Fields | Meaning |
 | --- | --- | --- |
 | `R` | key, time, author, batch, value | one record |
-| `Z` | same as `R`, value compressed | one big record, Deflate + Base64 (`C_EncodingUtil`) (2.10+) |
-| `S` | lane, `author:newest:sum,...` | a sync check: per author, their newest record's time and a checksum (base 36) (2.11+) |
-| `Q` | lane, target, author, since | "send me this author's records newer than `since`" (`0`: all) (2.11+) |
+| `B` | lane, `z`, data | several records: `Base64(Deflate(lines))`, one `key time author batch value` per line |
+| `F` | lane, root, `q` or `a`, target, [32 group sums] | a check: `q` asks, `a` answers (with the group sums when the roots differ) |
+| `E` | lane, target, `1` or `2`, groups, `author:newest:sum,...` | per-author lists for the groups that differ (`1` is answered with `2`) |
+| `Q` | lane, target, `author:since,...` | "send these authors' records newer than `since`" (`0`: all) |
+| `H` / `K` | | relay hello and its acknowledgement (whispers) |
 | `C` | id, part, parts, data | a piece of a message longer than 250 bytes (at most 16 parts) |
 
-Local changes are sent together 15 seconds after the first one (a **batch**, which the audit groups). Every 10 minutes, when the window opens, and when a guildmate's first check of the session arrives, each copy sends a check per **lane**:
+Numbers are base 36.
 
-| Lane | Channel | Records | Who sends a check | Entries |
-| --- | --- | --- | --- | --- |
-| guild | GUILD | guild records except recruitment statuses | everyone | members: only themselves; officers: every author |
-| officer | OFFICER | officer records | officers | every author |
-| recruit | GUILD | recruitment statuses (`RS`) | members whose rank may recruit (others don't keep them) | every author |
+### How it flows
 
-A copy compares each entry with its own. Where the checksum differs and the sender's newest is later, it asks (`Q`) for that author's records since its own newest; where the newest times match but the checksums don't (an older record was lost), it asks for all of them, and then not again for 15 minutes for that author. It only asks someone it would accept those records from: the author, an officer, or (recruit and officer lanes) anyone in the lane. Before asking it waits up to 3 seconds and skips if someone else just asked, since the answer goes to the whole channel. A copy answers a given request at most once per 20 seconds, and one requester at most 30 times a minute.
+- **Changes** are sent once: Records batches a player's changes for 15 seconds, then Sync bundles them per lane, compressed when that's smaller. Nothing is re-sent on a timer: **with no changes and nobody logging in, nothing is sent.**
+- **At login** (and on `/ngm sync`, Sync Now, or a click on the status dot) a copy sends `F q` per lane with one **root** fingerprint. One guildmate answers, the same one on every copy: candidates are ordered by a mixed hash of asker and name, officers first in the guild lane; the first answers after 0.5 s, the next after 3.5 s if nobody has, up to 4. If the roots match, that's the end: two short messages.
+- **If they differ**, the answer carries 32 **group** fingerprints (authors by name hash). The asker sends its per-author entries (`E 1`) for the groups that differ, the answerer replies with its own (`E 2`), and each side asks (`Q`) for exactly the authors it's behind on. An author's fingerprint is their newest record's time plus the sum of hashes of all their records in the lane. When the other side's newest is later, it asks for records newer than its own newest; when the newest times match but the sums don't (an older record was lost), it asks for all of them (then not again for that author for 15 minutes).
+- **Who's asked:** the author, when online (everyone answers for their own records); otherwise an online guildmate whose copies we'd accept (an officer, or anyone in the recruit and officer lanes), chosen per author by the same mixed hash, so the work spreads over the officers online. If a request goes unanswered, the next one goes to someone else.
+- **Answers** go to the whole lane channel in compressed bundles, your own records first and recipe lists last, so everyone else who was missing them gets them too. A record already waiting to go out isn't queued again. A copy answers each requester at most 20 times a minute, and not at all while 3,000 messages are already queued.
+- **After catching up**, the asker checks once more when data has stopped arriving (up to 5 times a session), and its status says so.
 
-Who passes on what: everyone answers for their own records (fast lane); officers also answer for everyone's guild and officer records, and recruiters for everyone's recruitment statuses (slow lane). The same record is never queued twice while it's waiting to go out.
+### A guild channel that doesn't deliver
 
-**Officers by rank.** Members can't see the officer channel. The Guild Master's copy records the rank of everyone it sees on it in `GS:officers` (rank names, `;`-separated), which only the current Guild Master may write. Every copy treats the Guild Master, those ranks, and anyone it has seen on the officer channel as officers.
+On WoW: Forever the game sometimes accepts a player's guild addon messages and delivers them to nobody (themselves included), while their whispers arrive. Every guild addon message normally comes back to its sender, so a copy that hears nothing back within 8 seconds of its first guild message:
 
-**A guild channel that doesn't deliver.** The game echoes guild addon messages back to their sender. A copy that has sent 3 or more over 20 seconds and heard none back whispers its messages to an online officer running 2.11 or later instead (its sync checks still go on the guild channel too, so it notices if that starts working). The officer applies that member's records as if they came on the guild channel, passes on only records that member wrote, and answers or forwards their requests.
+1. picks an online officer (the same ordering as above) and whispers a tiny hello (`H`), since the first whisper to someone can be lost;
+2. sends its version and checks again, now as whispers to that officer; checks also still go on the guild channel, and if one ever comes back, it switches back;
+3. if no acknowledgement (`K`) arrives within 10 seconds, tries the next officer.
 
-Records over 150 bytes are sent as `Z` only while every guildmate online with the addon runs 2.10 or later. Copies before 2.11 send their own kind of checks (`D`, `L`, `B`), which 2.11 ignores: they still exchange live changes, but not repairs.
+The officer treats those whispers as guild messages from that player, answers their checks itself, passes on their requests to whoever they're meant for, and passes on **only records the player wrote** (never officer records) to the guild. Officers read at most 120 whispers a minute from one guildmate, and only from people on the roster.
+
+### Status
+
+`S:Health()` and `S:StatusLines()` give the state per lane (`checking`, `comparing`, `catching`, `synced`, `alone`), whether the guild channel delivers and through whom, the officer ranks, and session counts. `/ngm sync`, Options and the dot next to the version number in the window show them.
 
 ### Record types
 
@@ -94,15 +120,15 @@ Hall of Fame extras (Services/HallOfFame.lua): `social` is a count of 15-minute 
 
 ### Security
 
-A record's author is only what the sender claims; the sender is the one name the game vouches for. So every copy of the addon checks each incoming record (`S:SenderAllowed` in `Core/Sync.lua`):
+A record's author is only what the sender claims; the sender is the one name the game vouches for. So every copy checks each incoming record (`S:Accept` and `S:SenderAllowed` in `Core/Records.lua`):
 
-- The author must be allowed to write the record (their own data, their rank's permissions from the guild roster, or officer), and must be the sender, unless the sender is a **known officer** passing on someone else's record. Officers are known by having sent on the officer channel, which the game only allows officer ranks to do.
-- Permission settings (`GS:perm_*`) only count when their author is the current Guild Master.
-- "Self-only" records (`P`, `AV`, `SC`, `RP`, `RR`, `PS`) must be authored by the member they're about.
+- The author must be allowed to write the record (their own data, their rank's permissions from the guild roster, or officer), and must be the sender, unless the sender is a **known officer** passing on someone else's record.
+- **Known officers**: the Guild Master; anyone whose **current** rank is in `GS:officers`; and anyone seen on the officer channel this session, while their rank is still what it was then. `GS:officers` (rank names) is written only by the current Guild Master's copy: it adds the rank of anyone it sees using the officer channel and drops ranks the guild no longer has, and the Guild Master can correct it in Options. A demoted or departed officer stops being trusted at once. Until a copy has the Guild Master's list (a new install with the Guild Master offline), the rank just below the Guild Master counts.
+- Permission settings (`GS:perm_*`) and `GS:officers` only count when their author is the current Guild Master.
+- "Self-only" records (`P`, `AV`, `SC`, `RP`, `RR`, `PS`, `HF`) must be authored by the member they're about.
 - Records on the officer channel come only from officers, by the game's rules.
-- Keys or authors containing `|` are dropped and `|` in values is replaced, so shared text can't inject textures, colors or links. Chunked messages are capped (16 parts, 8 unfinished per sender, no chunks inside chunks).
-
-- Limits on what one guildmate can add (`S:WithinLimits`): values up to 4,000 bytes; recipe lists only under numeric profession IDs and at most 12 per member; and at most 500 new records per 10 minutes from any non-officer sender, so a modified client can't flood everyone's saved data with records it's allowed to write. Officers are exempt, since their repairs legitimately carry hundreds of records.
+- Keys or authors containing `|` are dropped and `|` and control characters in values are replaced, so shared text can't inject textures, colors, links or extra lines. Messages in pieces are capped (16 parts, 8 unfinished per sender, no pieces inside pieces); a bundle unpacks to at most 64 KB and 1,000 records.
+- Limits on what one guildmate can add (`S:WithinLimits`): values up to 4,000 bytes; recipe lists only under numeric profession IDs and at most 12 per member; and at most 500 new records per 10 minutes from any non-officer sender. Officers are exempt, since catching someone up legitimately carries hundreds of records.
 
 Your private notes never leave your computer. Officer data goes only over the officer channel.
 
@@ -119,15 +145,27 @@ Your private notes never leave your computer. Officer data goes only over the of
 
 ## Adding a shared record type
 
-1. Add it to `S.TYPES` in `Core/Sync.lua` with its scope and who may write it (`selfOnly`, `self`, `officer`, `anyone`, or a permission in `DB.PERM_BY_TYPE`). The security checks follow from these.
+1. Add it to `S.TYPES` in `Core/Records.lua` with its scope and who may write it (`selfOnly`, `self`, `officer`, `anyone`, or a permission in `DB.PERM_BY_TYPE`). The security checks follow from these.
 2. If its key has more than a member (like `L:` or `RP:`), teach `S.ParseKey` where the member name is.
 3. Turn the value into working data in `S:Materialize` (or read it straight from the store, as `Recipes.lua` does).
-4. Describe it in the comment at the top of `Core/Sync.lua` and in the table above.
-5. Records of a type that's later removed are deleted on load by `S:PurgeUnknown`. If old clients would fight over the change, bump `PROTO`.
+4. Describe it in the comment at the top of `Core/Records.lua` and in the table above.
+5. Records of a type that's later removed are deleted on load by `S:PurgeUnknown`. If old clients would fight over the change, bump `PROTO` in `Core/Sync.lua`.
+6. Heavy records that can wait (like recipe lists) go in `HEAVY` in `Core/Sync.lua`, so they're sent after everything else.
 
 ## Testing
 
-`tests/run.sh` runs every test with LuaJIT (or `lua5.1`). The tests load the real addon files with stand-ins for the game's API and check sync permissions against forged messages, the roster change log, recruitment message lengths and Do Not Whisper rules, the Invite prompt, Play Together, recipes and raid readiness. They don't replace trying it in the game: anything about frames, layout or Blizzard's restrictions needs an in-game check.
+`tests/run.sh` runs every test with LuaJIT (or `lua5.1`). The tests load the real addon files with stand-ins for the game's API and check sync permissions against forged messages, the roster change log, recruitment message lengths and Do Not Whisper rules, the Invite prompt, Play Together, recipes and raid readiness.
+
+`tests/sim.lua` simulates a guild for sync: every member runs their own copy of `Records.lua` and `Sync.lua` against one clock, one roster and a stand-in for the game that delivers addon messages with a delay (and can leave a player's guild channel delivering nothing). `test_sync.lua` covers the protocol and its security in a small guild; `test_sync_scale.lua` measures a 300-member guild at the real send budget (compression is a stand-in at 35%). They don't replace trying it in the game: anything about frames, layout or Blizzard's restrictions needs an in-game check.
+
+## The NGM Hub (3.0)
+
+The Hub (Discord and the web, in 3.0) will hold the same records under the same rules. To keep that simple:
+
+- **Records are the contract.** Keys, values, `t`/`a`/`b`, newest-wins and who may write what are defined once, in `Core/Records.lua`, and documented above. The Hub implements the same rules rather than its own.
+- **Two seams.** In game, Sync calls `S:Apply` for what arrives and Records calls `S:Broadcast` for what changes. Anything that carries records between the addon and the Hub uses the same two calls, with `ctx.origin` naming where a record came from.
+- **Fingerprints are portable.** Per-author fingerprints (newest time and a sum of record hashes, `S:AuthorSums`) let any two holders of records, a copy of the addon and the Hub included, find what the other lacks without sending everything.
+- **Identity** is the character's plain name (Forever has no realms), checked against the guild roster, the same thing the Hub will see.
 
 ## Releasing
 

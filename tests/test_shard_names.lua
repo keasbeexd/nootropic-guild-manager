@@ -39,7 +39,7 @@ function ns.DB:PermRanks() return nil end
 function ns.DB:PermDef(k) return k == "ownprofile" and { everyone = true } or {} end
 ns.Roster = { byName = {
   ["Marc Priest"] = { rankIndex = 0 }, ["Probably Shawn"] = { rankIndex = 1 }, ["Grud Sama"] = { rankIndex = 4 } } }
-assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
+assert(loadfile(ROOT .. "/Core/Records.lua"))("NGM", ns) assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
 local S = ns.Sync
 S.Pump = function() end
 local P = S.PROTO

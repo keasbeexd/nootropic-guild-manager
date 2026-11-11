@@ -107,8 +107,6 @@ function R:Rebuild()
                     online = online and true or false,
                     status = status or 0,
                     lastOnline = 0,
-                    -- the shard tag the game adds on Forever ("CAMWOWUS1Realm2PvP"), for diagnostics
-                    shard = type(name) == "string" and name:match("%-(.+)$") or nil,
                 }
                 -- race isn't in the guild roster; the game knows it from their character id
                 local guid = select(17, GetGuildRosterInfo(i))
@@ -507,18 +505,6 @@ function R:IsOutdated(e)
 end
 
 -- /ngm diag: how the addon sees you, and what version record it has for you.
-function R:Diagnose()
-    local me = ns.PlayerFullName()
-    local fromUnit = ns.NormalizeName(UnitName("player"))
-    local rec = ns.Sync:Get("AV:" .. me)
-    local m = ns.DB:GetMember(me)
-    local e = self.byName[me]
-    ns:Print(("Version: running %s. You are \"%s\"%s; roster row %s; shared version record %s; saved version %s."):format(
-        ns.version, me, fromUnit ~= me and (" (UnitName gives \"" .. fromUnit .. "\")") or "",
-        e and "found" or "|cffff5555not found|r", rec and ("\"" .. rec.v .. "\"") or "|cffff5555missing|r",
-        m and m.version or "none"))
-end
-
 -- Tells you (once per session) when a guildmate has a newer version.
 function R:CheckVersion()
     local newest = self:NewestVersion()
