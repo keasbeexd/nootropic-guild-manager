@@ -338,11 +338,13 @@ function O:BuildMain()
     syncNow:SetPoint("TOPLEFT", 18, y)
     syncNow:SetScript("OnClick", function()
         ns.Comm:Report()
-        local started = ns.Sync:Exchange(true)
-        ns:Print(started and "Comparing data with guildmates now." or "A sync just ran; it repeats automatically every few minutes.")
+        if ns.Sync:CheckAll() then
+            ns.Sync.reportLane = "guild"
+            ns:Print("Checking with your guild now...")
+        end
         O:Refresh()
     end)
-    W.Tooltip(syncNow, "Sync now", "Compares your data with guildmates running the addon. It also happens by itself every few minutes.")
+    W.Tooltip(syncNow, "Sync now", "Checks your data against your guildmates' and fetches anything you're missing. It also happens by itself each time you log in, and changes are sent as you make them.")
     local open = W.Button(L.panel, "Open Guild Manager", 170, 24)
     open:SetPoint("LEFT", syncNow, "RIGHT", 8, 0)
     open:SetScript("OnClick", function() ns.UI:OpenTab(ns.UI.TAB_ROSTER) end)
@@ -471,8 +473,8 @@ end
 
 function O:BuildPermControls(L)
     L:Header("Permissions  |cff9d9d9d(Guild Master, whole guild)|r")
-    L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers (ranks that can read officer notes). Pick ranks to hand it to them instead; the Guild Master always can.")
-    L:Text("The Officer Log and the Audit always stay with officers: the game only sends that data to officer ranks.", "GameFontDisableSmall")
+    L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers. Pick ranks to hand it to them instead; the Guild Master always can.")
+    L:Text("Who's an officer and who may recruit follow the game's own rank settings (Guild Control: Officer, and Invite Member). The Officer Log and the Audit always stay with officers.", "GameFontDisableSmall")
     self.permRows = {}
     for _, perm in ipairs(ns.DB.PERMS) do
         local y = L:Row(28)
@@ -670,9 +672,7 @@ function O:Refresh()
     if not self.reminderBox:HasFocus() then self.reminderBox:SetText(ns.InstallReminder:Text()) end
     self.minimapCheck:SetChecked(not s.minimap.hide)
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end
-    local st = ns.Sync.stats
-    self.syncStatus:SetText(("|cffffd100Sync this session:|r %d sent, %d received, %d applied, %d waiting to send."):format(
-        st.sent, st.received, st.applied, ns.Sync:QueueSize()))
+    self.syncStatus:SetText("|cffffd100Sync:|r " .. select(2, ns.Sync:Health()))
 
     self:RefreshRecruiting()
 

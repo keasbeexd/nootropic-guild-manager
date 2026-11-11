@@ -25,7 +25,7 @@ GetTime = function() return 1 end
 IsInGuild = function() return true end
 ns.Data = {}
 assert(loadfile(ROOT .. "/Core/Data.lua"))("NGM", ns)
-assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
+assert(loadfile(ROOT .. "/Core/Records.lua"))("NGM", ns) assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
 ns.Sync.readyFor = "g"; ns.Sync.QueueOutgoing = function() end
 assert(loadfile(ROOT .. "/Services/Recipes.lua"))("NGM", ns)
 assert(loadfile(ROOT .. "/Services/Readiness.lua"))("NGM", ns)

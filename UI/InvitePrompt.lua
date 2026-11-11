@@ -182,9 +182,3 @@ function IP:Next()
     end
 end
 
--- /ngm diag
-function IP:Diagnose()
-    ns:Print(("Invite prompt: %s, %d waiting, invite message pattern %s"):format(
-        self.frame and self.frame:IsShown() and ("showing " .. ns.ShortName(self.full or "?")) or "closed",
-        #self.queue, ERR_GUILD_INVITE_S and "from the game" or "built in"))
-end

@@ -121,42 +121,12 @@ function GR:DecorateRow(row)
     b:Show()
 end
 
--- Tooltip lines: added after Blizzard's own (HookScript runs after theirs).
+-- Our lines under Blizzard's own (HookScript runs after theirs): the same
+-- member lines as every other tooltip in the addon.
 function GR:AddTooltip(e)
     if not (e and GameTooltip:IsShown()) then return end
-    local GOLD = { 1, 0.82, 0 }
-    local function Pair(left, right)
-        GameTooltip:AddDoubleLine(left, right, GOLD[1], GOLD[2], GOLD[3], 1, 1, 1)
-    end
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("Nootropic Guild Manager", 0.6, 0.6, 0.6)
-    local title = ns.HallOfFame:TitleText(e.full)
-    if title then GameTooltip:AddLine(title, 1, 1, 1, true) end
-    if e.isAlt then
-        Pair("Alt of", e.mainShort)
-    elseif e.alts and #e.alts > 0 then
-        local names = {}
-        for i, full in ipairs(e.alts) do names[i] = ns.ShortName(full) end
-        Pair("Alts", table.concat(names, ", "))
-    end
-    if e.spec then Pair("Specialization", e.spec) end
-    if e.roleList and #e.roleList > 0 then Pair("Role", table.concat(e.roleList, ", ")) end
-    if e.profs and #e.profs > 0 then
-        local parts = {}
-        for i, p in ipairs(e.profs) do
-            parts[i] = p.name .. ((p.rank and p.rank > 0) and (" " .. p.rank) or "")
-        end
-        Pair("Professions", table.concat(parts, ", "))
-    end
-    if e.discord then Pair("Discord", e.discord) end
-    local reminded = ns.InstallReminder:StatusLine(e)
-    if reminded then GameTooltip:AddLine(reminded, 0.6, 0.6, 0.6) end
-    local check = ns.HofCheck:TooltipLine(e.full) -- officers only
-    if check then GameTooltip:AddLine(check, 1, 1, 1, true) end
-    local PF = ns.Profile
-    local hours = PF:Hours(e.full)
-    local summary = hours and PF.Summary(hours)
-    if summary then GameTooltip:AddLine(("Usually online: %s (%s)"):format(summary, PF.ClockLabel()), 0.7, 0.7, 0.7, true) end
+    ns.RosterView:AddMemberLines(e)
     GameTooltip:AddLine("Alt+click or right-click for the profile.", 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end

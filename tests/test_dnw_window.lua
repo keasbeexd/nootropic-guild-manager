@@ -12,6 +12,7 @@ ns.Data = { WHISPER_MAX = 255, MAX_KEYWORDS = 6 }
 local settings = { whisperPerHour = 40 }
 local store = {}
 ns.DB = { Now = function() return NOW end, Guild = function() return {} end, Settings = function() return settings end, HasPerm = function() return true end }
+CanGuildInvite = function() return true end
 ns.Sync = { TYPES = { RS = { ttl = 14 * 86400 } }, Store = function() return store end,
   Get = function(_, k) return store[k] end, Value = function(_, k) return store[k] and store[k].v end,
   Clean = function(v) return v end,

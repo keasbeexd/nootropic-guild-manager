@@ -1,1037 +1,81 @@
 --[[
-    Nootropic Guild Manager - Sync engine (protocol 2)
+    Nootropic Guild Manager - Sync (protocol 6)
 
-    Shared data is stored as RECORDS: key -> { v = value, t = time, a = author }.
-    Every change gets the server time and its author, and the newest version of
-    a record always wins (ties broken by author name), so every copy converges
-    on the same data no matter what order messages arrive in.
+    Carries records (Core/Records.lua) between guildmates in game. Lean by
+    design: nothing is sent while nothing changes.
 
-    Scopes
-      guild    main/alt links, specs, roles, professions and contact info.
-               Sent on the GUILD addon channel.
-      officer  officer log and audit trail. Sent only on the OFFICER
-               addon channel (the game delivers it only to ranks that can read
-               officer chat).
+      Live changes   A change is sent once, bundled with others made in the
+                     same 15 seconds, compressed when that's smaller.
+      Checks         At login (and on /ngm sync) a copy sends one
+                     fingerprint per lane. One guildmate answers, chosen the
+                     same way by every copy. If the fingerprints match, that's
+                     it. If not: 32 group fingerprints, then per-author lists
+                     for the groups that differ, then each side asks for
+                     exactly the authors it's behind on.
+      Answers        Asked of the author when they're online (everyone
+                     answers for their own records), otherwise of an officer
+                     chosen per author, so the work is spread out. Sent as
+                     compressed bundles to the whole channel, so everyone who
+                     was missing them gets them too.
+      Dead guild     Rarely the game accepts someone's guild addon messages
+      channel        and delivers them to nobody. Every guild message normally
+                     comes back to its sender; a copy that hears none back
+                     whispers one online officer instead, who passes on that
+                     member's own records (only theirs).
 
-    Delivery
-      1. Batches: local changes apply instantly but are sent together 15
-         seconds after the first one (one BATCH id, also used to group the
-         audit trail).
-      2. Repair, by author (2.11): every 10 minutes each copy sends a short
-         check per lane: for each author, the time of their newest record and
-         a checksum. Members name only themselves; officers name everyone.
-         Whoever sees a difference asks for exactly that author's records
-         since a time, and gets them on the same channel. Lost messages,
-         offline officers and late joiners all heal this way.
-      3. Transport: a byte-budget queue (live changes first), retries when the
-         game reports throttling or combat lockdown, and splits long messages.
-         A copy whose guild messages never come back to it (the game isn't
-         delivering them) whispers them to an online officer, who passes on
-         that member's own records. Nothing else is ever whispered, and only
-         guild and officer messages (and those whispers, by officers) are read.
-
-    Record keys
-      M:<member>           member's main ("" = main) officers
-      MS:<member>          spec override           officers, or the member
-      RL:<member>          roles: "tank,healer,damage" (any of them)   officers, or the member
-      MP:<member>          manual professions      officers, or the member
-      P:<member>           addon-reported spec/professions   the member only
-      L:<member>:<id>      officer log entry       officers (officer scope)
-      A:<id>               audit entry             officers (officer scope)
-      DN:<player>          Do Not Whisper entry    anyone in the guild ("" = removed)
-      RS:<player>          recruitment status      anyone in the guild (kept 14 days;
-                                                   blocks new whispers to them meanwhile)
-      AV:<member>          addon version in use    the member only
-      GS:<name>            guild-wide setting, e.g. GS:perm_links = "1,3" (who may link mains)   officers
-                           (GS:perm_* and GS:officers, the officer rank names, the Guild Master only)
-      CN:<member>          contact: "discord;note" (Discord name, then
-                           anything else: BattleTag, timezone...)   officers, or the member
-      JN:<member>          when they joined: "time;inviter"   officers (officer scope)
-      RK:<member>          their current rank since: "time;rank;by"   officers (officer scope)
-      RP:<member>:<prof>   recipes they know in one profession: "name;id,id"
-                           (base-36 spell IDs; Services/Recipes.lua)   the member only
-      RR:<member>          raid readiness: attunements and keys
-                           (Services/Readiness.lua)   the member only
-      PS:<member>          sharing choices others must respect: "together" =
-                           leave me out of Play Together (Services/Sharing.lua)   the member only
-      SC:<member>          usual online hours: 168 bits (Monday 00:00 UTC
-                           onward) as 42 hex digits   the member only
-      HX:<member>          left out of the Hall of Fame: "1" ("" = shown)   officers
-      HW:<month>           that month's Hall of Fame champions:
-                           "quests=Name,Name;kills=Name" (Services/HallOfFame.lua)   officers
-      HA:<month>           that month's champions were announced in guild chat:
-                           "<time>" (the author announced them)   officers
-      HC:<member>          their Hall of Fame numbers checked against the game:
-                           "<time>;ok" or "<time>;bad;key=claimed/real,..."
-                           (Services/HofCheck.lua)   officers (officer scope: only
-                           officers ever receive it)
-      IR:<member>          reminded to install the addon: "" (the time and who
-                           are the record's own; kept 30 days)   anyone in the guild
-      HF:<member>          Hall of Fame: their character statistics, all time,
-                           this month and last (Services/HallOfFame.lua)   the member only
-
-    Types with a ttl (or an expires function) expire: older records are
-    deleted, left out of digests and repairs, and refused when they arrive.
+    Messages (fields tab-separated, all start with PROTO):
+      R  key time author batch value          one record
+      B  lane z data                          records bundle, Base64(Deflate(lines))
+      F  lane root q|a target [groups]        fingerprint: q asks, a answers
+      E  lane target 1|2 groups entries       per-author list: author:newest:sum
+      Q  lane target author:since,...         "send these authors' records newer than since"
+      H  / K                                  relay hello / its acknowledgement (whispers)
+      C  id part parts data                   a piece of a longer message
+    Only the GUILD and OFFICER channels are read, plus whispers from
+    guildmates to an officer acting as relay. Copies before 2.12 use
+    protocol 5 and don't sync with this one; they only see our version.
 ]]
 local _, ns = ...
-local S = {}
-ns.Sync = S
+local S = ns.Sync
 
 local PREFIX = "NootropicGM"
-local PROTO = "5" -- 5: 2.1 (tags removed); 4: 2.0 (reviews, ratings and map positions removed); 3: batches, channel-only repair
+local PROTO = "6"
+local LEGACY = "5"
 S.PROTO = PROTO
-S.FS = "\t"
+S.MIN_VERSION = "2.12.0" -- the first version speaking protocol 6
+
 local FS = "\t"
-local US = "\031" -- separator inside audit values
-
-S.AUDIT_SYNC_WINDOW = 30 * 86400 -- audit older than this isn't compared (retention differs per officer)
-S.DIGEST_INTERVAL = 600          -- routine sync check every 10 minutes
-S.EXCHANGE_COOLDOWN = 120        -- at most one routine exchange every 2 minutes
-S.BATCH_DELAY = 15               -- local changes are sent together after this many seconds
-S.BYTES_PER_SEC = 600            -- gentler than ChatThrottleLib's 800
-S.BURST = 1800
-S.CHUNK = 200
-S.MAX_MSG = 250
-
-S.TYPES = {
-    M  = { scope = "guild",   officer = true, label = "Main / Alt" },
-    MS = { scope = "guild",   officer = true, self = true, label = "Spec" },
-    RL = { scope = "guild",   officer = true, self = true, label = "Role" },
-    MP = { scope = "guild",   officer = true, self = true, label = "Professions" },
-    P  = { scope = "guild",   selfOnly = true, label = "Reported spec / professions" },
-    L  = { scope = "officer", officer = true, label = "Officer log" },
-    A  = { scope = "officer", officer = true, noAudit = true, label = "Audit" },
-    DN = { scope = "guild",   anyone = true, label = "Do Not Whisper" },
-    RS = { scope = "guild",   anyone = true, noAudit = true, ttl = 14 * 86400, label = "Recruitment status" },
-    AV = { scope = "guild",   selfOnly = true, noAudit = true, label = "Addon version" },
-    GS = { scope = "guild",   officer = true, label = "Guild setting" },
-    CN = { scope = "guild",   officer = true, self = true, label = "Contact" },
-    SC = { scope = "guild",   selfOnly = true, noAudit = true, label = "Usually online" },
-    RP = { scope = "guild",   selfOnly = true, noAudit = true, low = true, label = "Recipes" },
-    RR = { scope = "guild",   selfOnly = true, noAudit = true, label = "Raid readiness" },
-    PS = { scope = "guild",   selfOnly = true, noAudit = true, label = "Sharing choices" },
-    HF = { scope = "guild",   selfOnly = true, noAudit = true, low = true, label = "Hall of Fame" },
-    IR = { scope = "guild",   anyone = true, noAudit = true, ttl = 30 * 86400, label = "Install reminder" },
-    HX = { scope = "guild",   officer = true, label = "Hidden from Hall of Fame" },
-    HW = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame champions" },
-    HA = { scope = "guild",   officer = true, noAudit = true, label = "Champions announced" },
-    HC = { scope = "officer", officer = true, noAudit = true, label = "Hall of Fame check" },
-    JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
-    RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
-}
--- Audit entry kinds that aren't records: changes to the guild roster itself
--- (Services/RosterLog.lua). GM joined/left, GK promoted/demoted, LV level,
--- GN public/officer note, NC name change.
-S.ROSTER_EVENTS = { GM = true, GK = true, LV = true, GN = true, NC = true }
-S.EVENT_DEDUPE = 6 * 3600 -- event-log times are only known to the hour
-
--- Same event seen by two officers: same signature. nil for kinds that
--- don't need it (their ids already match).
-function S.EventSig(typ, member, new)
-    if typ ~= "GM" and typ ~= "GK" then return nil end
-    if new == "rejoin" then new = "join" end
-    return typ .. "|" .. (member or "") .. "|" .. (new or "")
-end
-local CHANNEL = { guild = "GUILD", officer = "OFFICER" }
--- Types whose key is not about one member.
-local NO_MEMBER = { A = true, GS = true, HW = true, HA = true }
-
-S.officers = {} -- players seen sending on the officer channel this session
-S.stats = { sent = 0, received = 0, applied = 0, retries = 0, dropped = 0, refused = 0 }
-
-------------------------------------------------------------------------
--- Helpers
-------------------------------------------------------------------------
+local Hash, Base36, Same, RosterEntry = S.Hash, S.Base36, S.Same, S.RosterEntry
+local LANE_STORE, LANE_CHANNEL, LaneOf = S.LANE_STORE, S.LANE_CHANNEL, S.LaneOf
 local function Now() return ns.DB:Now() end
 local function Me() return ns.PlayerFullName() end
+local P32 = 4294967291
+local RawSend -- the transport, below
 
--- Simple string hash, kept below 2^32 (exact in Lua numbers).
-local function Hash(str)
-    local h = 5381
-    for i = 1, #str do h = (h * 33 + str:byte(i)) % 4294967291 end
-    return h
-end
-S.Hash = Hash
-
-local B36 = "0123456789abcdefghijklmnopqrstuvwxyz"
-local function Base36(n)
-    n = math.floor(n)
-    if n == 0 then return "0" end
-    local out = {}
-    while n > 0 do
-        local d = n % 36
-        table.insert(out, 1, B36:sub(d + 1, d + 1))
-        n = math.floor(n / 36)
-    end
-    return table.concat(out)
-end
-S.Base36 = Base36
-
--- Values never contain tabs/newlines (message separators) or "|" (the
--- game's escape character, which would garble chat and text display).
-local function Clean(v)
-    return (tostring(v or ""):gsub("[\t\r\n]", " "):gsub(US, ""):gsub("|", "/"))
-end
-S.Clean = Clean
-
-function S.ParseKey(key)
-    local typ, rest = key:match("^(%u+):(.*)$")
-    if not typ or not S.TYPES[typ] then return nil end
-    local member
-    if typ == "L" or typ == "RP" then
-        member = rest:match("^([^:]+):")
-    elseif not NO_MEMBER[typ] then
-        member = rest
-    end
-    return typ, member, rest
-end
+S.GROUPS = 32
+S.CHUNK = 200            -- characters per piece of a long message
+S.MAX_MSG = 250
+S.MAX_PARTS = 16         -- pieces per message (3200 characters)
+S.PACK_MAX = 2800        -- characters of payload per bundle or list message
+S.BYTES_PER_SEC = 600    -- what we send, at most (gentler than ChatThrottleLib's 800)
+S.BURST = 1800
+S.ANSWER_WAIT = 3        -- seconds between candidate answerers
+S.ANSWERERS = 4          -- how many candidates may answer one check
+S.ASK_COOLDOWN = 60      -- per lane and author
+S.FULL_COOLDOWN = 900    -- after asking for all of an author's records
+S.MAX_ASKS = 20          -- requests answered per requester per minute
+S.MAX_BACKLOG = 3000     -- answers wait while this many messages are queued
+S.MAX_WHISPERS = 120     -- whispers read per guildmate per minute (relays)
+S.RECHECK = 35           -- after catching up, check again once this much later
+S.MAX_BUNDLE = 65536     -- characters of one unpacked bundle
+S.ECHO_WAIT = 8          -- seconds for our first guild message to come back
 
 ------------------------------------------------------------------------
--- Names without shard tags (WoW: Forever; see ns.NormalizeName)
--- Older copies of the addon still send "Name-<shard>"; every key, author
--- and name inside a value is brought to the plain name before it's checked
--- or stored, so everyone's copy keeps one record per person.
+-- Fingerprints
 ------------------------------------------------------------------------
-local function CN(name)
-    if not name or name == "" then return name end
-    return ns.NormalizeName(name) or name
-end
-S.CanonName = CN
-
--- key -> the same key with plain names
-function S.CanonKey(key)
-    if not ns.NO_REALMS then return key end
-    local typ, rest = key:match("^(%u+):(.*)$")
-    if not typ or NO_MEMBER[typ] then return key end
-    if typ == "L" or typ == "RP" then
-        local member, tail = rest:match("^([^:]+):(.*)$")
-        if not member then return key end
-        return typ .. ":" .. CN(member) .. ":" .. tail
-    end
-    return typ .. ":" .. CN(rest)
-end
-
--- Names inside values: mains, who invited or promoted, audit entries.
-function S.CanonValue(typ, v)
-    if not ns.NO_REALMS or not v or v == "" then return v end
-    if typ == "M" then return CN(v) end
-    if typ == "JN" then
-        local t, by = v:match("^(%d+);(.*)$")
-        if t then return t .. ";" .. (by ~= "" and CN(by) or "") end
-    elseif typ == "RK" then
-        local t, rank, by = v:match("^(%d+);([^;]*);(.*)$")
-        if t then return t .. ";" .. rank .. ";" .. (by ~= "" and CN(by) or "") end
-    elseif typ == "A" then
-        local f = ns.Split(v, US)
-        if #f >= 4 then
-            f[1] = CN(f[1])
-            if f[2] == "M" then f[3], f[4] = CN(f[3]), CN(f[4]) end
-            return table.concat(f, US)
-        end
-    end
-    return v
-end
-
--- (key, rec) -> plain-name key and the record with its author and values tidied
-function S.Canon(key, rec)
-    if not ns.NO_REALMS then return key, rec end
-    local ck = S.CanonKey(key)
-    local typ = ck:match("^(%u+):")
-    rec.a = CN(rec.a)
-    rec.v = S.CanonValue(typ, rec.v)
-    return ck, rec
-end
-
--- One pass over saved data from before 2.7.2: records, private notes,
--- recruit history and your own per-character settings move to plain names.
--- Where two records become one, the newer wins (the same rule as sync), so
--- every copy ends up identical.
-function S:CanonicalizeSaved()
-    local g = ns.DB:Guild()
-    if not ns.NO_REALMS or not g or g.realmless then return 0 end
-    local moved = 0
-    for _, scope in ipairs({ "guild", "officer" }) do
-        local store = self:Store(scope)
-        local out = {}
-        for key, rec in pairs(store) do
-            local before = key .. "\0" .. tostring(rec.a) .. "\0" .. tostring(rec.v)
-            local ck, r = S.Canon(key, rec)
-            if ck .. "\0" .. tostring(r.a) .. "\0" .. tostring(r.v) ~= before then moved = moved + 1 end
-            local cur = out[ck]
-            if not cur or S.Newer(r, cur) then out[ck] = r end
-        end
-        for k in pairs(store) do store[k] = nil end
-        for k, r in pairs(out) do store[k] = r end
-    end
-    local function rekey(t, merge)
-        if type(t) ~= "table" then return end
-        local keys = {}
-        for k in pairs(t) do if type(k) == "string" then keys[#keys + 1] = k end end
-        for _, k in ipairs(keys) do
-            local ck = CN(k)
-            if ck ~= k then
-                local v = t[k]
-                t[k] = nil
-                if t[ck] == nil then t[ck] = v elseif merge then merge(t[ck], v) end
-                moved = moved + 1
-            end
-        end
-    end
-    rekey(g.members, function(cur, m)
-        if m.note and m.note ~= "" and m.note ~= cur.note then
-            cur.note = (cur.note and cur.note ~= "") and (cur.note .. " / " .. m.note) or m.note
-        end
-    end)
-    if g.recruit then rekey(g.recruit.people) end
-    local s = ns.DB:Settings()
-    rekey(s.schedules)
-    rekey(s.hof)
-    g.realmless = true
-    self.auditCache = nil
-    return moved
-end
-
--- When a record stops being kept (server time), or nil when it never expires.
-function S:ExpiresAt(key, rec)
-    local typ = S.ParseKey(key)
-    if not typ then return nil end
-    local def = S.TYPES[typ]
-    return def.ttl and rec.t + def.ttl or nil
-end
-
-local function Newer(a, b)
-    if a.t ~= b.t then return a.t > b.t end
-    local aa, ba = a.a or "", b.a or ""
-    if aa ~= ba then return aa > ba end
-    return (a.v or "") > (b.v or "")
-end
-S.Newer = Newer
-
-function S:Store(scope)
-    local g = ns.DB:Guild()
-    if not g then return nil end
-    g.sync = g.sync or {}
-    g.sync[scope] = g.sync[scope] or {}
-    return g.sync[scope]
-end
-
-function S:Get(key)
-    local typ = S.ParseKey(key)
-    if not typ then return nil end
-    local store = self:Store(S.TYPES[typ].scope)
-    return store and store[key]
-end
-
-function S:Value(key)
-    local rec = self:Get(key)
-    return rec and rec.v
-end
-
-------------------------------------------------------------------------
--- Permissions
-------------------------------------------------------------------------
-function S:CanWrite(key)
-    local typ, member, rest = S.ParseKey(key)
-    if not typ then return false end
-    local def = S.TYPES[typ]
-    if def.selfOnly then return member == Me() end
-    if def.anyone then return IsInGuild() end -- (DN removal is checked in RC:RemoveDNW)
-    -- your own profile: the Guild Master decides (everyone by default)
-    if def.self and member == Me() and ns.DB:HasPerm("ownprofile") then return true end
-    -- permissions only the Guild Master changes
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then return ns.DB:IsGuildMaster() end
-    -- what the Guild Master hands out per rank (Options > Officers > Permissions)
-    local perm = def.scope == "guild" and ns.DB.PERM_BY_TYPE[typ]
-    if perm then return ns.DB:HasPerm(perm) end
-    if def.officer and ns.IsOfficer() then return true end
-    return false
-end
-
-------------------------------------------------------------------------
--- Who may send a record. A record's author (rec.a) is only what the sender
--- claims; the sender is the one name the game vouches for. So:
---   * the author must be allowed to write the record (rank, permissions,
---     their own profile), checked against the guild roster
---   * a record someone else wrote may only be passed on (repair) by an
---     officer; the game only lets officer ranks send on the officer channel,
---     so S.officers can't be faked
---   * Guild Master permission settings must name the current Guild Master
---     as author, whoever passes them on
--- Without this any guildmate could forge permission changes or anyone's
--- profile with one hand-made addon message.
-------------------------------------------------------------------------
-local function Same(a, b) return a and b and a:lower() == b:lower() end
-
-local function RosterEntry(name)
-    if not name then return nil end
-    local e = ns.Roster.byName[name]
-    if e then return e end
-    local lower = name:lower()
-    for full, entry in pairs(ns.Roster.byName) do
-        if full:lower() == lower then return entry end
-    end
-end
-
-local function IsGuildMaster(name)
-    local e = RosterEntry(name)
-    return e ~= nil and e.rankIndex == 0
-end
-
--- Officer ranks, by name, as the Guild Master's copy has seen them on the
--- officer channel (members can't see that channel, so they learn it from
--- this record, which only the current Guild Master may write).
-function S:OfficerRanks()
-    local rec = self:Get("GS:officers")
-    if not rec or (rec.v or "") == "" or not IsGuildMaster(rec.a) then return nil end
-    local set = {}
-    for r in rec.v:gmatch("[^;]+") do set[r:lower()] = true end
-    return set
-end
-
--- The Guild Master's copy: someone sent on the officer channel, so their
--- rank is an officer rank.
-function S:NoteOfficer(who)
-    if not (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then return end
-    local e = RosterEntry(who)
-    if not e or e.rankIndex == 0 or not e.rank or e.rank == "" or e.rank:find(";", 1, true) then return end
-    local ranks = self:OfficerRanks() or {}
-    if ranks[e.rank:lower()] then return end
-    local cur = self:Value("GS:officers")
-    self:Set("GS:officers", ((cur and cur ~= "") and (cur .. ";") or "") .. e.rank, { force = true })
-end
-
--- A player we know to be an officer: the Guild Master, someone of an
--- officer rank, someone seen on the officer channel this session, or you
--- (when you are one).
-function S:KnownOfficer(name)
-    if not name then return false end
-    if Same(name, Me()) then return ns.IsOfficer() end
-    for who in pairs(self.officers) do
-        if Same(who, name) then return true end
-    end
-    local e = RosterEntry(name)
-    if e then
-        if e.rankIndex == 0 then return true end
-        local ranks = self:OfficerRanks()
-        if ranks and e.rank and ranks[e.rank:lower()] then return true end
-    end
-    return false
-end
-
--- Would `name` be allowed to write this record themselves?
-function S:MayAuthor(name, typ, member, rest)
-    local def = S.TYPES[typ]
-    if not (def and name and name ~= "") then return false end
-    if def.anyone then return RosterEntry(name) ~= nil end
-    if def.selfOnly then return Same(name, member) end
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then return IsGuildMaster(name) end
-    if def.self and Same(name, member) and self:RankMay(name, "ownprofile") then return true end
-    local e = RosterEntry(name)
-    if e and e.rankIndex == 0 then return true end
-    local perm = def.scope == "guild" and ns.DB.PERM_BY_TYPE[typ]
-    if perm then
-        local set = ns.DB:PermRanks(perm)
-        if set then return e ~= nil and set[e.rankIndex] == true end
-        local pdef = ns.DB:PermDef(perm)
-        if pdef and pdef.everyone then return e ~= nil end
-    end
-    if def.officer then return self:KnownOfficer(name) end
-    return false
-end
-
--- May `name` (a guildmate) do what the Guild Master allows for `perm`?
-function S:RankMay(name, perm)
-    local e = RosterEntry(name)
-    if not e then return false end
-    if e.rankIndex == 0 then return true end
-    local set = ns.DB:PermRanks(perm)
-    if set then return set[e.rankIndex] == true end
-    local pdef = ns.DB:PermDef(perm)
-    if pdef and pdef.everyone then return true end
-    return self:KnownOfficer(name)
-end
-
-function S:SenderAllowed(typ, member, rest, def, rec, ctx)
-    if def.scope == "officer" then return true end -- officer channel: officers only, by the game
-    local sender, author = ctx.sender, rec.a
-    -- anyone may put someone on the Do Not Whisper list; taking them off
-    -- needs the recruit permission
-    if typ == "DN" and (rec.v or "") == "" then
-        return self:RankMay(author, "recruit") and (Same(sender, author) or self:KnownOfficer(sender))
-    end
-    -- install reminders say who sent them: only that person (or an officer
-    -- passing it on) may send one, so nobody can block reminders for the
-    -- whole guild in someone else's name
-    if typ == "IR" then return Same(sender, author) or self:KnownOfficer(sender) end
-    if def.anyone then return true end
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then
-        return IsGuildMaster(author) and (Same(sender, author) or self:KnownOfficer(sender))
-    end
-    if Same(sender, author) then return self:MayAuthor(author, typ, member, rest) end
-    -- passing on someone else's record: officers only, and self-only
-    -- records must still be the member's own
-    if not self:KnownOfficer(sender) then return false end
-    if def.selfOnly and not Same(author, member) then return false end
-    return true
-end
-
--- Limits on what one guildmate can add (not who may write what, which is
--- SenderAllowed): a hand-made client could otherwise flood everyone's saved
--- data with records it's allowed to write (its own recipe lists under
--- made-up professions, Do Not Whisper entries...).
-S.MAX_VALUE = 4000            -- bytes in one value (ours are far smaller)
-S.MAX_PROFESSIONS = 12        -- recipe lists (RP) per member
-S.NEW_KEYS_PER_WINDOW = 500   -- new records one non-officer may add...
-S.NEW_KEYS_WINDOW = 600       -- ...per 10 minutes
-local newKeys = {}            -- sender -> { count, since }
-
-function S:WithinLimits(typ, member, rest, rec, ctx, store)
-    if #(rec.v or "") > self.MAX_VALUE then return false end
-    if (typ == "HW" or typ == "HA") and not rest:match("^%d%d%d%d%d%d$") then return false end
-    -- reminders only about guildmates, holding the time they were sent
-    if typ == "IR" then
-        if not RosterEntry(member) then return false end
-        local v = rec.v or ""
-        if v ~= "" and not (v:match("^%d+$") and math.abs(tonumber(v) - rec.t) < 86400) then return false end
-    end
-    if typ == "RP" then
-        if not rest:match("^[^:]+:%d+$") then return false end
-        if not store[ctx.key] then
-            local prefix, n = "RP:" .. member .. ":", 0
-            for key in pairs(store) do
-                if key:sub(1, #prefix) == prefix then n = n + 1 end
-            end
-            if n >= self.MAX_PROFESSIONS then return false end
-        end
-    end
-    if not store[ctx.key] and not self:KnownOfficer(ctx.sender) then
-        local now = GetTime()
-        local c = newKeys[ctx.sender]
-        if not c or now - c.since > self.NEW_KEYS_WINDOW then
-            c = { count = 0, since = now }
-            newKeys[ctx.sender] = c
-        end
-        if c.count >= self.NEW_KEYS_PER_WINDOW then return false end
-        c.count = c.count + 1
-    end
-    return true
-end
-
--- Should we accept this record from someone else?
--- Counts a refused record and remembers the last one, for /ngm sync.
--- What arrived from each guildmate this session (for /ngm sync <name>)
-S.from = {}
-function S:From(who)
-    local f = self.from[who]
-    if not f then
-        f = { messages = 0, kinds = {}, applied = 0, refused = 0, older = 0 }
-        self.from[who] = f
-    end
-    return f
-end
-
-function S:Refuse(ctx, rec, why)
-    self.stats.refused = (self.stats.refused or 0) + 1
-    if ctx.sender then self:From(ctx.sender).refused = self:From(ctx.sender).refused + 1 end
-    self.lastRefused = { sender = ctx.sender, key = ctx.key, author = rec.a, why = why, at = Now() }
-    return false
-end
-
-function S:Accept(typ, member, def, rec, ctx)
-    if def.scope == "officer" then
-        -- the game only delivers the officer channel to officer ranks
-        if ctx.channel ~= "OFFICER" or not ns.IsOfficer() then return false end
-    elseif ctx.channel ~= "GUILD" then
-        return false
-    end
-    if def.selfOnly and rec.a ~= member then return self:Refuse(ctx, rec, "its author isn't the member it's about") end
-    if not self:SenderAllowed(typ, member, select(3, S.ParseKey(ctx.key)) or "", def, rec, ctx) then
-        return self:Refuse(ctx, rec, "the sender may not write it")
-    end
-    if rec.t > Now() + 300 then return self:Refuse(ctx, rec, "its time is in the future (clock?)") end
-    if typ == "A" and rec.t < Now() - self:RetentionSeconds() then return false end
-    local expires = self:ExpiresAt(ctx.key, rec)
-    if expires and expires < Now() then return false end
-    if not self:WithinLimits(typ, member, select(3, S.ParseKey(ctx.key)) or "", rec, ctx, self:Store(def.scope) or {}) then
-        return self:Refuse(ctx, rec, "over a size or rate limit")
-    end
-    return true
-end
-
--- Records left out of digests and repairs: old audit entries (each officer
--- keeps a different amount) and anything past its expiry.
-function S:Excluded(key, rec, now)
-    now = now or Now()
-    if key:sub(1, 2) == "A:" then return rec.t < now - self.AUDIT_SYNC_WINDOW end
-    local expires = self:ExpiresAt(key, rec)
-    return expires ~= nil and expires < now
-end
-
--- Deletes records past their expiry.
-function S:PruneExpired()
-    local now, removed = Now(), 0
-    for _, scope in ipairs({ "guild", "officer" }) do
-        local store = self:Store(scope)
-        if store then
-            local dead = {}
-            for key, rec in pairs(store) do
-                local expires = self:ExpiresAt(key, rec)
-                if expires and expires < now then dead[#dead + 1] = key end
-            end
-            for _, key in ipairs(dead) do
-                store[key] = nil
-                removed = removed + 1
-            end
-        end
-    end
-    if removed > 0 then ns:Fire("RECRUITS_CHANGED") end
-    return removed
-end
-
-------------------------------------------------------------------------
--- Writing and applying
-------------------------------------------------------------------------
--- Changes a record locally and broadcasts it.
--- opts: migration (no audit/broadcast), author, force (skip permission)
-function S:Set(key, value, opts)
-    opts = opts or {}
-    if not ns.DB:Guild() then return nil, "You are not in a guild." end
-    local typ = S.ParseKey(key)
-    if not typ then return nil, "Unknown record." end
-    if not opts.force and not self:CanWrite(key) then
-        return nil, "Only officers can change that."
-    end
-    value = Clean(value)
-    local store = self:Store(S.TYPES[typ].scope)
-    local cur = store[key]
-    if cur and cur.v == value then return true end
-    local t = opts.time or Now()
-    if cur and cur.t >= t then t = cur.t + 1 end
-    local rec = { v = value, t = t, a = opts.author or Me() }
-    if not opts.migration and not opts.noBatch then rec.b = self:CurrentBatch() end
-    self:Apply(key, rec, { origin = "local", migration = opts.migration })
-    if not opts.migration then self:QueueOutgoing(key) end
-    self:FlushNotify()
-    return true
-end
-
-------------------------------------------------------------------------
--- Batching: changes made close together are sent (and audited) as one group
-------------------------------------------------------------------------
-S.outbox = {}
-
-function S:CurrentBatch()
-    if not self.batchId then
-        self.batchId = Base36(Now()) .. Base36(math.random(0, 46655))
-    end
-    return self.batchId
-end
-
-function S:QueueOutgoing(key)
-    self.outbox[key] = true
-    if not self.outboxTimer then
-        self.outboxTimer = true
-        C_Timer.After(self.BATCH_DELAY, function() S:FlushOutgoing() end)
-    end
-end
-
--- Sends everything queued, newest version of each record.
-function S:FlushOutgoing()
-    self.outboxTimer = false
-    self.batchId = nil
-    local keys = {}
-    for key in pairs(self.outbox) do keys[#keys + 1] = key end
-    wipe(self.outbox)
-    table.sort(keys)
-    for _, key in ipairs(keys) do
-        local rec = self:Get(key)
-        if rec then self:Broadcast(key, rec) end
-    end
-    return #keys
-end
-
--- Stores a record if it's newer than ours. Returns true when applied.
-function S:Apply(key, rec, ctx)
-    local typ, member = S.ParseKey(key)
-    if not typ then return false end
-    local def = S.TYPES[typ]
-    local store = self:Store(def.scope)
-    if not store then return false end
-    rec.t = tonumber(rec.t) or 0
-    rec.v = rec.v or ""
-    ctx.key = key
-    -- recruitment statuses are only kept by members who may recruit
-    if ctx.origin == "remote" and typ == "RS" and not self:MayRecruit() then return false end
-    if ctx.origin == "remote" and not self:Accept(typ, member, def, rec, ctx) then return false end
-    local cur = store[key]
-    if cur and not Newer(rec, cur) then
-        if ctx.origin == "remote" and ctx.sender then self:From(ctx.sender).older = self:From(ctx.sender).older + 1 end
-        return false
-    end
-    store[key] = rec
-    self.storeVersion = (self.storeVersion or 0) + 1
-    if ctx.origin == "remote" and ctx.sender then self:From(ctx.sender).applied = self:From(ctx.sender).applied + 1 end
-    self:Materialize(typ, key, member, rec)
-    if not def.noAudit and not ctx.migration and ns.IsOfficer() then
-        self:Audit(typ, key, member, cur, rec)
-    end
-    self.stats.applied = self.stats.applied + 1
-    return true
-end
-
-------------------------------------------------------------------------
--- Values <-> the addon's working data
-------------------------------------------------------------------------
-local Codec = {}
-S.Codec = Codec
-
-function Codec.ParseSet(v)
-    local set = {}
-    for id in (v or ""):gmatch("[^,]+") do set[id] = true end
-    return set
-end
-
-function Codec.Profs(list)
-    local parts = {}
-    for _, p in ipairs(list or {}) do
-        parts[#parts + 1] = ("%s:%d"):format((p.name:gsub("[:,;]", "")), p.rank or 0)
-    end
-    return table.concat(parts, ",")
-end
-function Codec.ParseProfs(v)
-    local list = {}
-    for chunk in (v or ""):gmatch("[^,]+") do
-        local name, rank = chunk:match("^([^:]+):?(%d*)$")
-        if name then list[#list + 1] = { name = name, rank = tonumber(rank) or 0 } end
-    end
-    return list
-end
-
--- Addon-reported data: "spec;dist;name:rank:max:icon,..."
-function Codec.Report(snap)
-    local parts = {}
-    for i, p in ipairs(snap.profs or {}) do
-        if i > 6 then break end
-        parts[#parts + 1] = ("%s:%d:%d:%s"):format((p.name:gsub("[:,;]", "")), p.rank or 0, p.max or 0, p.icon and tostring(p.icon) or "")
-    end
-    return ("%s;%s;%s"):format(Clean(snap.spec or ""):gsub(";", ""), Clean(snap.dist or ""):gsub(";", ""), table.concat(parts, ","))
-end
-function Codec.ParseReport(v)
-    local spec, dist, profs = (v or ""):match("^([^;]*);([^;]*);(.*)$")
-    if not spec then return nil end
-    local data = { spec = spec ~= "" and spec or nil, dist = dist ~= "" and dist or nil, profs = {} }
-    for chunk in profs:gmatch("[^,]+") do
-        local name, rank, max, icon = chunk:match("^([^:]*):(%d*):(%d*):?(%d*)$")
-        if name and name ~= "" then
-            data.profs[#data.profs + 1] = { name = name, rank = tonumber(rank) or 0, max = tonumber(max) or 0, icon = tonumber(icon) }
-        end
-    end
-    return data
-end
-
--- Officer log: "created;creator;text" ("" = deleted)
-function Codec.Log(created, creator, text)
-    return ("%d;%s;%s"):format(created, Clean(creator):gsub(";", ""), Clean(text))
-end
-function Codec.ParseLog(v)
-    local created, creator, text = (v or ""):match("^(%d+);([^;]*);(.*)$")
-    if not created then return nil end
-    return { ts = tonumber(created), author = creator, text = text }
-end
-
-local pending = { members = {}, links = false, audit = false }
-
-function S:Notify(kind, member)
-    if kind == "member" then
-        if member then pending.members[member] = true end
-    else
-        pending[kind] = true
-    end
-    if not self.notifyQueued then
-        self.notifyQueued = true
-        C_Timer.After(0.05, function() S:FlushNotify() end)
-    end
-end
-
-function S:FlushNotify()
-    self.notifyQueued = false
-    local p = { members = pending.members, links = pending.links, audit = pending.audit }
-    pending.members, pending.links, pending.audit = {}, false, false
-    if p.links then ns:Fire("LINKS_CHANGED") end
-    for member in pairs(p.members) do ns:Fire("MEMBER_CHANGED", member) end
-    if p.audit then
-        self.auditCache = nil
-        ns:Fire("AUDIT_CHANGED")
-    end
-end
-
-function S:Materialize(typ, key, member, rec)
-    local v = rec.v
-    if typ == "GS" then
-        ns.Debounce("guildsettings", 0.1, function() ns:Fire("GUILD_SETTINGS_CHANGED") end)
-        return
-    elseif typ == "RP" then
-        ns.Debounce("recipeschanged", 0.3, function() ns:Fire("RECIPES_CHANGED") end)
-        return
-    elseif typ == "HF" or typ == "HX" or typ == "HW" or typ == "HA" or typ == "HC" then
-        ns.Debounce("hofchanged", 0.5, function() ns:Fire("HALL_OF_FAME_CHANGED") end)
-        return
-    elseif typ == "IR" then
-        ns.Debounce("reminderschanged", 0.3, function() ns:Fire("MEMBER_CHANGED") end)
-        return
-    elseif typ == "DN" or typ == "RS" then
-        -- Do Not Whisper entries are about people outside the guild: no member record
-        ns.Debounce("dnwchanged", 0.1, function() ns:Fire("RECRUITS_CHANGED") end)
-        return
-    elseif typ == "A" then
-        self.auditCache = nil
-        self:Notify("audit")
-        return
-    end
-    local m = ns.DB:EnsureMember(member)
-    if not m then return end
-    if typ == "M" then
-        m.main = (v ~= "" and v ~= member) and v or nil
-        self:Notify("links")
-    elseif typ == "MS" then
-        m.spec = v ~= "" and v or nil
-    elseif typ == "RL" then
-        m.roles = v ~= "" and v or nil
-    elseif typ == "MP" then
-        local list = Codec.ParseProfs(v)
-        m.profs = #list > 0 and list or nil
-    elseif typ == "P" then
-        local data = v ~= "" and Codec.ParseReport(v) or nil
-        if v == "" then m.auto = nil end -- they stopped sharing it
-        if data then
-            data.ts = rec.t
-            m.auto = data
-        end
-    elseif typ == "CN" then
-        m.contact = v ~= "" and v or nil
-    elseif typ == "SC" then
-        m.schedule = v ~= "" and v or nil
-    elseif typ == "AV" then
-        m.version = v ~= "" and v or nil
-        ns.Debounce("versioncheck", 1, function() if ns.Roster.CheckVersion then ns.Roster:CheckVersion() end end)
-    elseif typ == "JN" then
-        local t, by = v:match("^(%d+);(.*)$")
-        m.joined = t and { t = tonumber(t), by = by ~= "" and by or nil } or nil
-    elseif typ == "RK" then
-        local t, rank, by = v:match("^(%d+);([^;]*);(.*)$")
-        m.rankSince = t and { t = tonumber(t), rank = rank ~= "" and rank or nil, by = by ~= "" and by or nil } or nil
-    elseif typ == "L" then
-        local id = key:match("^L:[^:]+:(.+)$")
-        m.log = m.log or {}
-        local entry = Codec.ParseLog(v)
-        if entry then
-            entry.id, entry.upd = id, rec.t
-            m.log[id] = entry
-        else
-            m.log[id] = { id = id, del = true, upd = rec.t, ts = rec.t, text = "" }
-        end
-    end
-    self:Notify("member", member)
-end
-
--- Rebuilds the working data from records (after loading or migrating).
-function S:RebuildAll()
-    local g = ns.DB:Guild()
-    if not g then return end
-    for _, m in pairs(g.members) do
-        m.tags, m.main, m.spec, m.profs, m.auto, m.log, m.version = nil, nil, nil, nil, nil, nil, nil
-        m.rating = nil
-        m.schedule, m.contact = nil, nil
-        m.joined, m.rankSince = nil, nil
-        m.about, m.status, m.statusAt, m.pronouns = nil, nil, nil, nil
-    end
-    for _, scope in ipairs({ "guild", "officer" }) do
-        for key, rec in pairs(self:Store(scope)) do
-            local typ, member = S.ParseKey(key)
-            if typ then self:Materialize(typ, key, member, rec) end
-        end
-    end
-    self:FlushNotify()
-end
-
-------------------------------------------------------------------------
--- Audit trail
-------------------------------------------------------------------------
-function S:RetentionSeconds()
-    local days = ns.DB:Settings().auditDays or 30
-    return days * 86400
-end
-
--- Compact form of a reported-data value for the audit: spec + profession names.
-local function ReportSummary(v)
-    local d = Codec.ParseReport(v)
-    if not d then return "" end
-    local names = {}
-    for _, p in ipairs(d.profs) do names[#names + 1] = p.name end
-    table.sort(names)
-    return (d.spec or "") .. ";" .. table.concat(names, ",")
-end
-
-function S:Audit(typ, key, member, cur, rec)
-    local old = cur and cur.v or ""
-    local new = rec.v
-    if typ == "P" then
-        old, new = cur and ReportSummary(old) or "", ReportSummary(new)
-    end
-    if old == new then return end
-    local store = self:Store("officer")
-    -- Same id on every officer's client, so copies of one change merge.
-    local id = Base36(Hash(key .. "@" .. rec.t .. "@" .. (rec.a or ""))) .. Base36(rec.t)
-    local akey = "A:" .. id
-    if store[akey] then return end
-    store[akey] = {
-        v = table.concat({ member or "", typ, Clean(old), Clean(new), key:sub(#typ + 2), rec.b or "" }, US),
-        t = rec.t, a = rec.a or "",
-    }
-    self.auditCache = nil
-    self:Notify("audit")
-end
-
--- Adds an audit entry that isn't about a record (a roster change), and
--- sends it to the other officers. False when it's already there.
-function S:AddAuditEntry(id, t, author, member, typ, old, new, ref, batch)
-    if not ns.IsOfficer() then return false end
-    local store = self:Store("officer")
-    if not store then return false end
-    local akey = "A:" .. id
-    if store[akey] then return false end
-    store[akey] = {
-        v = table.concat({ member or "", typ, Clean(old), Clean(new), Clean(ref or ""), batch or "" }, US),
-        t = math.floor(t), a = author or "",
-    }
-    self.auditCache = nil
-    self:Notify("audit")
-    self:QueueOutgoing(akey)
-    return true
-end
-
--- Decoded audit entries, newest first: { id, t, author, member, typ, old, new, ref }
-function S:AuditEntries()
-    if self.auditCache then return self.auditCache end
-    local out = {}
-    local store = self:Store("officer")
-    if store then
-        for key, rec in pairs(store) do
-            if key:sub(1, 2) == "A:" then
-                local f = ns.Split(rec.v, US)
-                local member, typ, old, new, ref, batch = f[1], f[2], f[3], f[4], f[5], f[6]
-                if typ and typ ~= "" then
-                    out[#out + 1] = {
-                        id = key:sub(3), t = rec.t, author = rec.a, member = member ~= "" and member or nil,
-                        typ = typ, old = old or "", new = new or "", ref = ref,
-                        batch = (batch and batch ~= "") and batch or nil,
-                    }
-                end
-            end
-        end
-    end
-    table.sort(out, function(a, b)
-        if a.t ~= b.t then return a.t > b.t end
-        return a.id > b.id
-    end)
-    -- one event-log event noticed an hour apart by two officers: keep one
-    local kept, last = {}, {}
-    for _, e in ipairs(out) do
-        local sig = S.EventSig(e.typ, e.member, e.new)
-        if not (sig and last[sig] and last[sig] - e.t <= S.EVENT_DEDUPE) then
-            kept[#kept + 1] = e
-            if sig then last[sig] = e.t end
-        end
-    end
-    self.auditCache = kept
-    return kept
-end
-
-function S:PruneAudit()
-    local store = self:Store("officer")
-    if not store then return end
-    local cutoff = Now() - self:RetentionSeconds()
-    local removed = 0
-    for key, rec in pairs(store) do
-        if key:sub(1, 2) == "A:" and rec.t < cutoff then
-            store[key] = nil
-            removed = removed + 1
-        end
-    end
-    if removed > 0 then
-        self.auditCache = nil
-        ns:Fire("AUDIT_CHANGED")
-    end
-    return removed
-end
-
-------------------------------------------------------------------------
--- Lanes: what's compared together, and on which channel.
---   guild    guild records, except recruitment statuses     GUILD
---   recruit  recruitment statuses (RS), only between members who may
---            recruit (nobody else keeps them)                GUILD
---   officer  officer records                                 OFFICER
-------------------------------------------------------------------------
-local function LaneOf(key)
-    local typ = key:match("^(%u+):")
-    if typ == "RS" then return "recruit" end
-    local def = typ and S.TYPES[typ]
-    return def and def.scope
-end
-S.LaneOf = LaneOf
-
-local LANE_STORE = { guild = "guild", recruit = "guild", officer = "officer" }
-local LANE_CHANNEL = { guild = "GUILD", recruit = "GUILD", officer = "OFFICER" }
-
-function S:MayRecruit()
-    return ns.Recruit and ns.Recruit.MayRecruit and ns.Recruit:MayRecruit() and true or false
-end
-
--- May we use this lane on this channel?
-function S:LaneOpen(lane, channel)
-    if lane == "officer" then return channel == "OFFICER" and ns.IsOfficer() end
-    if lane == "guild" then return channel == "GUILD" end
-    if lane == "recruit" then return channel == "GUILD" and self:MayRecruit() end
-    return false
-end
-
--- Will guildmates accept other people's records of this lane from `name`?
--- (Recruitment statuses from anyone; the officer channel is officers only;
--- guild records only from officers. See SenderAllowed.)
-function S:MayRelay(name, lane)
-    if lane == "recruit" or lane == "officer" then return true end
-    return self:KnownOfficer(name)
-end
-
-------------------------------------------------------------------------
--- Sync checks, by author. For each author: the time of their newest record
--- and a checksum over all of their records in the lane.
---   PROTO S <lane> <author>:<newest>:<sum>,<author>:<newest>:<sum>,...
--- A member's check names only themselves; officers (and, in the recruit
--- lane, recruiters) name every author, since guildmates accept everyone's
--- records from them. Whoever sees a difference asks for exactly what they
--- lack:
---   PROTO Q <lane> <target> <author> <since>
--- and the target sends that author's records newer than <since> ("0": all) on
--- the lane's channel, so everyone else who lacked them gets them as well.
-------------------------------------------------------------------------
-S.SUMMARY_MAX = 2400   -- characters of entries per check message
-S.ASK_COOLDOWN = 30    -- per lane and author
-S.FULL_COOLDOWN = 900  -- after asking for everything: a difference left is a tie, not a loss
-S.ANSWER_COOLDOWN = 20 -- the same request answered at most this often
-S.MAX_ANSWERS = 30     -- requests answered per requester per minute
-
-S.storeVersion = 0
 S.sumCache = {}
-S.asked = {}       -- "lane|author" -> { at, full }
-S.heardAsk = {}    -- "lane|author" -> { at, since }: someone asked; the answer reaches us too
-S.answered = {}    -- "lane|author|since" -> GetTime()
-S.answerCount = {} -- requester -> { n, since }
-S.peers = {}       -- who has sent a check this session
 
-local function Entry(author, s) return author .. ":" .. Base36(s.t) .. ":" .. Base36(s.h) end
-
--- { [author] = { t = newest, h = checksum, n = count } } for a lane
+-- { [author] = { t = newest, h = sum, n = count } } for a lane
 function S:AuthorSums(lane)
     local c = self.sumCache[lane]
     if c and c.version == self.storeVersion and GetTime() - c.at < 30 then return c.sums end
@@ -1044,7 +88,7 @@ function S:AuthorSums(lane)
                 local s = out[rec.a]
                 if not s then s = { t = 0, h = 0, n = 0 }; out[rec.a] = s end
                 if rec.t > s.t then s.t = rec.t end
-                s.h = (s.h + Hash(key .. FS .. rec.t .. FS .. (rec.v or ""))) % 4294967291
+                s.h = (s.h + Hash(key .. FS .. rec.t .. FS .. (rec.v or ""))) % P32
                 s.n = s.n + 1
             end
         end
@@ -1053,281 +97,592 @@ function S:AuthorSums(lane)
     return out
 end
 
-function S:SendSummary(lane)
-    local sums = self:AuthorSums(lane)
-    local me = Me()
-    local entries = {}
-    if lane == "guild" and not ns.IsOfficer() then
-        if sums[me] then entries[1] = Entry(me, sums[me]) end
-    else
-        for author, s in pairs(sums) do entries[#entries + 1] = Entry(author, s) end
-        table.sort(entries)
+local function GroupOf(author) return Hash(author:lower()) % S.GROUPS + 1 end
+local function AuthorPrint(author, s) return Hash(author .. ":" .. s.t .. ":" .. s.h) end
+
+-- 32 group fingerprints and the root over them
+function S:Groups(lane)
+    local g = {}
+    for i = 1, self.GROUPS do g[i] = 0 end
+    for author, s in pairs(self:AuthorSums(lane)) do
+        local i = GroupOf(author)
+        g[i] = (g[i] + AuthorPrint(author, s)) % P32
     end
-    -- with nothing yet, still say hello (others answer with their checks,
-    -- and the Guild Master's copy learns the officer ranks from the officer
-    -- channel); only an empty recruit check is skipped
-    if #entries == 0 and lane == "recruit" then return end
-    local channel = LANE_CHANNEL[lane]
-    local part, size = {}, 0
-    local function flush()
-        self:Send(table.concat({ PROTO, "S", lane, table.concat(part, ",") }, FS), channel, nil, "high")
-        part, size = {}, 0
-    end
-    for _, e in ipairs(entries) do
-        if size > 0 and size + #e + 1 > self.SUMMARY_MAX then flush() end
-        part[#part + 1] = e
-        size = size + #e + 1
-    end
-    if size > 0 or #entries == 0 then flush() end
+    local root = 0
+    for i = 1, self.GROUPS do root = (root * 31 + g[i]) % P32 end
+    return g, root
 end
 
--- Send our checks so others can tell what they're missing (and ask us).
-function S:Exchange(force)
-    if not IsInGuild() or not ns.DB:Guild() then return false end
-    local now = GetTime()
-    local since = now - (self.lastExchange or -1e9)
-    if since < (force and 10 or self.EXCHANGE_COOLDOWN) then return false end
-    self.lastExchange = now
-    self:SendSummary("guild")
-    if ns.IsOfficer() then self:SendSummary("officer") end
-    if self:MayRecruit() then self:SendSummary("recruit") end
-    return true
-end
+local function Entry(author, s) return author .. ":" .. Base36(s.t) .. ":" .. Base36(s.h) end
 
-local function ParseSummary(payload)
+local function ParseEntries(text)
     local out, n = {}, 0
-    for e in (payload or ""):gmatch("[^,]+") do
+    for e in (text or ""):gmatch("[^,]+") do
         local a, t, h = e:match("^([^:]+):(%w+):(%w+)$")
         if a and #a <= 48 and not a:find("[|%c]") then
-            out[CN(a)] = { t = tonumber(t, 36) or 0, h = tonumber(h, 36) or -1 }
+            out[S.CanonName(a)] = { t = tonumber(t, 36) or 0, h = tonumber(h, 36) or -1 }
             n = n + 1
-            if n >= 1000 then break end
+            if n >= 2000 then break end
         end
     end
     return out
 end
-S.ParseSummary = ParseSummary
 
-function S:OnSummary(lane, payload, who, channel)
-    if not self:LaneOpen(lane, channel) then return end
-    -- someone new this session (just logged in?): send ours, so they can
-    -- catch up from us too
-    if not self.peers[who] then
-        self.peers[who] = true
-        C_Timer.After(1 + math.random() * 4, function() S:Exchange(true) end)
+local function ParseNumbers(text, max)
+    local out = {}
+    for n in (text or ""):gmatch("%w+") do
+        out[#out + 1] = tonumber(n, 36)
+        if #out >= max then break end
     end
-    local mine = self:AuthorSums(lane)
-    for author, theirs in pairs(ParseSummary(payload)) do
-        -- only ask someone whose copies of these records we'd accept
-        if Same(author, who) or self:MayRelay(who, lane) then
-            self:MaybeAsk(lane, who, author, theirs, mine[author])
+    return out
+end
+
+------------------------------------------------------------------------
+-- Who's around: guildmates online whose copy speaks this protocol
+------------------------------------------------------------------------
+-- (No version known yet, as on a new install: assume so; a request they
+-- don't answer is asked of someone else next time.)
+function S:Speaks(name)
+    local av = self:Get("AV:" .. name)
+    return av == nil or ns.CompareVersions(av.v or "", self.MIN_VERSION) >= 0
+end
+
+function S:OnlinePeers()
+    local out, me = {}, Me()
+    for _, e in ipairs((ns.Roster and ns.Roster.members) or {}) do
+        if e.online and not Same(e.full, me) and self:Speaks(e.full) then out[#out + 1] = e.full end
+    end
+    return out
+end
+
+-- Is anyone online running a copy from before 2.12?
+function S:OlderCopyOnline()
+    local me = Me()
+    for _, e in ipairs((ns.Roster and ns.Roster.members) or {}) do
+        if e.online and not Same(e.full, me) then
+            local av = self:Get("AV:" .. e.full)
+            if av and ns.CompareVersions(av.v or "", self.MIN_VERSION) < 0 then return true end
         end
+    end
+    return false
+end
+
+-- May `name` take part in this lane (as far as we can tell from here)?
+function S:PeerInLane(name, lane)
+    if lane == "officer" then return self:KnownOfficer(name) end
+    if lane == "recruit" then return self:MayRecruitName(name) end
+    return true
+end
+
+-- A well-spread number for a string. (The plain hash is linear: two names
+-- differing in one letter always come out in the same order.) Integer math
+-- below 2^53 only, so every copy gets the same result.
+local function Spread(str)
+    local h = Hash(str)
+    for _ = 1, 3 do
+        local lo, hi = h % 65536, math.floor(h / 65536)
+        h = (lo * 40503 + hi * hi % 65521 * 2654 + lo * hi % 65537 + 1013904223) % P32
+    end
+    return h
+end
+
+-- Online guildmates in a lane (and us), ordered for `seed` the same way on
+-- every copy; in the guild lane officers first (they hold everyone's records).
+function S:Candidates(lane, seed, filter)
+    local list = {}
+    for _, name in ipairs(self:OnlinePeers()) do
+        if self:PeerInLane(name, lane) and (not filter or filter(name)) then list[#list + 1] = name end
+    end
+    local me = Me()
+    if self:InLane(lane) and (not filter or filter(me)) then list[#list + 1] = me end
+    local function score(name)
+        local officer = (lane == "guild" and self:KnownOfficer(name)) and 0 or 1
+        return officer * P32 + Spread(seed:lower() .. "|" .. name:lower())
+    end
+    table.sort(list, function(a, b) return score(a) < score(b) end)
+    return list
+end
+
+------------------------------------------------------------------------
+-- Checks
+------------------------------------------------------------------------
+S.lane = {}        -- lane -> { state, with, at, behind }
+S.answered = {}    -- "lane|asker" -> GetTime() someone answered their check
+S.asked = {}       -- "lane|author" -> { at, full }
+S.heardAsk = {}    -- "lane|author" -> { at, since }
+S.answeredAsk = {} -- "lane|author|since" -> GetTime()
+S.askCount = {}    -- requester -> { n, since }
+S.rechecks = {}    -- lane -> re-checks this session
+
+function S:LaneState(lane) return self.lane[lane] or { state = "idle" } end
+
+local FINAL = { synced = true, catching = true, alone = true }
+local function SetState(lane, state, with, behind)
+    S.lane[lane] = { state = state, with = with, at = GetTime(), behind = behind }
+    ns:Fire("SYNC_STATUS", lane)
+    if S.reportLane == lane and FINAL[state] then
+        S.reportLane = nil
+        ns:Print(select(2, S:Health()) .. ".")
     end
 end
 
-function S:MaybeAsk(lane, target, author, theirs, mine)
-    if mine and mine.h == theirs.h then return end
-    local since
-    if not mine then
-        since = 0
-    elseif theirs.t > mine.t then
-        since = mine.t                 -- the usual case: newer records
-    elseif theirs.t == mine.t then
-        since = 0                      -- an older record lost somewhere: all of them
-    else
-        return                         -- they're behind; they'll ask
-    end
-    local k = lane .. "|" .. author
+-- Ask the lane how we compare (at login, and on /ngm sync).
+function S:Check(lane)
+    if not IsInGuild() or not ns.DB:Guild() or not self:InLane(lane) then return false end
+    local _, root = self:Groups(lane)
+    SetState(lane, "checking")
+    self:Send(table.concat({ PROTO, "F", lane, Base36(root), "q", "" }, FS), LANE_CHANNEL[lane], nil, "high")
+    C_Timer.After(self.ANSWER_WAIT * self.ANSWERERS + 5, function()
+        if S:LaneState(lane).state == "checking" then SetState(lane, "alone") end
+    end)
+    return true
+end
+
+function S:CheckAll(force)
     local now = GetTime()
-    local last = self.asked[k]
-    if last and now - last.at < (last.full and self.FULL_COOLDOWN or self.ASK_COOLDOWN) then return end
-    self.asked[k] = { at = now, full = since == 0 and mine ~= nil }
-    -- a short random wait: when several copies notice the same gap, the
-    -- first one asks and the rest get the answer with it
-    C_Timer.After(0.5 + math.random() * 2.5, function()
-        local h = S.heardAsk[k]
-        if h and GetTime() - h.at < 15 and h.since <= since then return end
-        local cur = S:AuthorSums(lane)[author]
-        if cur and cur.h == theirs.h then return end
-        S.heardAsk[k] = { at = GetTime(), since = since }
-        S:Send(table.concat({ PROTO, "Q", lane, target, author, Base36(since) }, FS), LANE_CHANNEL[lane], nil, "high")
+    if not force and now - (self.lastCheck or -1e9) < 10 then return false end
+    self.lastCheck = now
+    local any = false
+    for _, lane in ipairs(self.LANES) do any = self:Check(lane) or any end
+    return any
+end
+
+-- Someone asks: answer if it's our turn and nobody has yet.
+-- (As someone's relay we always answer, at once: nobody else heard them.)
+function S:OnCheck(lane, root, asker, relayFor)
+    local k = lane .. "|" .. asker:lower()
+    local pos = 1
+    if not relayFor then
+        local order = self:Candidates(lane, asker, function(n) return not Same(n, asker) end)
+        local me = Me()
+        pos = nil
+        for i, n in ipairs(order) do if Same(n, me) then pos = i break end end
+        if not pos or pos > self.ANSWERERS then return end
+    end
+    C_Timer.After(0.5 + (pos - 1) * self.ANSWER_WAIT, function()
+        if GetTime() - (S.answered[k] or -1e9) < 30 then return end
+        S.answered[k] = GetTime()
+        local groups, mine = S:Groups(lane)
+        local fields = { PROTO, "F", lane, Base36(mine), "a", asker }
+        if mine ~= root then
+            local g = {}
+            for i = 1, S.GROUPS do g[i] = Base36(groups[i]) end
+            fields[#fields + 1] = table.concat(g, ",")
+        end
+        S:Send(table.concat(fields, FS), LANE_CHANNEL[lane], nil, "high")
     end)
 end
 
-function S:OnAsk(lane, target, author, since, who, channel)
-    if not self:LaneOpen(lane, channel) then return end
-    author = CN(author)
-    since = tonumber(since or "", 36)
-    if not (author and target and since) then return end
-    local k = lane .. "|" .. author
-    local h = self.heardAsk[k]
-    if not h or GetTime() - h.at > 15 or since < h.since then self.heardAsk[k] = { at = GetTime(), since = since } end
+-- An answer to someone's check (maybe ours).
+function S:OnCheckAnswer(lane, root, target, groupsText, who)
+    self.answered[lane .. "|" .. target:lower()] = GetTime()
     if not Same(target, Me()) then return end
-    if not (Same(author, Me()) or self:MayRelay(Me(), lane)) then return end
+    local groups, mine = self:Groups(lane)
+    if root == mine then
+        SetState(lane, "synced", who)
+        return
+    end
+    local theirs = ParseNumbers(groupsText, self.GROUPS)
+    local differ = {}
+    for i = 1, self.GROUPS do
+        if (theirs[i] or -1) ~= groups[i] then differ[#differ + 1] = i end
+    end
+    SetState(lane, "comparing", who)
+    self:SendEntries(lane, who, "1", differ)
+end
+
+-- Our per-author list for some groups.
+function S:SendEntries(lane, target, step, groups)
+    local want = {}
+    for _, i in ipairs(groups) do want[i] = true end
+    local entries = {}
+    for author, s in pairs(self:AuthorSums(lane)) do
+        if want[GroupOf(author)] then entries[#entries + 1] = Entry(author, s) end
+    end
+    table.sort(entries)
+    local glist = {}
+    for _, i in ipairs(groups) do glist[#glist + 1] = Base36(i) end
+    local head = table.concat({ PROTO, "E", lane, target, step, table.concat(glist, ",") }, FS) .. FS
+    local part, size = {}, 0
+    local function flush()
+        self:Send(head .. table.concat(part, ","), LANE_CHANNEL[lane], nil, "high")
+        part, size = {}, 0
+    end
+    for _, e in ipairs(entries) do
+        if size > 0 and size + #e + 1 > self.PACK_MAX then flush() end
+        part[#part + 1] = e
+        size = size + #e + 1
+    end
+    flush()
+end
+
+function S:OnEntries(lane, target, step, groupsText, entriesText, who)
+    if not Same(target, Me()) then return end
+    local groups = ParseNumbers(groupsText, self.GROUPS)
+    if step == "1" then
+        -- once per peer and check (a long list comes in several messages)
+        local k = lane .. "|" .. who
+        self.entriesSent = self.entriesSent or {}
+        if GetTime() - (self.entriesSent[k] or -1e9) > 10 then
+            self.entriesSent[k] = GetTime()
+            self:SendEntries(lane, who, "2", groups)
+        end
+    end
+    self:Pull(lane, who, ParseEntries(entriesText))
+end
+
+-- Who to ask for an author's records: the author when they're online,
+-- otherwise one of the online guildmates whose copies we'd accept (officers;
+-- anyone in the recruit and officer lanes), chosen per author so the work is
+-- spread out. The peer we compared with, when nobody else fits.
+function S:SourceFor(lane, author, peer, skip)
+    local me = Me()
+    local e = RosterEntry(author)
+    if e and e.online and not Same(author, me) and not Same(author, skip) and self:Speaks(author) then return author end
+    local list = self:Candidates(lane, author, function(n)
+        return not Same(n, me) and not Same(n, skip) and self:MayRelay(n, lane)
+    end)
+    if list[1] then return list[1] end
+    if not Same(peer, skip) and (Same(peer, author) or self:MayRelay(peer, lane)) then return peer end
+end
+
+-- Ask for whatever `theirs` shows we lack, from the best source for each author.
+function S:Pull(lane, peer, theirs)
+    local mine = self:AuthorSums(lane)
+    local me = Me()
+    local bySource, behind, waitFor = {}, 0, 0
+    for author, t in pairs(theirs) do
+        local m = mine[author]
+        local since
+        if not m then since = 0
+        elseif m.h == t.h then since = nil
+        elseif t.t > m.t then since = m.t
+        elseif t.t == m.t then since = 0
+        end
+        -- (our own too: a new install gets back what we wrote before)
+        if since then
+            local k = lane .. "|" .. author
+            local last = self.asked[k]
+            -- asked before and still missing: try someone else this time
+            local source = self:SourceFor(lane, author, peer, last and last.source)
+                or self:SourceFor(lane, author, peer)
+            if source then
+                behind = behind + 1
+                local cool = last and (last.full and self.FULL_COOLDOWN or self.ASK_COOLDOWN) or 0
+                local left = last and (cool - (GetTime() - last.at)) or 0
+                if left <= 0 then
+                    self.asked[k] = { at = GetTime(), full = since == 0 and m ~= nil, source = source }
+                    bySource[source] = bySource[source] or {}
+                    table.insert(bySource[source], author .. ":" .. Base36(since))
+                elseif left > waitFor then
+                    waitFor = left
+                end
+            end
+        end
+    end
+    if behind == 0 then
+        SetState(lane, "synced", peer)
+        return
+    end
+    SetState(lane, "catching", peer, behind)
+    for source, pulls in pairs(bySource) do
+        local head = table.concat({ PROTO, "Q", lane, source }, FS) .. FS
+        local part, size = {}, 0
+        for _, p in ipairs(pulls) do
+            if size > 0 and size + #p + 1 > self.PACK_MAX then
+                self:Send(head .. table.concat(part, ","), LANE_CHANNEL[lane], nil, "high")
+                part, size = {}, 0
+            end
+            part[#part + 1] = p
+            size = size + #p + 1
+        end
+        self:Send(head .. table.concat(part, ","), LANE_CHANNEL[lane], nil, "high")
+    end
+    -- check again once it's had time to arrive (once per lane at a time)
+    self.rechecks[lane] = (self.rechecks[lane] or 0) + 1
+    self.recheckDue = self.recheckDue or {}
+    if self.rechecks[lane] <= 5 and not self.recheckDue[lane] then
+        self.recheckDue[lane] = true
+        local function recheck()
+            -- still arriving: wait until it's quiet
+            if GetTime() - (S.lastArrival or -1e9) < 10 then
+                C_Timer.After(10, recheck)
+                return
+            end
+            S.recheckDue[lane] = false
+            S:Check(lane)
+        end
+        C_Timer.After(math.max(self.RECHECK, waitFor + 1), recheck)
+    end
+end
+
+-- Someone asks for authors' records.
+function S:OnAsk(lane, target, pullsText, who)
     local now = GetTime()
-    local ak = k .. "|" .. since
-    if now - (self.answered[ak] or -1e9) < self.ANSWER_COOLDOWN then return end
-    local r = self.answerCount[who]
+    local pulls = {}
+    for p in (pullsText or ""):gmatch("[^,]+") do
+        local author, since = p:match("^([^:]+):(%w+)$")
+        if author then
+            author = S.CanonName(author)
+            since = tonumber(since, 36) or 0
+            local k = lane .. "|" .. author
+            local h = self.heardAsk[k]
+            if not h or now - h.at > 20 or since < h.since then self.heardAsk[k] = { at = now, since = since } end
+            pulls[#pulls + 1] = { author, since }
+        end
+        if #pulls >= 500 then break end
+    end
+    if not Same(target, Me()) then return end
+    -- one requester can't keep us busy
+    local r = self.askCount[who]
     if not r or now - r.since > 60 then
         r = { n = 0, since = now }
-        self.answerCount[who] = r
+        self.askCount[who] = r
     end
-    if r.n >= self.MAX_ANSWERS then return end
     r.n = r.n + 1
-    self.answered[ak] = now
-    self:SendAuthor(lane, author, since)
-end
-
--- Sends an author's records of a lane newer than `since` (0: all of them).
-function S:SendAuthor(lane, author, since)
-    local store = self:Store(LANE_STORE[lane]) or {}
-    local own = Same(author, Me())
-    local now = Now()
-    local channel = LANE_CHANNEL[lane]
-    for key, rec in pairs(store) do
-        if Same(rec.a, author) and rec.t > since and LaneOf(key) == lane and not self:Excluded(key, rec, now) then
-            self:Send(self:EncodeForWire(key, rec), channel, nil, own and "high" or "bulk", self:EncodeRecord(key, rec))
-        end
-    end
-end
-
-------------------------------------------------------------------------
--- A guild channel that doesn't deliver. Rarely, the game accepts someone's
--- guild addon messages and delivers them to nobody, while their whispers
--- still arrive. Every guild message normally comes back to its sender too,
--- so a copy that has sent a few and heard none back sends through an online
--- officer instead: it whispers them, and the officer passes on that
--- member's own records (only theirs) to the guild.
-------------------------------------------------------------------------
-S.RELAY_VERSION = "2.11.0"
-S.MAX_WHISPERS = 120 -- whispered messages read per guildmate per minute
-S.whispers = {}
-S.ECHO_GRACE = 20
-
-function S:NoteGuildSent()
-    if self.guildEcho then return end
-    self.unechoed = (self.unechoed or 0) + 1
-    self.firstUnechoed = self.firstUnechoed or GetTime()
-end
-
-function S:GuildBroken()
-    return not self.guildEcho and (self.unechoed or 0) >= 3
-        and GetTime() - (self.firstUnechoed or GetTime()) > self.ECHO_GRACE
-end
-
--- An online officer running a copy that passes messages on.
-function S:PickRelay()
-    local cur = self.relay
-    if cur then
-        local e = RosterEntry(cur)
-        if e and e.online then return cur end
-    end
-    self.relay = nil
+    if r.n > self.MAX_ASKS or self:QueueSize() > self.MAX_BACKLOG then return end
     local me = Me()
-    for _, e in ipairs((ns.Roster and ns.Roster.members) or {}) do
-        if e.online and not Same(e.full, me) and self:KnownOfficer(e.full) then
-            local av = self:Get("AV:" .. e.full)
-            if av and ns.CompareVersions and ns.CompareVersions(av.v or "", self.RELAY_VERSION) >= 0 then
-                self.relay = e.full
-                return e.full
-            end
+    local want = {}
+    for _, p in ipairs(pulls) do
+        local author, since = p[1], p[2]
+        local ak = lane .. "|" .. author .. "|" .. since
+        if (Same(author, me) or self:MayRelay(me, lane)) and now - (self.answeredAsk[ak] or -1e9) > 20 then
+            self.answeredAsk[ak] = now
+            want[author:lower()] = math.min(want[author:lower()] or since, since)
         end
     end
+    if not next(want) then return end
+    local out, tnow = {}, Now()
+    for key, rec in pairs(self:Store(LANE_STORE[lane]) or {}) do
+        local since = rec.a and want[rec.a:lower()]
+        if since and rec.t > since and LaneOf(key) == lane and not self:Excluded(key, rec, tnow) then
+            out[#out + 1] = { key, rec }
+        end
+    end
+    if #out > 0 then self:SendRecords(lane, out) end
 end
 
 ------------------------------------------------------------------------
--- Compression (2.10+): big records (recipe lists, Hall of Fame) are sent
--- compressed ("Z") with the game's own Deflate + Base64, but only while
--- every guildmate online with the addon runs a copy that can read them.
+-- Sending records: one, or bundles
 ------------------------------------------------------------------------
-S.COMPRESS_OVER = 150
-S.Z_VERSION = "2.10.0"
+local function Line(key, rec)
+    return table.concat({ key, tostring(rec.t), rec.a or "", rec.b or "", rec.v or "" }, FS)
+end
 
-function S:CanCompress()
+local function CanPack()
     local E = C_EncodingUtil
-    if not (E and E.CompressString and E.DecompressString and E.EncodeBase64 and E.DecodeBase64) then return false end
-    return self:AllOnlineAtLeast(self.Z_VERSION)
+    return E and E.CompressString and E.DecompressString and E.EncodeBase64 and E.DecodeBase64 and true or false
 end
 
--- Is every guildmate online with the addon on `version` or later? (cached 30 s)
-function S:AllOnlineAtLeast(version)
-    local now = GetTime()
-    self.versionCheck = self.versionCheck or {}
-    local c = self.versionCheck[version]
-    if c and now - c.at < 30 then return c.ok end
-    local ok = true
-    for _, e in ipairs((ns.Roster and ns.Roster.members) or {}) do
-        if e.online and e.hasAddon and not e.isSelf then
-            if not (e.version and ns.CompareVersions and ns.CompareVersions(e.version, version) >= 0) then
-                ok = false
-                break
-            end
-        end
-    end
-    self.versionCheck[version] = { at = now, ok = ok }
-    return ok
-end
-
--- The message for a record: compressed when that's worth it and safe.
-function S:EncodeForWire(key, rec)
-    local v = rec.v or ""
-    if #v > self.COMPRESS_OVER and self:CanCompress() then
-        local okC, packed = pcall(C_EncodingUtil.CompressString, v)
-        local okB, text = false, nil
-        if okC then okB, text = pcall(C_EncodingUtil.EncodeBase64, packed) end
-        if okB and type(text) == "string" and #text + 20 < #v then
-            return table.concat({ PROTO, "Z", key, tostring(rec.t), rec.a or "", rec.b or "", text }, FS)
-        end
-    end
-    return self:EncodeRecord(key, rec)
+local function Pack(text)
+    local okC, packed = pcall(C_EncodingUtil.CompressString, text)
+    if not okC or type(packed) ~= "string" then return nil end
+    local okB, out = pcall(C_EncodingUtil.EncodeBase64, packed)
+    if not okB or type(out) ~= "string" then return nil end
+    return out
 end
 
 local function Unpack(text)
-    local E = C_EncodingUtil
-    if not (E and E.DecodeBase64 and E.DecompressString) then return nil end
-    local okB, packed = pcall(E.DecodeBase64, text)
+    if not CanPack() then return nil end
+    local okB, packed = pcall(C_EncodingUtil.DecodeBase64, text)
     if not okB or type(packed) ~= "string" then return nil end
-    local okD, v = pcall(E.DecompressString, packed)
-    if not okD or type(v) ~= "string" or #v > S.MAX_VALUE then return nil end
+    local okD, v = pcall(C_EncodingUtil.DecompressString, packed)
+    if not okD or type(v) ~= "string" or #v > S.MAX_BUNDLE then return nil end
     return v
 end
+
+-- Heavy records (recipe lists) go after everything else.
+local HEAVY = { RP = true }
+local function Order(a, b)
+    local ha, hb = HEAVY[a[1]:match("^(%u+)")] and 1 or 0, HEAVY[b[1]:match("^(%u+)")] and 1 or 0
+    if ha ~= hb then return ha < hb end
+    return a[1] < b[1]
+end
+
+-- Sends records of one lane: compressed bundles where that's smaller,
+-- single records otherwise. Your own go first. A record already waiting to
+-- go out (same version) isn't queued again.
+S.outgoing = {} -- key -> time of the version waiting to go out
+function S:SendRecords(lane, list)
+    local channel = LANE_CHANNEL[lane]
+    local me = Me()
+    local own, other = {}, {}
+    for _, kr in ipairs(list) do
+        if self.outgoing[kr[1]] ~= kr[2].t then
+            table.insert(Same(kr[2].a, me) and own or other, kr)
+        end
+    end
+    local function keysOf(items)
+        local keys = {}
+        for _, kr in ipairs(items) do
+            keys[#keys + 1] = kr[1]
+            self.outgoing[kr[1]] = kr[2].t
+        end
+        return keys
+    end
+    local function single(kr, prio)
+        local msg = PROTO .. FS .. "R" .. FS .. Line(kr[1], kr[2])
+        self:Send(msg, channel, nil, prio, msg, keysOf({ kr }))
+    end
+    local function bundle(items, prio)
+        if #items == 1 or not CanPack() then
+            for _, kr in ipairs(items) do single(kr, prio) end
+            return
+        end
+        local lines = {}
+        for _, kr in ipairs(items) do lines[#lines + 1] = Line(kr[1], kr[2]) end
+        local plain = table.concat(lines, "\n")
+        local packed = Pack(plain)
+        if not packed or #packed >= #plain then
+            for _, kr in ipairs(items) do single(kr, prio) end
+        elseif #packed > self.PACK_MAX then
+            local half = math.floor(#items / 2)
+            bundle({ unpack(items, 1, half) }, prio)
+            bundle({ unpack(items, half + 1) }, prio)
+        else
+            self:Send(table.concat({ PROTO, "B", lane, "z", packed }, FS), channel, nil, prio, packed, keysOf(items))
+        end
+    end
+    if #own > 0 then
+        table.sort(own, Order)
+        bundle(own, "high")
+    end
+    if #other > 0 then
+        table.sort(other, Order)
+        for i = 1, #other, 200 do bundle({ unpack(other, i, math.min(i + 199, #other)) }, "bulk") end
+    end
+end
+
+-- Live changes (the batching in Core/Records.lua calls this per record):
+-- sent together at the end of the frame, per lane.
+S.live = {}
+function S:Broadcast(key, rec)
+    local lane = LaneOf(key)
+    if not lane or not self:InLane(lane) then return end
+    self.live[lane] = self.live[lane] or {}
+    table.insert(self.live[lane], { key, rec })
+    if not self.liveTimer then
+        self.liveTimer = true
+        C_Timer.After(0, function()
+            S.liveTimer = false
+            local live = S.live
+            S.live = {}
+            for l, list in pairs(live) do S:SendRecords(l, list) end
+        end)
+    end
+end
+
+------------------------------------------------------------------------
+-- Receiving records
+------------------------------------------------------------------------
+-- One record from the wire: tidied like our own edits, then applied.
+function S:Intake(key, t, author, batch, value, ctx)
+    t = tonumber(t)
+    if not key or not t or key:find("[|%c]") or (author or ""):find("[|%c]") then return false end
+    value = (value or ""):gsub("|", "/")
+    if key:match("^(%u+):") ~= "A" then value = value:gsub(S.US, "") end
+    value = value:gsub("[%z\1-\30\127]", " ")
+    if batch and not batch:match("^%w%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?$") then batch = "" end
+    local rec = { v = value, t = t, a = author, b = (batch ~= "" and batch) or nil }
+    key, rec = S.Canon(key, rec)
+    local applied = self:Apply(key, rec, ctx)
+    if applied then self.lastArrival = GetTime() end
+    self:Notify("member")
+    return applied, key, rec
+end
+
+-- A record arrived (alone or in a bundle). relayFor: whispered to us, as
+-- relay, by this guildmate: keep and pass on only their own records.
+function S:Received(key, t, author, batch, value, who, channel, relayFor)
+    if relayFor then
+        if not Same(author, relayFor) or LaneOf(key) == "officer" then return end
+        local _, k, rec = self:Intake(key, t, author, batch, value, { origin = "remote", channel = "GUILD", sender = who })
+        local cur = k and self:Get(k)
+        if cur and rec and cur.t == rec.t and Same(cur.a, rec.a) then self:Broadcast(k, cur) end
+        return
+    end
+    self:Intake(key, t, author, batch, value, { origin = "remote", channel = channel, sender = who })
+end
+
+function S:OnBundle(lane, data, who, channel, relayFor)
+    local text = Unpack(data or "")
+    if not text then return end
+    local n = 0
+    for line in text:gmatch("[^\n]+") do
+        n = n + 1
+        if n > 1000 then break end
+        local f = ns.Split(line, FS)
+        if f[1] and LaneOf(f[1]) == lane then
+            self:Received(f[1], f[2], f[3], f[4], table.concat(f, FS, 5), who, channel, relayFor)
+        end
+    end
+end
+
+------------------------------------------------------------------------
+-- A guild channel that doesn't deliver
+------------------------------------------------------------------------
+function S:NoteGuildSent()
+    if self.guildEcho or self.firstUnechoed then return end
+    self.firstUnechoed = GetTime()
+    C_Timer.After(self.ECHO_WAIT + 1, function() S:CheckEcho() end)
+end
+
+function S:GuildBroken()
+    return not self.guildEcho and self.firstUnechoed ~= nil and GetTime() - self.firstUnechoed >= self.ECHO_WAIT
+end
+
+function S:CheckEcho()
+    if self.relay or not self:GuildBroken() then return end
+    self:NextRelay()
+end
+
+-- Whispers the next online officer we haven't tried: a tiny hello first (a
+-- first whisper can be lost), then everything that matters again.
+S.relayTried = {}
+function S:NextRelay()
+    local me = Me()
+    local list = self:Candidates("guild", me, function(n)
+        return not Same(n, me) and self:KnownOfficer(n) and not self.relayTried[n]
+    end)
+    local relay = list[1]
+    self.relay, self.relayAcked = relay, false
+    if not relay then return end
+    self.relayTried[relay] = true
+    RawSend(PROTO .. FS .. "H", "WHISPER", ns.ChatName(relay))
+    C_Timer.After(2, function()
+        if S.relay ~= relay then return end
+        S:QueueOutgoing("AV:" .. me)
+        S:FlushOutgoing()
+        S:CheckAll(true)
+    end)
+    C_Timer.After(10, function()
+        if S.relay == relay and not S.relayAcked then S:NextRelay() end
+    end)
+end
+
 ------------------------------------------------------------------------
 -- Messages
 ------------------------------------------------------------------------
-function S:EncodeRecord(key, rec)
-    return table.concat({ PROTO, "R", key, tostring(rec.t), rec.a or "", rec.b or "", rec.v or "" }, FS)
-end
-
-function S:Broadcast(key, rec)
-    local typ = S.ParseKey(key)
-    local def = S.TYPES[typ]
-    local scope = def.scope
-    if scope == "officer" and not ns.IsOfficer() then return end
-    self:Send(self:EncodeForWire(key, rec), CHANNEL[scope], nil, def.low and "bulk" or "high")
-end
-
-local partials = {}
-local reassembling = false
-local MAX_PARTS = 16   -- a 250-byte message per part: far more than any record needs
-local MAX_PENDING = 8  -- unfinished chunked messages kept per sender
+S.partials = {}
+S.whispers = {}
 
 function S:OnMessage(msg, channel, sender)
     local who = ns.NormalizeName(sender)
-    if not who then
-        self.stats.unreadable = (self.stats.unreadable or 0) + 1
-        self.lastUnreadable = ("no usable sender name (\"%s\")"):format(tostring(sender))
-        return
-    end
+    if not who then return end
     if who == Me() then
-        -- our own guild message came back: the guild channel delivers
-        if channel == "GUILD" then self.guildEcho = GetTime() end
+        if channel == "GUILD" then self.guildEcho, self.relay = true, nil end
         return
     end
+    local relayFor
     if channel == "WHISPER" then
-        -- only from a guildmate whose guild channel doesn't deliver, to an
-        -- officer who passes their records on (see GuildBroken)
-        if not ns.IsOfficer() or not RosterEntry(who) then return end
-        -- and not so many that passing them on floods the guild channel
+        -- relays: officers read whispers from guildmates, not too many
+        if not RosterEntry(who) then return end
+        local kind = msg:match("^%w+\t(%u)")
+        if kind == "K" then
+            if Same(who, self.relay) then self.relayAcked = true end
+            return
+        end
+        if not ns.IsOfficer() then return end
         local w = self.whispers[who]
         if not w or GetTime() - w.since > 60 then
             w = { n = 0, since = GetTime() }
@@ -1335,112 +690,104 @@ function S:OnMessage(msg, channel, sender)
         end
         w.n = w.n + 1
         if w.n > self.MAX_WHISPERS then return end
+        if kind == "H" then
+            RawSend(PROTO .. FS .. "K", "WHISPER", ns.ChatName(who))
+            return
+        end
+        relayFor, channel = who, "GUILD"
     elseif channel ~= "GUILD" and channel ~= "OFFICER" then
         return -- party, raid, instance: not ours to read
     end
     if channel == "OFFICER" then
-        self.officers[who] = true
+        local e = RosterEntry(who)
+        if e then self.officers[who] = e.rankIndex end
         self:NoteOfficer(who)
     end
     local f = ns.Split(msg, FS)
-    if f[1] ~= PROTO then return end -- other protocol versions are ignored
+    if f[1] == LEGACY then return self:OnLegacy(f, channel, who, relayFor) end
+    if f[1] ~= PROTO then return end
     self.stats.received = self.stats.received + 1
     local kind = f[2]
-    local from = self:From(who)
-    from.messages = from.messages + 1
-    from.kinds[kind or "?"] = (from.kinds[kind or "?"] or 0) + 1
-    from.last = GetTime()
-    from.raw = sender
-    if kind == "R" or kind == "Z" then
-        local key, t, author, batch = f[3], tonumber(f[4]), f[5], f[6]
-        if not key or not t then return end
-        -- our own values never contain "|" (Clean); one arriving would be a
-        -- hand-made escape code (textures, colors, links) for our tooltips
-        if key:find("[|%c]") or (author or ""):find("[|%c]") then return end
-        local raw = table.concat(f, FS, 7)
-        if kind == "Z" then
-            raw = Unpack(raw)
-            if not raw then return end
+    if kind == "C" then return self:OnPiece(f, channel, sender, relayFor) end
+    if kind == "R" then
+        if f[3] and LaneOf(f[3]) and LANE_CHANNEL[LaneOf(f[3])] == channel then
+            self:Received(f[3], f[4], f[5], f[6], table.concat(f, FS, 7), who, channel, relayFor)
         end
-        local value = raw:gsub("|", "/")
-        -- the same as our own edits (Clean): no line breaks or other control
-        -- characters (fake extra lines in tooltips); audit entries keep their
-        -- field separator
-        local typ0 = key:match("^(%u+):")
-        if typ0 ~= "A" then value = value:gsub(US, "") end
-        value = value:gsub("[%z\1-\30\127]", " ")
-        -- batch ids are ours (base-36, short); anything else is dropped
-        if batch and not batch:match("^%w%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?$") then batch = "" end
-        local rec = { v = value, t = t, a = author, b = (batch ~= "" and batch) or nil }
-        key, rec = S.Canon(key, rec)
-        if channel == "WHISPER" then
-            -- passing on: their own guild records only
-            if not Same(rec.a, who) or LaneOf(key) == "officer" then return end
-            self:Apply(key, rec, { origin = "remote", channel = "GUILD", sender = who })
-            local cur = self:Get(key)
-            if cur and cur.t == rec.t and Same(cur.a, rec.a) then
-                self:Send(self:EncodeForWire(key, cur), "GUILD", nil, "high", self:EncodeRecord(key, cur))
-            end
-        else
-            self:Apply(key, rec, { origin = "remote", channel = channel, sender = who })
-        end
-        self:Notify("member") -- schedule a flush
-    elseif kind == "S" then
-        self:OnSummary(f[3], f[4], who, channel == "WHISPER" and "GUILD" or channel)
+        return
+    end
+    local lane = f[3]
+    if not (lane and LANE_STORE[lane]) or LANE_CHANNEL[lane] ~= channel or not self:InLane(lane) then return end
+    if kind == "B" then
+        if f[4] == "z" then self:OnBundle(lane, f[5], who, channel, relayFor) end
+    elseif kind == "F" then
+        local root = tonumber(f[4] or "", 36)
+        if not root then return end
+        if f[5] == "q" then self:OnCheck(lane, root, who, relayFor)
+        elseif f[5] == "a" and f[6] then self:OnCheckAnswer(lane, root, S.CanonName(f[6]), f[7], who) end
+    elseif kind == "E" then
+        self:OnEntries(lane, S.CanonName(f[4] or ""), f[5], f[6], f[7], who)
     elseif kind == "Q" then
-        if channel == "WHISPER" and not Same(f[4], Me()) then
+        local target = S.CanonName(f[4] or "")
+        if relayFor and not Same(target, Me()) then
             -- their request for someone else: ask on their behalf
-            self:Send(table.concat({ PROTO, "Q", f[3] or "", f[4] or "", f[5] or "", f[6] or "" }, FS), "GUILD", nil, "high")
+            self:Send(table.concat({ PROTO, "Q", lane, target, f[5] or "" }, FS), "GUILD", nil, "high")
             return
         end
-        self:OnAsk(f[3], f[4], f[5], f[6], who, channel == "WHISPER" and "GUILD" or channel)
-    elseif kind == "C" then
-        if reassembling then return end -- a chunk can't contain chunks
-        -- chunk: id, index, total, data
-        local id, i, n = f[3], tonumber(f[4]), tonumber(f[5])
-        if not (id and i and n) then return end
-        -- ours are a few parts at most; bound what one sender can pile up
-        if n < 1 or n > MAX_PARTS or i < 1 or i > n or i % 1 ~= 0 then return end
-        local pkey = who .. ":" .. id
-        local p = partials[pkey]
-        if not p then
-            local pending = 0
-            for k in pairs(partials) do if k:sub(1, #who + 1) == who .. ":" then pending = pending + 1 end end
-            if pending >= MAX_PENDING then return end
-            p = { parts = {}, count = 0, n = n, at = GetTime() }
-            partials[pkey] = p
-        end
-        if n ~= p.n then return end
-        if not p.parts[i] then
-            p.parts[i] = table.concat(f, FS, 6)
-            p.count = p.count + 1
-        end
-        if p.count == p.n then
-            partials[pkey] = nil
-            reassembling = true
-            local ok, err = pcall(self.OnMessage, self, table.concat(p.parts), channel, sender)
-            reassembling = false
-            if not ok then error(err, 0) end
-        end
-        -- forget stale partial messages
-        for k, v in pairs(partials) do
-            if GetTime() - v.at > 60 then partials[k] = nil end
-        end
+        self:OnAsk(lane, target, f[5], who)
     end
 end
 
+-- Copies before 2.12: we only read their version (so it shows, and so they
+-- can be reminded to update).
+function S:OnLegacy(f, channel, who, relayFor)
+    if relayFor or channel ~= "GUILD" or f[2] ~= "R" or not Same(f[3], "AV:" .. who) then return end
+    self:Intake(f[3], f[4], f[5], f[6], table.concat(f, FS, 7), { origin = "remote", channel = "GUILD", sender = who })
+end
+
+-- Pieces of a long message.
+function S:OnPiece(f, channel, sender, relayFor)
+    if self.reassembling then return end
+    local id, i, n = f[3], tonumber(f[4]), tonumber(f[5])
+    if not (id and i and n) or n < 1 or n > self.MAX_PARTS or i < 1 or i > n or i % 1 ~= 0 then return end
+    local who = ns.NormalizeName(sender)
+    local pkey = who .. ":" .. (relayFor and "W" or channel) .. ":" .. id
+    local p = self.partials[pkey]
+    if not p then
+        local pending = 0
+        for k in pairs(self.partials) do if k:sub(1, #who + 1) == who .. ":" then pending = pending + 1 end end
+        if pending >= 8 then return end
+        p = { parts = {}, count = 0, n = n, at = GetTime() }
+        self.partials[pkey] = p
+    end
+    if n ~= p.n then return end
+    if not p.parts[i] then
+        p.parts[i] = table.concat(f, FS, 6)
+        p.count = p.count + 1
+    end
+    for k, v in pairs(self.partials) do
+        if GetTime() - v.at > 60 then self.partials[k] = nil end
+    end
+    if p.count < p.n then return end
+    self.partials[pkey] = nil
+    self.reassembling = true
+    local ok, err = pcall(self.OnMessage, self, table.concat(p.parts), relayFor and "WHISPER" or channel, sender)
+    self.reassembling = false
+    if not ok then error(err, 0) end
+end
+
 ------------------------------------------------------------------------
--- Transport: byte budget, priorities, retries, chunking
+-- Transport: byte budget, priorities, retries, pieces
 ------------------------------------------------------------------------
 local queues = { high = {}, bulk = {} }
-local tokens, lastRefill = nil, nil
+local waiting = {} -- identical messages already queued (never queued twice)
+local tokens, lastRefill
 local chunkId = 0
-S.queues = queues
+S.queues, S.waiting = queues, waiting
 
 local RESULT_RETRY = { [3] = 1, [8] = 1, [11] = 5 } -- throttle, channel throttle, combat lockdown (seconds)
 
-local function RawSend(msg, channel, target)
-    local send = (C_ChatInfo and C_ChatInfo.SendAddonMessage) or SendAddonMessage
+RawSend = function(msg, channel, target)
+    local send = C_ChatInfo and C_ChatInfo.SendAddonMessage
     if not send then return "drop" end
     local ok, res = pcall(send, PREFIX, msg, channel, target)
     if not ok then return "drop" end
@@ -1449,28 +796,30 @@ local function RawSend(msg, channel, target)
     return "drop"
 end
 
--- dedupe: messages already waiting to go out (identical text), so repeated
--- repairs don't pile the same record into the queue again and again
-local waiting = {}
-S.waiting = waiting
-
-function S:Send(msg, channel, target, prio, dedupe)
+-- keys: records in this message (no longer "waiting to go out" once sent)
+function S:Send(msg, channel, target, prio, dedupe, keys)
     local q = queues[prio or "high"]
     if dedupe then
         if waiting[dedupe] then return end
         waiting[dedupe] = true
     end
     if #msg > self.MAX_MSG then
+        local n = math.ceil(#msg / self.CHUNK)
+        if n > self.MAX_PARTS then
+            if dedupe then waiting[dedupe] = nil end
+            for _, k in ipairs(keys or {}) do self.outgoing[k] = nil end
+            self.stats.dropped = self.stats.dropped + 1
+            return
+        end
         chunkId = (chunkId + 1) % 46656
         local id = Base36(chunkId)
-        local n = math.ceil(#msg / self.CHUNK)
         for i = 1, n do
             local part = msg:sub((i - 1) * self.CHUNK + 1, i * self.CHUNK)
-            -- the last part releases the dedupe mark once it's gone
-            q[#q + 1] = { table.concat({ PROTO, "C", id, tostring(i), tostring(n), part }, FS), channel, target, i == n and dedupe or nil }
+            q[#q + 1] = { table.concat({ PROTO, "C", id, tostring(i), tostring(n), part }, FS), channel, target,
+                i == n and dedupe or nil, i == n and keys or nil }
         end
     else
-        q[#q + 1] = { msg, channel, target, dedupe }
+        q[#q + 1] = { msg, channel, target, dedupe, keys }
     end
     self:Pump()
 end
@@ -1494,28 +843,27 @@ function S:Pump()
             local cost = #item[1] + #PREFIX + 10
             if tokens < cost then break end
             local channel, target = item[2], item[3]
-            if channel == "GUILD" and S:GuildBroken() then
-                local relay = S:PickRelay()
-                if relay then channel, target = "WHISPER", ns.ChatName(relay) end
+            -- our guild messages go nowhere: whisper them to the relay
+            -- instead; checks still also go on the guild channel, so we
+            -- notice if it starts working again
+            local probe = false
+            if channel == "GUILD" and S.relay and S:GuildBroken() then
+                probe = item[1]:find("^%w+\tF\t") ~= nil
+                channel, target = "WHISPER", ns.ChatName(S.relay)
             end
             local result, wait = RawSend(item[1], channel, target)
-            -- sync checks also still go on the guild channel: if they start
-            -- coming back, the guild channel works again
-            if result == "ok" and channel == "WHISPER" and item[2] == "GUILD" and item[1]:find("^[^\t]+\tS\t") then
-                if RawSend(item[1], "GUILD") == "ok" then S:NoteGuildSent() end
-            end
             if result == "retry" then
-                S.stats.retries = S.stats.retries + 1
                 C_Timer.After(wait, step)
                 return
             end
+            if probe then RawSend(item[1], "GUILD") end
             table.remove(q, 1)
             if item[4] then waiting[item[4]] = nil end
+            if item[5] then for _, k in ipairs(item[5]) do S.outgoing[k] = nil end end
             tokens = tokens - cost
             if result == "ok" then
                 S.stats.sent = S.stats.sent + 1
                 if channel == "GUILD" then S:NoteGuildSent() end
-                if channel == "WHISPER" then S.stats.relayed = (S.stats.relayed or 0) + 1 end
             else
                 S.stats.dropped = S.stats.dropped + 1
             end
@@ -1525,67 +873,67 @@ function S:Pump()
     step()
 end
 
-function S:QueueSize()
-    return #queues.high + #queues.bulk
-end
+function S:QueueSize() return #queues.high + #queues.bulk end
 
 ------------------------------------------------------------------------
--- Migration from the old (protocol 1) data
+-- Status (/ngm sync, Options, the dot in the window's status bar)
 ------------------------------------------------------------------------
-function S:Migrate()
-    local g = ns.DB:Guild()
-    if not g or g.syncVersion == 2 then return end
-    local me = Me()
-    local store = self:Store("guild")
-    local officerStore = self:Store("officer")
+local LANE_LABEL = { guild = "Guild data", officer = "Officer data", recruit = "Recruiting data" }
 
-    for full, m in pairs(g.members or {}) do
-        if type(m) == "table" then
-            if m.main then store["M:" .. full] = { v = m.main, t = 1, a = me } end
-            if m.spec then store["MS:" .. full] = { v = Clean(m.spec), t = 1, a = me } end
-            if m.profs and #m.profs > 0 then store["MP:" .. full] = { v = Codec.Profs(m.profs), t = 1, a = me } end
-            if m.auto then store["P:" .. full] = { v = Codec.Report(m.auto), t = m.auto.ts or 1, a = full } end
-            for id, e in pairs(m.log or {}) do
-                local key = "L:" .. full .. ":" .. id
-                if e.del then
-                    officerStore[key] = { v = "", t = e.upd or e.ts or 1, a = me }
-                else
-                    officerStore[key] = { v = Codec.Log(e.ts or 1, e.author or "?", e.text or ""), t = e.upd or e.ts or 1, a = me }
-                end
-            end
-        end
-    end
-    g.tags, g.nextTagId, g.logUpd = nil, nil, nil
-    g.syncVersion = 2
-    self.migrated = true
+local function Ago(at)
+    local s = math.floor(GetTime() - (at or GetTime()))
+    if s < 60 then return "just now" end
+    if s < 3600 then return ("%d min ago"):format(s / 60) end
+    return ("%d h ago"):format(s / 3600)
 end
 
--- Deletes stored records of types this version no longer has (reviews,
--- ratings, map dot colors, polls, stats, goals, kudos, About me, status,
--- pronouns), and retired guild settings (tab titles and ranks, pronouns), so
--- they don't linger in the saved data or upset digests.
-function S:PurgeUnknown()
-    local removed = 0
-    for _, scope in ipairs({ "guild", "officer" }) do
-        local store = self:Store(scope)
-        if store then
-            local dead = {}
-            for key, rec in pairs(store) do
-                if not S.ParseKey(key) or key:match("^GS:tab_") or key == "GS:pronouns" or key == "GS:reviews"
-                    or key == "GS:perm_tags" or key == "GS:perm_tagothers" then
-                    dead[#dead + 1] = key
-                elseif key:sub(1, 2) == "A:" then
-                    -- audit entries about removed types
-                    local typ = ns.Split(rec.v or "", US)[2]
-                    if typ and typ ~= "" and not S.TYPES[typ] and not S.ROSTER_EVENTS[typ] then dead[#dead + 1] = key end
-                end
-            end
-            for _, key in ipairs(dead) do store[key] = nil end
-            removed = removed + #dead
+-- "ok", "busy", "alone" or "problem", and a short line to show.
+function S:Health()
+    if self:GuildBroken() then
+        if self.relay then return "busy", "Your guild messages don't arrive; going through " .. self.relay end
+        return "problem", "Your guild messages don't arrive, and no officer is online to go through"
+    end
+    local st = self:LaneState("guild")
+    if st.state == "synced" then return "ok", "In sync with " .. (st.with or "your guild") end
+    if st.state == "catching" then return "busy", ("Catching up (%d to fetch)"):format(st.behind or 0) end
+    if st.state == "checking" or st.state == "comparing" then return "busy", "Checking with your guild..." end
+    if st.state == "alone" then return "alone", "No one online to compare with" end
+    return "alone", "Not checked yet"
+end
+
+function S:StatusLines()
+    local out = {}
+    for _, lane in ipairs(self.LANES) do
+        if self:InLane(lane) then
+            local st = self:LaneState(lane)
+            local text = ({
+                synced = "in sync with " .. tostring(st.with),
+                catching = ("catching up from %s (%d to fetch)"):format(tostring(st.with), st.behind or 0),
+                checking = "checking...", comparing = "comparing with " .. tostring(st.with) .. "...",
+                alone = "no one online to compare with",
+            })[st.state] or "not checked yet"
+            out[#out + 1] = ("%s: %s%s"):format(LANE_LABEL[lane], text, st.at and (" (" .. Ago(st.at) .. ")") or "")
         end
     end
-    if removed > 0 then self.auditCache = nil end
-    return removed
+    if self:GuildBroken() then
+        out[#out + 1] = self.relay
+            and ("|cffff5555Your guild messages don't arrive|r (a game issue); sending through %s%s."):format(self.relay, self.relayAcked and "" or ", waiting for them to answer")
+            or "|cffff5555Your guild messages don't arrive|r (a game issue), and no officer running the addon is online to send them through."
+    end
+    local ranks = {}
+    for _, r in ipairs(ns.DB:GuildRanks()) do
+        local e = { rankIndex = r.index, rank = r.name }
+        if r.index == 0 or self:RankIsOfficer(e) then ranks[#ranks + 1] = r.name end
+    end
+    out[#out + 1] = "Officer ranks (from the game's rank settings): " .. (#ranks > 0 and table.concat(ranks, ", ") or "not known yet")
+    local st = self.stats
+    out[#out + 1] = ("This session: %d sent, %d received, %d changes applied%s."):format(st.sent, st.received, st.applied,
+        st.refused > 0 and (", " .. st.refused .. " refused") or "")
+    local lr = self.lastRefused
+    if lr then
+        out[#out + 1] = ("Last refused: %s from %s (written as %s): %s."):format(tostring(lr.key), tostring(lr.sender), tostring(lr.author), lr.why)
+    end
+    return out
 end
 
 ------------------------------------------------------------------------
@@ -1594,37 +942,30 @@ end
 function S:Init()
     if C_ChatInfo and C_ChatInfo.RegisterAddonMessagePrefix then
         C_ChatInfo.RegisterAddonMessagePrefix(PREFIX)
-    elseif RegisterAddonMessagePrefix then
-        RegisterAddonMessagePrefix(PREFIX)
     end
     ns:RegisterEvent("CHAT_MSG_ADDON", function(_, prefix, msg, channel, sender)
         if prefix ~= PREFIX then return end
-        -- counted before anything else, so a message we can't read still shows
-        S.stats.heard = (S.stats.heard or 0) + 1
-        if issecretvalue and (issecretvalue(sender) or issecretvalue(msg)) then
-            S.stats.unreadable = (S.stats.unreadable or 0) + 1
-            S.lastUnreadable = "protected sender or message"
-            return
-        end
+        if issecretvalue and (issecretvalue(sender) or issecretvalue(msg)) then return end
         local ok, err = pcall(S.OnMessage, S, msg, channel, sender)
-        if not ok then
-            S.stats.unreadable = (S.stats.unreadable or 0) + 1
-            S.lastUnreadable = ("from \"%s\" on %s: %s"):format(tostring(sender), tostring(channel), tostring(err))
-        end
+        if not ok then S.lastError = tostring(err) end
     end)
 
-    -- Your version, announced once per session, and only once the roster has
-    -- told us your full name: before that the game gives only your first name
-    -- ("Deja"), and a record under that name is refused by guildmates (it
-    -- doesn't match the sender, "Deja Rollupz"). It's re-sent even when
-    -- unchanged, so a broadcast lost at a quick /reload heals at the next login.
+    -- Once the roster has told us your full name (before that the game may
+    -- give only your first name): your version (sent only when it changed;
+    -- the check finds anyone who missed it), then compare with whoever's
+    -- online. Copies before 2.12 online get your version in their format,
+    -- so they're told to update.
     local announced = false
     local function announceVersion()
         if announced or not S.readyFor or not (ns.Roster and ns.Roster.selfRow) then return end
         announced = true
-        local key = "AV:" .. Me()
-        S:Set(key, ns.version)
-        S:QueueOutgoing(key)
+        local me = Me()
+        S:Set("AV:" .. me, ns.version, { force = true })
+        local rec = S:Get("AV:" .. me)
+        if rec and S:OlderCopyOnline() then
+            S:Send(table.concat({ LEGACY, "R", "AV:" .. me, tostring(rec.t), me, "", rec.v }, FS), "GUILD", nil, "bulk")
+        end
+        C_Timer.After(3 + math.random() * 4, function() S:CheckAll(true) end)
     end
     S.AnnounceVersion = announceVersion
 
@@ -1633,22 +974,24 @@ function S:Init()
         local key = ns.DB:GuildKey()
         if not key or S.readyFor == key or not ns.DB:Guild() then return end
         S.readyFor = key
-        S:Migrate()
         S:CanonicalizeSaved()
         S:PurgeUnknown()
         S:PruneAudit()
         S:PruneExpired()
         S:RebuildAll()
-        -- tell the guild which version of the addon we run (once we know our name)
+        S:PublishRanks()
         announceVersion()
-        C_Timer.After(5 + math.random() * 10, function() S:Exchange(true) end)
     end
     ns:RegisterEvent("GUILD_ROSTER_UPDATE", ready)
+    -- rank settings changed (Guild Control): read them again
+    ns:RegisterEvent("GUILD_RANKS_UPDATE", function()
+        S.flagCache = {}
+        S:PublishRanks()
+    end)
     ns:RegisterEvent("PLAYER_GUILD_UPDATE", ready)
     ready()
 
-    -- the roster spells your name differently than expected: re-announce
-    -- your version (and spec/professions) under that spelling
+    -- the roster spells your name differently than expected: announce again
     ns:On("SELF_NAME_CHANGED", function()
         if not S.readyFor then return end
         announced = false
@@ -1657,14 +1000,7 @@ function S:Init()
     end)
     ns:On("ROSTER_UPDATED", announceVersion)
 
-    -- flush queued changes when the player logs out or reloads (best effort;
-    -- anything missed is repaired by the next digest exchange)
+    -- send queued changes when logging out or reloading (best effort; the
+    -- next check catches anything missed)
     ns:RegisterEvent("PLAYER_LOGOUT", function() S:FlushOutgoing() end)
-
-    local function tick()
-        S:PruneExpired()
-        S:Exchange(false)
-        C_Timer.After(S.DIGEST_INTERVAL, tick)
-    end
-    C_Timer.After(S.DIGEST_INTERVAL, tick)
 end

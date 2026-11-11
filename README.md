@@ -97,7 +97,7 @@ The first time you log in with the addon (and once after updating to 2.5.0), a s
 **On the game's Guild & Communities roster** — Nootropic Guild Manager works on top of Blizzard's own guild roster rather than replacing it:
 
 - **After each name**: "alt" for alts.
-- **Hover a member**: Blizzard's tooltip gets this addon's details underneath: main or alts, spec, roles, professions with skill levels, Discord and when they usually play.
+- **Hover a member**: Blizzard's tooltip gets this addon's details underneath, the same as everywhere in the addon: main (or alt of whom), spec, role, their two main professions with skill levels, Discord, their addon version (or whether they've been reminded to install it), and your private note. Everything else is on their profile.
 - **Right-click a member**: **Profile** and **Main / Alt** (mark as alt, change main, make main, unlink, add an alt; if your rank may) are added to Blizzard's menu.
 - **Alt+click a member** (or **Profile** in the menu) opens their profile docked beside the window, next to Blizzard's own member details when those are open.
 - Only shown on your guild, not other communities. **Options > Show alts and profiles on the Guild roster** turns all of it off. Nothing Blizzard does is changed or replaced, so inviting, promoting and removing keep working normally.
@@ -121,7 +121,7 @@ The first time you log in with the addon (and once after updating to 2.5.0), a s
 - **Header**: name, "Level 22 Feral Druid - Veteran" (with the spec icon), online status and zone. Under it, one line for **main / alts** (click a name to open that profile).
 - **Contact**: their **Discord** name (click it to copy) and a contact note (up to 80 characters: BattleTag, timezone, "DM me before raids"). Set by the member, or by anyone whose rank may edit other guildmates' profiles (handy for guildmates without the addon). Alts without their own show their main's. Searchable with `discord:`.
 - **Usually online**: a one-line summary of when they usually play (e.g. "Mon-Fri 8 pm-11 pm - Sat-Sun 2 pm-12 am"). Times follow **your game clock**: if its **Use Local Time** box is ticked you see your local time, otherwise server time, and **24 Hour Mode** shows "20:00-23:00". **Show week** unfolds a week grid; hover a block to see it on the other clock too. Hours are **learned automatically**: while you play, your own copy of the addon notes the server hour every 10 minutes and keeps the last 4 weeks (an hour counts once you've played it in two different weeks), and only the result is shared. Don't want that? Untick **Learn when I usually play** in Options; nothing is noted or shared then. Everything is kept in server time, the same for the whole guild, so no time zone settings are needed.
-- **Tabs**: **Profile** (professions: primary first, then secondary; the ones their addon reports stay up to date by themselves; **Recipes (N)** lists every recipe they've shared), **Raids** (raid readiness, see below), **Notes** (your **private notes** about them; only you ever see these), and **Officer** (officers only: the **officer log** and **change history**, headed by when they **joined** (and who invited them) and since when they've held their **current rank**; these two are kept even after the audit's history expires). Officers also see **Joined** and **Rank since** in the roster tooltip.
+- **Tabs**: **Profile** (professions: primary first, then secondary; the ones their addon reports stay up to date by themselves; **Recipes (N)** lists every recipe they've shared), **Raids** (raid readiness, see below), **Notes** (your **private notes** about them; only you ever see these), and **Officer** (officers only: the **officer log** and **change history**, headed by when they **joined** (and who invited them) and since when they've held their **current rank**; these two are kept even after the audit's history expires). Officers also see **Joined** and **Rank since** on the profile.
 - **Edit** (your own characters, or others if your rank may): **Contact**, **specialization**, **roles**, **professions** (add, remove, set levels) and **main & alt links**. **Done** goes back.
 
 **Who Can Craft?** (everyone) — every recipe your guildmates know, in one search. Type part of a recipe or item name ("flask", "bracers") and see who can make it, guildmates online now first (in green); hover a recipe for the full tooltip and every crafter, click it to open a crafter's profile. Open it from the Find tab's **Who Can Craft?** button or with `/ngm craft <name>`. Recipes are **shared automatically** when someone with the addon opens one of their own profession windows: the addon reads the recipes they've learned the same way the game's window lists them, and shares just the recipe numbers (every copy of the addon looks up the names). Recipes hidden by the window's own search or filters are kept from earlier visits, and a profession you drop is cleared. The game doesn't let addons read anyone else's recipes, so guildmates without the addon don't appear.
@@ -214,9 +214,9 @@ Messages and keywords are saved per guild.
 | Edit others' spec, roles, professions and contact info | | yes (by default) |
 | Officer Log, Change History, Audit tab | | yes |
 
-"Officers" are ranks that can read officer notes (the game's own permission). If someone is promoted or demoted, the addon updates on the spot.
+"Officers" are the ranks the game marks **Officer**, and recruiters the ranks with **Invite Member** (Guild Control, the game's own rank settings). Change those in the game and the addon follows, on the spot.
 
-**Permissions** (Guild Master only, in **Options > Officers > Permissions**): every row marked "by default" can be given to other ranks or taken away: **edit their own profile** (everyone by default; spec, roles, professions and contact info, not what their addon reports by itself), **link mains and alts**, **recruit** (officers by default), and **edit other guildmates' profiles** (spec, roles, professions, contact; this includes their own). Pick ranks from each row's menu, or the default to go back. Untick everyone and only the Guild Master can. The Guild Master always can. Officer Log and Audit always stay with officers: the game only delivers that data to officer ranks. Permission changes show in the Audit tab.
+**Permissions** (Guild Master only, in **Options > Officers > Permissions**): every row marked "by default" can be given to other ranks or taken away: **edit their own profile** (everyone by default; spec, roles, professions and contact info, not what their addon reports by itself), **link mains and alts**, and **edit other guildmates' profiles** (spec, roles, professions, contact; this includes their own). Pick ranks from each row's menu, or the default to go back. Untick everyone and only the Guild Master can. The Guild Master always can. Officer Log and Audit always stay with officers: the game only delivers that data to officer ranks. Permission changes show in the Audit tab.
 
 ## Options
 
@@ -234,7 +234,7 @@ Options has four pages in the game's AddOns list:
 - **Officers**: **Permissions** (Guild Master, whole guild) and **Audit History** (keep 30, 60 or 90 days on your copy). Members see this page but can't change it.
 - **About**: what the addon does, credits, and links to copy (the game can't open web pages): the maintainer's site, the **Nootropic Discord** and the addon's GitHub page.
 
-The window's tabs run down its right side like the character panel's; hover one for its name. Tabs you can't use (Recruitment without the recruit permission, Audit for non-officers) are hidden.
+The window's tabs run down its right side like the character panel's; hover one for its name. Tabs you can't use (Recruitment without your rank's Invite Member setting, Audit for non-officers) are hidden.
 
 ## Searching
 
@@ -261,7 +261,7 @@ Type any words. A member is shown when every word matches their name, class, spe
 
 The game does not let addons read another player's professions or talents. Nootropic Guild Manager handles this two ways:
 
-- **Members running Nootropic Guild Manager** share their own professions and spec automatically over the hidden guild addon channel when they log in, when they change talents or skills, and when someone opens the roster, and every few minutes (or right away with **Sync Now** in Options or `/ngm sync`). A green check marks synced data.
+- **Members running Nootropic Guild Manager** share their own professions and spec automatically over the hidden guild addon channel when they change talents or skills. Anyone who missed it gets it the next time they log in. A green check marks synced data.
 - **Everyone else** can be filled in by hand from the detail panel. Synced data takes priority for professions; a manual spec always wins over a synced one.
 
 Spec is detected from the modern specialization API when the client has it, otherwise from whichever talent tree has the most points (shown as a split like `5/31/15`).
@@ -276,17 +276,18 @@ Spec is detected from the modern specialization API when the client has it, othe
 
 Every shared value (a member's main, spec, professions, contact info, an officer log entry, a permission) is stored with the time it was changed and who changed it. The newest change always wins, so everyone ends up with the same data no matter the order messages arrive in.
 
-- **Batches:** your changes show up for you instantly but are sent 15 seconds after the first one, all together. Everything in one batch is grouped in the audit.
-- **Repair:** every few minutes, and whenever you open the window, each copy of the addon sends a short check: for each author, when their newest record was written and a checksum. Whoever is missing something asks for exactly that author's records since then, from the author or an officer, and gets them on the same channel. Missed messages, officers who were offline, and new installs all catch up this way, with no "Sync" button needed.
-- **Whispers:** only when the game doesn't deliver someone's guild addon messages (their copy notices its own messages never come back): their copy whispers them to an online officer, who passes on that member's own data. Nothing else is ever whispered.
+- **Changes:** yours show up for you instantly and are sent once, 15 seconds after the first one, together and compressed. Everything in one batch is grouped in the audit.
+- **Logging in:** your copy sends one tiny fingerprint of its data. One guildmate answers (every copy agrees who). If the fingerprints match, that's it: two short messages. If not, the two compare in steps (32 groups, then the people in the groups that differ) and your copy asks for exactly what it's missing: from each person who wrote it, if they're online, otherwise from an officer, with the work spread over the officers online.
+- **Nothing else:** no background traffic. While nothing changes and nobody logs in, the addon sends nothing. `/ngm sync` (or **Sync Now** in Options, or the dot by the version number) checks again on demand.
+- **Whispers:** only when the game doesn't deliver someone's guild addon messages (it happens on WoW: Forever; their copy notices because its own messages never come back to it). Their copy then whispers one online officer, who passes on that member's own data, and only theirs. Nothing else is ever whispered, and the addon only reads guild and officer messages (and, on officers' copies, those whispers from guildmates).
 - **Officer-only data** (officer log, audit) only ever travels on the game's officer addon channel, which the game delivers only to officer ranks.
-- **Pacing:** messages are rate-limited to stay well under the game's limits; if the game reports throttling, messages are retried rather than lost.
+- **Pacing:** messages stay well under the game's limits; if the game reports throttling, they're retried rather than lost.
 
-In testing, three simulated clients (two officers and a member) with 40-50% of messages randomly dropped, one officer offline while others made changes, and conflicting edits all ended up identical.
+In a simulated 300-member guild with 40 online: logging in with nothing new costs 2 messages (about 70 bytes); a member back after a few days, with 60 guildmates' changes to fetch, is caught up in about 30 seconds; a brand-new install has everything in about 2 minutes; and an hour with no changes sends nothing.
 
-`/ngm sync` runs a sync immediately and shows counts of messages sent, received and applied.
+The dot next to the version number in the window shows sync at a glance: green in sync, yellow working on it, grey nobody online to compare with, red a problem. Hover it for details.
 
-- **Who can change what is checked by everyone.** Every copy of the addon checks each incoming record against the guild roster: the sender must be allowed to write it (their own profile; for anything else, a rank the Guild Master's permissions allow, or an officer). Records someone else wrote are only accepted when an officer passes them on (only officer ranks can send on the officer channel, so this can't be faked), and permission settings only when the current Guild Master made them. So a guildmate can't forge someone's profile, links or the Guild Master's permissions by sending hand-made addon messages.
+- **Who can change what is checked by everyone.** Every copy of the addon checks each incoming record against the guild roster: the sender must be allowed to write it (their own profile; for anything else, a rank the Guild Master's permissions allow, or an officer). Records someone else wrote are only accepted when an officer passes them on, and permission settings only when the current Guild Master made them. Which ranks are officer ranks comes from the game's own rank settings (the Guild Master's addon also writes them down for copies the game doesn't tell), always checked against each person's current rank, so a demoted officer stops being trusted at once. So a guildmate can't forge someone's profile, links or the Guild Master's permissions by sending hand-made addon messages.
 
 ## Your data
 
@@ -296,7 +297,7 @@ What is shared:
 - With everyone running the addon (each part can be switched off in **Options > Sharing**, except the basics like your version): each player's own professions and spec, mains/alts, spec/profession overrides, contact info (Discord name and note), roles, when each person usually plays (only the learned summary), the recipes they know, their raid readiness, the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, and the Guild Master's permissions.
 - With officers only: Officer Log entries (140 characters max; deleting one deletes it for every officer) and the audit trail.
 
-Each of 1.x, 2.0 and 2.1 uses its own sync protocol, so guildmates on different ones don't exchange data at all; everyone should run the latest release. When you first load 2.0, data from removed features (reviews, ratings, map dots, polls, stats, goals, kudos, About me, status, pronouns, tab settings) is deleted from your saved data. Loading 2.1 does the same for tags, tag assignments, tag icons and the tag permissions.
+Each of 1.x, 2.0, 2.1 and 2.12 uses its own sync protocol, so guildmates on different ones don't exchange data (2.12 still shows older copies' version, so they're told to update); everyone should run the latest release. When you first load 2.0, data from removed features (reviews, ratings, map dots, polls, stats, goals, kudos, About me, status, pronouns, tab settings) is deleted from your saved data. Loading 2.1 does the same for tags, tag assignments, tag icons and the tag permissions.
 
 A note on trust: every copy of the addon checks each change it receives against the guild roster: the sender must be allowed to make it, only officers can pass on other people's changes, and permission settings only count from the Guild Master. Officer data only travels on the officer channel. Every change is also recorded in the Audit tab with its author.
 
@@ -324,7 +325,7 @@ A note on trust: every copy of the addon checks each change it receives against 
 
 ```
 NootropicGuildManager.toc
-Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs, professions, roles, raid checks, links)  Database.lua (saved data, permissions)  Sync.lua (records, repair, transport)
+Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs, professions, roles, raid checks, links)  Database.lua (saved data, permissions)  Records.lua (shared records and who may write them)  Sync.lua (carrying records between guildmates)
 Services/  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)  HallOfFame.lua (shared character statistics)  InstallReminder.lua (one-click "install the addon" whispers)  HofCheck.lua (Hall of Fame numbers vs the game, on inspect)
 Media/     Logo.tga (the addon's icon, from docs/logo.svg)
 UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  OverviewView.lua (Overview tab)  HallOfFameView.lua (Hall of Fame tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua

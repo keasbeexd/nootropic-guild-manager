@@ -975,66 +975,50 @@ end
 ------------------------------------------------------------------------
 -- Row interactions
 ------------------------------------------------------------------------
--- hint: replaces the bottom "Click for details" line (used by the map dots).
-function RV:ShowRowTooltip(row, e, hint)
-    if not e then return end
+-- The member lines every tooltip shows (here, Play Together, and the
+-- game's own guild roster): main or alt, spec, role, the two main
+-- professions, Discord, their addon version (or whether they've been
+-- reminded to install it), and your private note. Everything else is on the
+-- profile and in the list's columns.
+function RV:AddMemberLines(e)
     local GOLD = { 1, 0.82, 0 }
     local function Pair(left, right)
         GameTooltip:AddDoubleLine(left, right, GOLD[1], GOLD[2], GOLD[3], 1, 1, 1)
     end
-    GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
-    local PF = ns.Profile
-    GameTooltip:AddLine(e.short, ns.ClassColor(e.classFile))
-    GameTooltip:AddLine(("Level %d %s"):format(e.level, e.className), 1, 1, 1)
-    local title = ns.HallOfFame:TitleText(e.full)
-    if title then GameTooltip:AddLine(title, 1, 1, 1, true) end
-    local hours = PF:Hours(e.full) -- local or server time, as your game clock is set
-    local summary = hours and PF.Summary(hours)
-    if summary then
-        GameTooltip:AddLine(("Usually online: %s (%s)"):format(summary, PF.ClockLabel()), 0.7, 0.7, 0.7, true)
-    end
-    if e.spec then Pair("Specialization", e.spec .. (e.dist and (" (" .. e.dist .. ")") or "")) end
+    Pair(e.isAlt and "Alt of" or "Main", e.isAlt and (e.mainShort or "?") or (#(e.alts or {}) > 0
+        and ("|cff9d9d9d" .. #e.alts .. (#e.alts == 1 and " alt" or " alts") .. "|r") or ""))
+    if e.spec then Pair("Spec", e.spec) end
     if e.roleList and #e.roleList > 0 then Pair("Role", table.concat(e.roleList, ", ")) end
-    if e.isAlt then
-        Pair("Alt of", e.mainShort)
-    elseif #e.alts > 0 then
-        local names = {}
-        for i, full in ipairs(e.alts) do names[i] = ns.ShortName(full) end
-        Pair("Alts", table.concat(names, ", "))
-    end
-    Pair("Rank", e.rank)
-    local j, r = ns.RosterLog:Joined(e.full), ns.RosterLog:RankSince(e.full)
-    if ns.IsOfficer() then
-        if j then Pair("Joined", date("%b %d, %Y", j.t)) end
-        if r and r.rank == e.rank then Pair("Rank since", date("%b %d, %Y", r.t)) end
-    end
-    if e.online then
-        Pair("Zone", e.zone)
-    else
-        Pair("Last online", ns.FormatLastSeen(e.lastOnline) .. " ago")
-    end
-    for _, p in ipairs(e.profs) do
-        local rank = (p.rank and p.rank > 0) and (p.max and p.max > 0 and (p.rank .. " / " .. p.max) or tostring(p.rank)) or "-"
-        GameTooltip:AddDoubleLine("|T" .. D:ProfIcon(p) .. ":14:14:0:0:64:64:5:59:5:59|t " .. p.name, rank, 1, 1, 1, 0.8, 0.8, 0.8)
+    local shown = 0
+    for _, p in ipairs(e.profs or {}) do
+        if shown < 2 and D:IsPrimary(p.name) then
+            shown = shown + 1
+            local rank = (p.rank and p.rank > 0) and (p.max and p.max > 0 and (p.rank .. " / " .. p.max) or tostring(p.rank)) or ""
+            GameTooltip:AddDoubleLine("|T" .. D:ProfIcon(p) .. ":14:14:0:0:64:64:5:59:5:59|t " .. p.name, rank, 1, 1, 1, 0.8, 0.8, 0.8)
+        end
     end
     if e.discord then Pair("Discord", e.discord) end
+    -- the addon: their version, or whether they've been reminded to install it
+    -- (dark gray: less noticeable than the rest)
     if e.hasAddon then
-        Pair("Addon version", e.version or "|cff9d9d9dnot received yet|r")
+        GameTooltip:AddDoubleLine("Addon version", e.version or "?", 0.5, 0.5, 0.5, 0.5, 0.5, 0.5)
     else
-        Pair("Addon version", "|cff9d9d9d(missing)|r")
-        local reminded = ns.InstallReminder:StatusLine(e)
-        if reminded then GameTooltip:AddLine(reminded, 0.6, 0.6, 0.6) end
+        GameTooltip:AddLine(ns.InstallReminder:StatusLine(e) or "Not reminded to install the addon yet", 0.5, 0.5, 0.5)
     end
-    local check = ns.HofCheck:TooltipLine(e.full) -- officers only
-    if check then GameTooltip:AddLine(check, 1, 1, 1, true) end
-    if e.note then
-        GameTooltip:AddLine(" ")
-        GameTooltip:AddLine(e.note, 0.85, 0.85, 0.85, true)
-    end
-    if e.publicNote ~= "" then
-        GameTooltip:AddLine("Guild note: " .. e.publicNote, 0.6, 0.6, 0.6, true)
-    end
+    if e.note and e.note ~= "" then GameTooltip:AddLine(e.note, 0.85, 0.85, 0.85, true) end
+end
+
+-- hint: replaces the bottom "Click for details" line.
+function RV:ShowRowTooltip(row, e, hint)
+    if not e then return end
+    GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
+    -- the same header as the game's own guild roster tooltip
+    GameTooltip:AddLine(e.full, ns.ClassColor(e.classFile))
+    if e.rank and e.rank ~= "" then GameTooltip:AddLine(e.rank, 1, 0.82, 0) end
+    GameTooltip:AddLine(("Level %d %s%s"):format(e.level or 0, e.race and e.race ~= "" and (e.race .. " ") or "", e.className or ""), 1, 1, 1)
+    if e.zone and e.zone ~= "" then GameTooltip:AddLine(e.zone, 1, 1, 1) end
     GameTooltip:AddLine(" ")
+    self:AddMemberLines(e)
     GameTooltip:AddLine(hint or "Click for details, right-click for quick actions.", 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end

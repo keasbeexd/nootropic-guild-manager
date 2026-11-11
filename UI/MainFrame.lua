@@ -54,6 +54,7 @@ function UI:Create()
     self.version = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     self.version:SetPoint("BOTTOMRIGHT", -14, 8)
     self.version:SetText("v" .. ns.version)
+    self:BuildSyncDot(f)
 
     ns.RosterView.LIST_WIDTH = math.floor(f:GetWidth() - ns.RosterView.LIST_INSET)
     ns.RosterView:Build(f)
@@ -71,7 +72,6 @@ function UI:Create()
         ns.CheckOfficer()
         UI:LayoutTabs()
         ns.Roster:Request()
-        ns.Sync:Exchange(false)
         UI:RefreshStatus()
         ns.RosterView:Refresh()
     end, "opening the window"))
@@ -455,6 +455,37 @@ function UI:BuildAddonCount(f)
     end)
     b:SetScript("OnClick", function() UI:ShowAddonUsers() end)
     self.addonCount = b
+end
+
+-- A dot by the version: green in sync, yellow working on it, grey nobody to
+-- compare with, red a problem. Hover for details; click to check now.
+local DOT_COLOR = { ok = { 0.25, 1, 0.25 }, busy = { 1, 0.82, 0 }, alone = { 0.55, 0.55, 0.55 }, problem = { 1, 0.3, 0.3 } }
+
+function UI:BuildSyncDot(f)
+    local b = CreateFrame("Button", nil, f)
+    b:SetSize(12, 12)
+    b:SetPoint("RIGHT", self.version, "LEFT", -6, 0)
+    b.Dot = b:CreateTexture(nil, "OVERLAY")
+    b.Dot:SetTexture("Interface\\COMMON\\Indicator-Gray")
+    b.Dot:SetAllPoints()
+    b:SetScript("OnEnter", function(btn)
+        GameTooltip:SetOwner(btn, "ANCHOR_TOPLEFT")
+        GameTooltip:AddLine("Sync")
+        for _, line in ipairs(ns.Sync:StatusLines()) do GameTooltip:AddLine(line, 1, 1, 1, true) end
+        GameTooltip:AddLine("Click to check now.", 0.6, 0.6, 0.6)
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:SetScript("OnClick", function()
+        if ns.Sync:CheckAll() then ns.Sync.reportLane = "guild" end
+    end)
+    self.syncDot = b
+    local function refresh()
+        local c = DOT_COLOR[(ns.Sync:Health())] or DOT_COLOR.alone
+        b.Dot:SetVertexColor(c[1], c[2], c[3])
+    end
+    ns:On("SYNC_STATUS", refresh)
+    refresh()
 end
 
 -- Roster tab, Version column on, only members running the addon.

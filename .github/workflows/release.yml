@@ -7,6 +7,9 @@
 #      releases (x.y.0) also in #announcements (DISCORD_ANNOUNCE_WEBHOOK,
 #      pinging the role in the DISCORD_ANNOUNCE_ROLE_ID variable). A Discord
 #      hiccup never fails the release, which is already uploaded by then.
+# Test releases: a tag with a dash (v2.12.0-beta1) goes to GitHub only, as a
+# pre-release, with no Discord post: the packager is told to leave out
+# CurseForge and Wago (-p 0 -a 0, "unset the TOC value").
 # CurseForge and Wago are skipped until their project IDs are in the TOC
 # (X-Curse-Project-ID, X-Wago-ID) and their tokens are repository secrets
 # (CURSEFORGE, WAGO). See docs/PUBLISHING.md.
@@ -49,6 +52,7 @@ jobs:
       # The packager skips a site silently when its token is missing, so
       # say so: a release with an ID in the TOC but no token fails here.
       - name: Check upload tokens
+        if: ${{ !contains(github.ref_name, '-') }}
         run: |
           missing=0
           if grep -q '^## X-Curse-Project-ID:' NootropicGuildManager.toc && [ -z "$CF_API_KEY" ]; then
@@ -61,8 +65,11 @@ jobs:
 
       # BigWigsMods/packager v2.6.1
       - uses: BigWigsMods/packager@e50a250f8705041e40f2fa1ddcb280a686d65aa0
+        with:
+          args: ${{ contains(github.ref_name, '-') && '-p 0 -a 0' || '' }}
 
       - name: Announce on Discord
+        if: ${{ !contains(github.ref_name, '-') }}
         continue-on-error: true
         env:
           DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}

@@ -27,7 +27,7 @@ ns.Roster = { byName = { ["Marc Priest"] = { rankIndex = 0 }, ["Grud Sama"] = { 
 C_Timer = { After = function() end }
 GetTime = function() return 100 end
 IsInGuild = function() return true end
-assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
+assert(loadfile(ROOT .. "/Core/Records.lua"))("NGM", ns) assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
 ns.Sync.readyFor = "g"; ns.Sync.QueueOutgoing = function() end
 local whispers = {}
 ns.Recruit = { SendWhisper = function(msg, to) whispers[#whispers + 1] = { msg, to } end,

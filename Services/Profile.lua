@@ -263,12 +263,6 @@ function PF:Hours(full, mode)
     return bits
 end
 
--- Is the 2-hour block (day 0-6, block 0-11) on? (Either hour counts.)
-function PF.BlockOn(bits, day, block)
-    local h = day * 24 + block * 2
-    return bits[h] or bits[h + 1] or false
-end
-
 -- "Mon-Fri 6 pm-12 am - Sat-Sun 2 pm-12 am"
 function PF.Summary(bits)
     if not bits then return nil end

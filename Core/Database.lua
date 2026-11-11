@@ -6,8 +6,7 @@
                    auditDays, onlineOnly, sortKey, sortAsc, hiddenColumns,
                    columnWidths, frameSize, framePos }
       guilds["<Guild>"] = {     -- "<Guild>-<Realm>" outside WoW: Forever
-          syncVersion = 2,
-          sync    = { guild = { [key] = record }, officer = { ... } }, -- see Core/Sync.lua
+          sync    = { guild = { [key] = record }, officer = { ... } }, -- see Core/Records.lua
           members = { ["First Second"] = { note = "private, never shared", + fields built from sync records } },
           recruit = { ... },                                           -- see Services/Recruit.lua
       }
@@ -137,7 +136,7 @@ end
 
 -- 2.7.2: on WoW: Forever the guild was saved as "<Guild>-<shard>"; it's
 -- now just "<Guild>". Adopts the old entries (the biggest as the base, the
--- rest merged in; Core/Sync.lua then tidies the names inside).
+-- rest merged in; Core/Records.lua then tidies the names inside).
 local function Count(t) local n = 0 for _ in pairs(t or {}) do n = n + 1 end return n end
 
 local function MergeGuild(into, from)
@@ -188,7 +187,7 @@ function DB:Guild()
     local g = self.sv.guilds[key]
     if not g and ns.NO_REALMS then g = self:AdoptShardGuilds(key) end
     if not g then
-        g = { members = {}, syncVersion = 2, sync = { guild = {}, officer = {} }, realmless = ns.NO_REALMS or nil }
+        g = { members = {}, sync = { guild = {}, officer = {} }, realmless = ns.NO_REALMS or nil }
         self.sv.guilds[key] = g
     end
     return g
@@ -207,8 +206,6 @@ end
 ------------------------------------------------------------------------
 DB.PERMS = {
     { key = "links",     label = "Link mains and alts",               hint = "Mark alts, change mains, unlink." },
-    { key = "recruit",   label = "Recruit",
-      hint = "The Recruitment tab and the /who whisper button: search, whisper and invite, and taking people off the Do Not Whisper list (anyone can add to it)." },
     { key = "ownprofile", label = "Edit their own profile",           everyone = true,
       hint = "Spec, roles, professions and contact info on their own characters. What their addon reports by itself (version, professions it reads, usual play hours) isn't affected." },
     { key = "profiles",  label = "Edit other guildmates' profiles",   hint = "Spec, roles, professions and contact info on anyone's profile (their own included)." },

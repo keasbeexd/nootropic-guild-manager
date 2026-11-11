@@ -34,7 +34,7 @@ C_Timer = { After = function() end, NewTicker = function() end }
 GetTime = function() return clock end
 IsInGuild = function() return true end
 date, time = os.date, os.time
-assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
+assert(loadfile(ROOT .. "/Core/Records.lua"))("NGM", ns) assert(loadfile(ROOT .. "/Core/Sync.lua"))("NGM", ns)
 ns.Sync.readyFor = "g"; ns.Sync.QueueOutgoing = function() end
 assert(loadfile(ROOT .. "/Services/Sharing.lua"))("NGM", ns)
 assert(loadfile(ROOT .. "/Services/HallOfFame.lua"))("NGM", ns)

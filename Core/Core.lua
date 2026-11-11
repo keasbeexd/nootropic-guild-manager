@@ -239,8 +239,14 @@ function ns.Safe(fn, where)
 end
 
 -- Officers are members whose rank can read officer notes.
+-- The game's Officer setting for your rank (Guild Control).
 function ns.IsOfficer()
     if not IsInGuild() then return false end
+    if IsGuildLeader and IsGuildLeader() then return true end
+    if C_GuildInfo and C_GuildInfo.IsGuildOfficer then
+        local ok, yes = pcall(C_GuildInfo.IsGuildOfficer)
+        if ok then return yes and true or false end
+    end
     if C_GuildInfo and C_GuildInfo.CanViewOfficerNote then
         return C_GuildInfo.CanViewOfficerNote() and true or false
     end
@@ -337,7 +343,7 @@ local function PrintHelp()
     ns:Print("commands:")
     ns:Print("  |cffffffff/ngm|r  - open or close the window")
     ns:Print("  |cffffffff/ngm find <text>|r  - open with a search")
-    ns:Print("  |cffffffff/ngm sync|r  - sync with guildmates now and show sync stats")
+    ns:Print("  |cffffffff/ngm sync|r  - check your data against the guild now, and show sync status")
     ns:Print(("  |cffffffff/ngm audit|r  - open the %s tab (officers)"):format(ns.TabName("audit")))
     ns:Print("  |cffffffff/ngm welcome|r  - the welcome tour (what's where, your sharing choices)")
     ns:Print("  |cffffffff/ngm craft <name>|r  - who in the guild can craft it")
@@ -348,7 +354,7 @@ local function PrintHelp()
     ns:Print("  |cffffffff/ngm minimap|r  - show or hide the minimap button")
     ns:Print(("  |cffffffff/ngm recruit|r  - open the %s tab"):format(ns.TabName("recruit")))
     ns:Print("  |cffffffff/ngm options|r  - open the options")
-    ns:Print("  |cffffffff/ngm diag|r  - troubleshoot the Guild & Communities shortcut")
+    ns:Print("  |cffffffff/ngm diag|r  - troubleshooting: version, sync, and the addon's hooks into game windows")
     ns:Print("  |cffffffff/ngm reset|r  - reset the window size and position")
 end
 
@@ -364,72 +370,27 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns.UI:Show()
         ns.UI:SetSearch(rest)
     elseif cmd == "diag" then
+        local me = ns.PlayerFullName()
+        ns:Print(("Version %s, playing as %s%s. Sync: %s."):format(ns.version, me,
+            ns.Roster.byName[me] and "" or " (|cffff5555not found on the guild roster|r)", select(2, ns.Sync:Health())))
+        ns:Print(("Rank settings (Officer, Invite) of other ranks: %s."):format(ns.Sync:RankFlags(1)
+            and "read from the game" or "not given by the game, taken from the Guild Master's addon"))
         ns.Communities:Diagnose()
         ns.GuildRoster:Diagnose()
         ns.WhoWhisper:Diagnose()
-        ns.InvitePrompt:Diagnose()
         ns.Recruit:Diagnose()
-        ns.Roster:Diagnose()
     elseif cmd == "options" or cmd == "config" or cmd == "settings" then
         ns.Options:Open()
     elseif cmd == "recruit" then
         ns.UI:Show()
         ns.UI:SelectTab(ns.UI.TAB_RECRUIT)
-    elseif cmd == "sync" and rest ~= "" then
-        -- /ngm sync <name>: what arrived from that guildmate this session
-        local S, want, shown = ns.Sync, rest:lower(), false
-        local function Shard(who)
-            local e = ns.Roster.byName[who]
-            return e and e.shard or "?"
-        end
-        local me = ns.PlayerFullName()
-        ns:Print(("You (%s) are on shard %s."):format(me, Shard(me)))
-        for _, e in ipairs(ns.Roster.members) do
-            if e.full:lower():find(want, 1, true) then
-                ns:Print(("  %s: shard %s, %s."):format(e.full, e.shard or "?", e.online and "online" or "offline"))
-            end
-        end
-        for who, f in pairs(S.from) do
-            if who:lower():find(want, 1, true) then
-                shown = true
-                local kinds = {}
-                for k, n in pairs(f.kinds) do kinds[#kinds + 1] = k .. " " .. n end
-                table.sort(kinds)
-                ns:Print(("From %s this session: %d messages (%s), last %ds ago; %d records applied, %d already had, %d refused."):format(
-                    who, f.messages, table.concat(kinds, ", "), math.floor(GetTime() - (f.last or GetTime())), f.applied, f.older, f.refused))
-            end
-        end
-        for who, f in pairs(S.from) do
-            if who:lower():find(want, 1, true) and f.raw then
-                ns:Print(("  Their messages arrive signed \"%s\"."):format(f.raw))
-            end
-        end
-        if not shown then ns:Print(("Nothing has arrived from anyone matching \"%s\" this session."):format(rest)) end
     elseif cmd == "sync" then
         ns.Comm:Report()
-        local started = ns.Sync:Exchange(true)
-        local st = ns.Sync.stats
-        ns:Print(started and "Comparing data with guildmates now." or "A sync just ran; it repeats automatically every few minutes.")
-        ns:Print(("Sync this session: %d sent, %d received, %d applied, %d refused, %d queued (%d own/live, %d passed on), %d dropped, %d held back by the game."):format(
-            st.sent, st.received, st.applied, st.refused or 0, ns.Sync:QueueSize(), #ns.Sync.queues.high, #ns.Sync.queues.bulk, st.dropped, st.retries or 0))
-        local S2 = ns.Sync
-        if S2.guildEcho then
-            ns:Print("  Guild channel: working (your messages come back to you).")
-        elseif S2:GuildBroken() then
-            local relay = S2:PickRelay()
-            ns:Print(("  Guild channel: |cffff5555not delivering your messages|r. %s"):format(relay
-                and ("Sending through " .. relay .. " instead (" .. (st.relayed or 0) .. " so far).")
-                or "No officer with 2.11 or later is online to send them through; they'll go when one is."))
-        else
-            ns:Print("  Guild channel: checking...")
+        if ns.Sync:CheckAll() then
+            ns.Sync.reportLane = "guild"
+            ns:Print("Checking with your guild now...")
         end
-        ns:Print(("  Addon messages heard: %d, unreadable: %d%s."):format(st.heard or 0, st.unreadable or 0,
-            ns.Sync.lastUnreadable and (" (last: " .. ns.Sync.lastUnreadable .. ")") or ""))
-        local lr = ns.Sync.lastRefused
-        if lr then
-            ns:Print(("  Last refused: %s from %s (written as %s): %s."):format(
-                tostring(lr.key), tostring(lr.sender), tostring(lr.author), lr.why))
-        end
+        for _, line in ipairs(ns.Sync:StatusLines()) do ns:Print("  " .. line) end
     elseif cmd == "audit" then
         ns.UI:Show()
         ns.UI:SelectTab(ns.UI.TAB_AUDIT)
