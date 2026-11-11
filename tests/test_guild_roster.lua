@@ -1,7 +1,7 @@
--- Test: the game's guild roster integration. Rows are decorated after
--- Blizzard's SetMember through hooksecurefunc (no callbacks registered inside
--- Blizzard's list, which tainted the rank dropdown); the "alt" label sits at
--- the right edge of the name column, and only on alts.
+-- Test: the game's guild roster integration. Rows get our tooltip lines and
+-- Alt+click after Blizzard's SetMember through hooksecurefunc (no callbacks
+-- registered inside Blizzard's list, which tainted the rank dropdown), and
+-- nothing is added to the rows themselves (the alt tag is only on Find).
 -- Run with tests/run.sh (it passes the repo root as arg[1]).
 local ROOT = arg[1]
 local ns = {}
@@ -23,7 +23,7 @@ local function frame()
   function f:SetPoint(...) self.points[#self.points + 1] = { ... } end
   function f:Show() self.shown = true end function f:Hide() self.shown = false end
   function f:SetShown(v) self.shown = v and true or false end
-  function f:HookScript() end
+  function f:HookScript(what) self.hooks = (self.hooks or 0) + 1 end
   function f:CreateTexture() local t = frame() function t:SetAllPoints() end function t:SetColorTexture() end return t end
   function f:CreateFontString() local t = frame() function t:SetText(x) self.text = x end function t:GetStringWidth() return 14 end return t end
   return f
@@ -62,16 +62,14 @@ assert(count("RefreshListDisplay") == 1)
 -- Blizzard fills the rows
 rows[1]:SetMember({ name = "Charliebrown Noises" })
 rows[2]:SetMember({ name = "Probably Shawn" })
-local b = rows[1].NGMBadge
-assert(b and b.shown, "alt gets the label")
-assert(b.points[1][1] == "RIGHT" and b.points[1][2] == rows[1].NameFrame, "at the name column's right edge")
-assert(not (rows[2].NGMBadge and rows[2].NGMBadge.shown), "a main gets no label")
--- the row is reused for a main while scrolling: the label goes away
+assert(rows[1].hooks == 2 and rows[2].hooks == 2, "tooltip and Alt+click hooked on each row")
+assert(rows[1].NGMBadge == nil and rows[2].NGMBadge == nil, "nothing added to the rows")
+-- rows reused while scrolling aren't hooked twice
 rows[1]:SetMember({ name = "Probably Shawn" })
-assert(not rows[1].NGMBadge.shown)
+assert(rows[1].hooks == 2, "hooked once")
 -- a row created after we hooked uses the hooked mixin method
 local late = row()
 late.SetMember = CommunitiesMemberListEntryMixin.SetMember
 late:SetMember({ name = "Charliebrown Noises" })
-assert(late.NGMBadge and late.NGMBadge.shown, "new rows decorated too")
+assert(late.hooks == 2 and late.NGMBadge == nil, "new rows hooked too, nothing added")
 print("OK")

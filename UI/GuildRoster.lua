@@ -3,13 +3,12 @@
     Adds this addon's data to Blizzard's own guild roster instead of
     replacing it:
 
-      Rows      an "alt" marker after each alt's name
-      Tooltip   main / alts, Discord, usually online, professions
+      Tooltip   the addon's member lines (main or alt, spec, role, main
+                professions, Discord, addon version)
       Menu      right-click a member: Profile, Main / Alt
       Alt+click a member opens their profile docked beside the window
 
-    Only additive, taint-safe hooks are used: our own child frames on the
-    rows, HookScript on tooltips, hooksecurefunc on the rows' SetMember
+    Only additive, taint-safe hooks are used: HookScript on the rows, hooksecurefunc on the rows' SetMember
     (Blizzard's way to run after their code without tainting it), and the
     official Menu.ModifyMenu. We never register callbacks inside Blizzard's
     member list: doing that from addon code left its row data tainted, and
@@ -22,7 +21,6 @@ local _, ns = ...
 local GR = {}
 ns.GuildRoster = GR
 
-local ICON = 12
 local decorated = setmetatable({}, { __mode = "k" }) -- rows we've added to
 
 function GR:Enabled()
@@ -31,7 +29,6 @@ end
 
 function GR:SetEnabled(on)
     ns.DB:Settings().blizzRoster = on and true or false
-    self:RefreshRows()
     ns:Fire("SETTINGS_CHANGED")
 end
 
@@ -75,56 +72,6 @@ function GR:OpenProfile(e)
     ns.DetailPanel:Show(e.full, host)
 end
 
-------------------------------------------------------------------------
--- Rows: an alt marker after the name
-------------------------------------------------------------------------
-local function Badge(row)
-    local b = row.NGMBadge
-    if b then return b end
-    b = CreateFrame("Frame", nil, row)
-    b:SetSize(ICON * 2, ICON)
-    b:SetFrameLevel(row:GetFrameLevel() + 3)
-    b:EnableMouse(false)
-    -- a dark backing, so a long name running under it stays readable
-    b.Bg = b:CreateTexture(nil, "BACKGROUND")
-    b.Bg:SetAllPoints()
-    b.Bg:SetColorTexture(0.05, 0.04, 0.03, 0.9)
-    b.Alt = b:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    b.Alt:SetText("alt")
-    b.Alt:SetPoint("CENTER", 0, 0)
-    row.NGMBadge = b
-    return b
-end
-
-function GR:DecorateRow(row)
-    local e = self:Enabled() and IsGuildView() and RowEntry(row)
-    local b = row.NGMBadge
-    if not e then
-        if b then b:Hide() end
-        return
-    end
-    if not e.isAlt then
-        if b then b:Hide() end
-        return
-    end
-    b = Badge(row)
-    b:SetWidth(math.ceil(b.Alt:GetStringWidth()) + 6)
-    b:ClearAllPoints()
-    -- just left of the online icon, in the gap Blizzard leaves between the
-    -- class icon and the name (the same spot as on the addon's Find list)
-    -- (only when the class icon is shown, as in the full guild view; else
-    -- there's no room on the left, so it goes at the name's right edge)
-    local nf = row.NameFrame
-    if nf and row.Class and row.Class:IsShown() then
-        b:SetPoint("RIGHT", nf, "LEFT", -1, 0)
-    elseif nf then
-        b:SetPoint("RIGHT", nf, "RIGHT", -2, 0)
-    else
-        b:SetPoint("RIGHT", row, "RIGHT", -6, 0)
-    end
-    b:Show()
-end
-
 -- Our lines under Blizzard's own (HookScript runs after theirs): the same
 -- member lines as every other tooltip in the addon.
 function GR:AddTooltip(e)
@@ -153,12 +100,6 @@ end
 local function ScrollBox()
     local list = CommunitiesFrame and CommunitiesFrame.MemberList
     return list and list.ScrollBox
-end
-
-function GR:RefreshRows()
-    local sb = ScrollBox()
-    if not (sb and sb.ForEachFrame) then return end
-    sb:ForEachFrame(function(row) GR:DecorateRow(row) end)
 end
 
 ------------------------------------------------------------------------
@@ -215,10 +156,7 @@ function GR:Attach()
     -- Rows are filled by Blizzard's SetMember: run after it, securely.
     -- Hooking the mixin covers rows created from now on; rows that already
     -- exist get the same hook on themselves.
-    local function after(row)
-        HookRow(row)
-        GR:DecorateRow(row)
-    end
+    local function after(row) HookRow(row) end
     if hooksecurefunc and CommunitiesMemberListEntryMixin and CommunitiesMemberListEntryMixin.SetMember then
         hooksecurefunc(CommunitiesMemberListEntryMixin, "SetMember", after)
     end
@@ -227,7 +165,6 @@ function GR:Attach()
         sb:ForEachFrame(function(row)
             if not decorated[row] and row.SetMember then hooksecurefunc(row, "SetMember", after) end
             HookRow(row)
-            GR:DecorateRow(row)
         end)
     end
     hookExisting()
@@ -265,7 +202,4 @@ function GR:Init()
         hooksecurefunc("ToggleCommunitiesFrame", function() GR:Attach() end)
     end
     self:Attach()
-    local function refresh() ns.Debounce("guildrosterrows", 0.1, function() GR:RefreshRows() end) end
-    ns:On("ROSTER_UPDATED", refresh)
-    ns:On("MEMBER_CHANGED", refresh)
 end
