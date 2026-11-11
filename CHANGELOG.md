@@ -18,6 +18,7 @@ Sync, rebuilt from the ground up: lean, stricter, and fast in big guilds. **Ever
 - The tabard looks right at small sizes: the minimap button, the Guild & Communities tab and the Options previews show the guild's emblem on its own background color, with one ring (the button's or tab's own), instead of stray pieces of the game's guild portrait art.
 - **A player's main and alts share what's about the player:** their Discord name (all their characters show the one set most recently on any of them; edit it on any and it changes for all), when they usually play (all their characters' hours together), and the addon version (the newest seen on any of them: an alt shows its main's and the other way round; unlink an alt and it shows its own again). Professions, recipes, raid readiness, spec and roles stay with each character.
 - The contact note is gone from profiles (only the Discord name is kept).
+- **Who Can Craft?** shows each recipe with the icon of what it makes (WoW: Forever gives many crafting spells a placeholder icon), and drops the "green: online now" legend.
 - The minimap button's icon sits centered in its ring, with no gap under it (laid out the way WoW: Forever's own minimap buttons are).
 - The window is always titled "Nootropic Guild Manager" (the option to use your guild's name is gone).
 
