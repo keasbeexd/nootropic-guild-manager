@@ -2,6 +2,11 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.9.1
+
+- Fix: some guildmates showed version **"old"** even on the latest version. At login the game first gives only your first name, and the addon announced your version under it ("Deja" instead of "Deja Rollupz"), which guildmates rightly refuse. It now waits until the roster gives your full name, and re-sends your version once every session, so one lost at a quick /reload is fixed at the next login.
+- A guildmate whose version hasn't arrived yet now shows a grey **?** instead of a red "old".
+
 ## 2.9.0
 
 - **Champion titles:** last month's Hall of Fame champions carry their title all month, in gold on their profile and in tooltips (Find, Play Together and the game's guild roster): "November's Champion: Quests completed, Kills". A person's alts show their main's titles.
