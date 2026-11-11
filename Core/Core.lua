@@ -412,6 +412,8 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns:Print(started and "Comparing data with guildmates now." or "A sync just ran; it repeats automatically every few minutes.")
         ns:Print(("Sync this session: %d sent, %d received, %d applied, %d refused, %d queued (%d own/live, %d passed on), %d dropped, %d held back by the game."):format(
             st.sent, st.received, st.applied, st.refused or 0, ns.Sync:QueueSize(), #ns.Sync.queues.high, #ns.Sync.queues.bulk, st.dropped, st.retries or 0))
+        ns:Print(("  Addon messages heard: %d, unreadable: %d%s."):format(st.heard or 0, st.unreadable or 0,
+            ns.Sync.lastUnreadable and (" (last: " .. ns.Sync.lastUnreadable .. ")") or ""))
         local lr = ns.Sync.lastRefused
         if lr then
             ns:Print(("  Last refused: %s from %s (written as %s): %s."):format(

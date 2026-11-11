@@ -5,6 +5,7 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 ## 2.10.2
 
 - `/ngm sync <name>` also shows which shard you and that guildmate are on, and how their messages arrive, to track down a guildmate whose data never reaches anyone.
+- `/ngm sync` also counts every addon message heard, and any that couldn't be read (with the reason), which were dropped silently before.
 
 ## 2.10.1
 

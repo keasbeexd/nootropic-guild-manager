@@ -1321,7 +1321,12 @@ local MAX_PENDING = 8  -- unfinished chunked messages kept per sender
 
 function S:OnMessage(msg, channel, sender)
     local who = ns.NormalizeName(sender)
-    if not who or who == Me() then return end
+    if not who then
+        self.stats.unreadable = (self.stats.unreadable or 0) + 1
+        self.lastUnreadable = ("no usable sender name (\"%s\")"):format(tostring(sender))
+        return
+    end
+    if who == Me() then return end
     if channel == "OFFICER" then self.officers[who] = true end
     local f = ns.Split(msg, FS)
     if f[1] ~= PROTO then return end -- other protocol versions are ignored
@@ -1559,7 +1564,19 @@ function S:Init()
         RegisterAddonMessagePrefix(PREFIX)
     end
     ns:RegisterEvent("CHAT_MSG_ADDON", function(_, prefix, msg, channel, sender)
-        if prefix == PREFIX then S:OnMessage(msg, channel, sender) end
+        if prefix ~= PREFIX then return end
+        -- counted before anything else, so a message we can't read still shows
+        S.stats.heard = (S.stats.heard or 0) + 1
+        if issecretvalue and (issecretvalue(sender) or issecretvalue(msg)) then
+            S.stats.unreadable = (S.stats.unreadable or 0) + 1
+            S.lastUnreadable = "protected sender or message"
+            return
+        end
+        local ok, err = pcall(S.OnMessage, S, msg, channel, sender)
+        if not ok then
+            S.stats.unreadable = (S.stats.unreadable or 0) + 1
+            S.lastUnreadable = ("from \"%s\" on %s: %s"):format(tostring(sender), tostring(channel), tostring(err))
+        end
     end)
 
     -- Your version, announced once per session, and only once the roster has
