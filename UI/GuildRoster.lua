@@ -110,10 +110,14 @@ function GR:DecorateRow(row)
     b = Badge(row)
     b:SetWidth(math.ceil(b.Alt:GetStringWidth()) + 6)
     b:ClearAllPoints()
-    -- the same spot on every row: the right edge of the name column (its
-    -- width is fixed by Blizzard), so it never lands in another column
+    -- just left of the online icon, in the gap Blizzard leaves between the
+    -- class icon and the name (the same spot as on the addon's Find list)
+    -- (only when the class icon is shown, as in the full guild view; else
+    -- there's no room on the left, so it goes at the name's right edge)
     local nf = row.NameFrame
-    if nf then
+    if nf and row.Class and row.Class:IsShown() then
+        b:SetPoint("RIGHT", nf, "LEFT", -1, 0)
+    elseif nf then
         b:SetPoint("RIGHT", nf, "RIGHT", -2, 0)
     else
         b:SetPoint("RIGHT", row, "RIGHT", -6, 0)

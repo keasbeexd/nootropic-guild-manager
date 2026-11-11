@@ -17,13 +17,14 @@ RV.LIST_INSET = 34  -- frame width minus list width (borders + scroll bar)
 -- hidePriority: when the window is too narrow, lower numbers are hidden first.
 -- locked: never hidden.  The last visible column fills any leftover space.
 local COLUMNS = {
-    { key = "name",   label = "First Name",  width = 104, min = 78, locked = true },
+    { key = "name",   label = "First Name",  width = 122, min = 96, locked = true },
     { key = "second", label = "Second Name", width = 92,  min = 60, hidePriority = 9 },
     { key = "level",  label = "Lvl",         width = 36,  min = 30, justify = "CENTER", hidePriority = 3 },
     { key = "class",  label = "Class",       width = 84,  min = 56, hidePriority = 2 },
     { key = "spec",   label = "Spec",        width = 110, min = 70, hidePriority = 7 },
     { key = "main",   label = "Main / Alt",  width = 126, min = 80, hidePriority = 6 },
     { key = "zone",   label = "Location",    width = 130, min = 74, hidePriority = 3.5 },
+    { key = "seen",   label = "Last Online", width = 76,  min = 60, hidePriority = 2.5 },
     { key = "profs",  label = "Professions", width = 150, min = 56, hidePriority = 4 },
     { key = "rank",   label = "Rank",        width = 96,  min = 56, hidePriority = 1 },
     { key = "version", label = "Addon Version", width = 96, min = 80, hidePriority = 0.5 },
@@ -757,13 +758,18 @@ local function BuildRow(row)
     end
     local cells = row.cells
 
-    -- Name
+    -- Name: [alt] [online] [class] name. The "alt" tag is the same one the
+    -- addon puts on the game's guild roster, in the same place (just left
+    -- of the online icon).
+    row.Alt = cells.name:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    row.Alt:SetPoint("LEFT", 2, 0)
+    row.Alt:SetText("alt")
     row.Status = cells.name:CreateTexture(nil, "ARTWORK")
     row.Status:SetSize(12, 12)
-    row.Status:SetPoint("LEFT", 4, 0)
+    row.Status:SetPoint("LEFT", 20, 0)
     row.ClassIcon = cells.name:CreateTexture(nil, "ARTWORK")
     row.ClassIcon:SetSize(16, 16)
-    row.ClassIcon:SetPoint("LEFT", 18, 0)
+    row.ClassIcon:SetPoint("LEFT", 34, 0)
     row.Name = Text(cells.name, "GameFontNormal")
     row.Name:SetPoint("LEFT", row.ClassIcon, "RIGHT", 5, 0)
     row.Name:SetPoint("RIGHT", -4, 0)
@@ -799,6 +805,11 @@ local function BuildRow(row)
     row.Zone = Text(cells.zone)
     row.Zone:SetPoint("LEFT", 6, 0)
     row.Zone:SetPoint("RIGHT", -4, 0)
+
+    -- Last online
+    row.Seen = Text(cells.seen)
+    row.Seen:SetPoint("LEFT", 6, 0)
+    row.Seen:SetPoint("RIGHT", -4, 0)
 
     -- Professions (up to 3)
     row.Profs = {}
@@ -896,6 +907,7 @@ function RV:InitRow(row, e)
     row.Content:SetAlpha(e.online and 1 or 0.55)
 
     -- Name
+    row.Alt:SetShown(e.isAlt and true or false)
     if e.online then
         row.Status:SetTexture(STATUS_ICONS[e.status] or STATUS_ICONS[0])
         row.Status:Show()
@@ -930,6 +942,11 @@ function RV:InitRow(row, e)
     -- Location
     if COL.zone.shown then
         row.Zone:SetText((e.zone ~= "" and e.zone) or "|cff6d6d6d-|r")
+    end
+
+    -- Last online
+    if COL.seen.shown then
+        row.Seen:SetText(e.online and "|cff40ff40Online|r" or (ns.FormatLastSeen(e.lastOnline) .. " ago"))
     end
 
     -- Professions
@@ -1110,7 +1127,7 @@ function RV:Refresh()
     local s = ns.DB:Settings()
     if s.sortKey and not COL[s.sortKey] then s.sortKey = "rank" end -- from an older version
     local list = ns.Roster:Query(self.query, self:QueryOptions())
-    ns.Roster:Sort(list, s.sortKey, s.sortAsc)
+    ns.Roster:Sort(list, s.sortKey, s.sortAsc, true)
     for i, e in ipairs(list) do e._stripe = (i % 2 == 0) end
 
     local provider = CreateDataProvider(list)

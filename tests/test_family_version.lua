@@ -46,4 +46,24 @@ check("someone without the addon or links has none", entry("Solo Guy").version =
 members["Myk Alt"].main = nil
 R:BuildAltIndex()
 check("unlinked, each shows its own again", entry("Myk Main").version == "2.10.0" and entry("Myk Alt").version == "2.11.0")
+-- sorting: alts always right under their main
+members["Myk Alt"].main = "Myk Main"
+R:BuildAltIndex()
+local list = {}
+for _, n in ipairs({ "Solo Guy", "Marc Druid", "Myk Alt", "Marc Priest", "Myk Main" }) do
+  local e = entry(n)
+  e.online = (n == "Myk Alt" or n == "Solo Guy")
+  e.lastOnline = ({ ["Marc Priest"] = 2, ["Marc Druid"] = 50, ["Myk Main"] = 10 })[n] or 0
+  list[#list + 1] = e
+end
+local function names(l) local t = {} for i, e in ipairs(l) do t[i] = e.full end return table.concat(t, ", ") end
+R:Sort(list, "name", true, true)
+check("by name: alts under their main (" .. names(list) .. ")", names(list) == "Marc Priest, Marc Druid, Myk Main, Myk Alt, Solo Guy")
+R:Sort(list, "seen", true, true)
+check("by last online: an online alt brings its family up (" .. names(list) .. ")",
+  names(list) == "Myk Main, Myk Alt, Solo Guy, Marc Priest, Marc Druid")
+local only = { list[1] }
+for _, e in ipairs(list) do if e.full == "Myk Alt" then only[2] = e end end
+R:Sort(only, "name", true, true)
+check("an alt whose main isn't listed keeps its own place", #only == 2)
 print("OK")
