@@ -126,7 +126,8 @@ local function NewPage(key, name, subtitle)
     outer:SetScript("OnShow", function() O:Refresh() end)
     O.pages[key] = outer
 
-    local logo = ns.Brand:Attach(panel, 36, { "TOPLEFT", panel, "TOPLEFT", 16, -14 })
+    -- the addon's own logo, whatever the icon choice (this is about the addon)
+    local logo = ns.Brand:Attach(panel, 36, { "TOPLEFT", panel, "TOPLEFT", 16, -14 }, { style = "nootropic" })
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 10, -2)
     title:SetText(key == "main" and PANEL_NAME or (PANEL_NAME .. "  |cffffffff-  " .. name .. "|r"))
@@ -583,7 +584,7 @@ function O:BuildAbout()
         insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     banner:SetBackdropColor(0.10, 0.07, 0.03, 0.9)
     banner:SetBackdropBorderColor(0.85, 0.65, 0.25, 1)
-    local logo = ns.Brand:Attach(banner, 64, { "LEFT", banner, "LEFT", 12, 0 })
+    local logo = ns.Brand:Attach(banner, 64, { "LEFT", banner, "LEFT", 12, 0 }, { style = "nootropic" })
     O.logos[#O.logos + 1] = logo
     local name = banner:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
     name:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 14, -6)
