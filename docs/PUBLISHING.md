@@ -51,19 +51,24 @@ Nothing is published to a site until both of its pieces are in place, so these c
 
 The workflow passes these to the packager as `CF_API_KEY` and `WAGO_API_TOKEN`. If a project ID is in the TOC but its secret is empty, the release stops at **Check upload tokens** instead of quietly skipping that site.
 
-### Discord announcement (optional)
+### Discord announcements (optional)
 
-Each release can post to a Discord channel: the version, its CHANGELOG.md section, and links to CurseForge, Wago and the GitHub release. It pings nobody.
+Each release posts to Discord: the version, its CHANGELOG.md section, and links to CurseForge, Wago and the GitHub release.
+- **Every release** → the addon's channel (#guild-manager-addon), **no ping**.
+- **Feature releases** (versions ending in `.0`, like 2.10.0 or 3.0.0) → also **#announcements**, pinging one role (Announcements). Fix releases (2.9.1) never ping.
 
-1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**. Choose the channel (for example #ngm), and copy the webhook URL. It's a secret: anyone with it can post there.
-2. In the GitHub repository: **Settings → Secrets and variables → Actions → New repository secret**, named `DISCORD_RELEASE_WEBHOOK`, with the URL as its value.
-3. Optional test (posts the current version's announcement now), from the repository folder:
+Setup:
+1. In Discord, create two webhooks: **Server Settings → Integrations → Webhooks → New Webhook**, one for #guild-manager-addon and one for #announcements. Copy each URL. They're secrets: anyone with one can post there.
+2. In the GitHub repository, go to **Settings → Secrets and variables → Actions**:
+   - secret `DISCORD_RELEASE_WEBHOOK` = the #guild-manager-addon URL
+   - secret `DISCORD_ANNOUNCE_WEBHOOK` = the #announcements URL
+   - **variable** (Variables tab) `DISCORD_ANNOUNCE_ROLE_ID` = the Announcements role's ID (Discord: Server Settings → Roles → right-click the role → Copy Role ID, with Developer Mode on). Not a secret.
+3. Optional test, from the repository folder (`--dry-run` only prints):
    ```bash
    DISCORD_RELEASE_WEBHOOK='paste-url' GITHUB_REF_NAME=v2.9.1 python3 .github/scripts/discord_release.py
    ```
-   Add `--dry-run` to only print the message.
 
-Without the secret the step is skipped. If Discord is down, the step fails but the release (already uploaded) doesn't.
+Missing secrets just skip their post. If Discord is down, the step fails but the release (already uploaded) doesn't. Nothing but the one role is ever pinged (never @everyone).
 
 ## Rules the sites share
 
