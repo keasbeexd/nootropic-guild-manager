@@ -1,4 +1,4 @@
--- Test: contact info and usual hours belong to the player, not one
+-- Test: the Discord name and usual hours belong to the player, not one
 -- character: every character of theirs shows the contact info set most
 -- recently on any of them, and their hours together. Professions and the
 -- rest stay per character (they're read from each character's own records).
@@ -18,10 +18,10 @@ assert(loadfile(ROOT .. "/Services/Profile.lua"))("NGM", ns)
 local PF = ns.Profile
 local function check(name, ok) print(("%-60s %s"):format(name, ok and "ok" or "FAIL")) assert(ok) end
 
-recs["CN:Marc Priest"] = { v = "old;on the main", t = 100 }
-recs["CN:Marc Druid"] = { v = "keasbeexd;set on the druid", t = 200 }
-local d, n, from = PF:Contact("Marc Rogue")
-check("an alt with none of its own shows the newest of the family", d == "keasbeexd" and n == "set on the druid" and from == "Marc Druid")
+recs["CN:Marc Priest"] = { v = "old;", t = 100 }
+recs["CN:Marc Druid"] = { v = "keasbeexd;an old contact note", t = 200 }
+local d, from = PF:Contact("Marc Rogue")
+check("an alt with none of its own shows the newest of the family", d == "keasbeexd" and from == "Marc Druid")
 d = PF:Contact("Marc Priest")
 check("so does the main", d == "keasbeexd")
 recs["CN:Marc Priest"] = { v = "newer;", t = 300 }
