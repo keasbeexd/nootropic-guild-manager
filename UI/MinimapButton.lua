@@ -32,18 +32,21 @@ function M:Init()
     b:RegisterForDrag("LeftButton")
     b:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
+    -- WoW: Forever's minimap art is the retail kind: a 50px ring at the
+    -- top-left and the disc centered on the button (as LibDBIcon lays out
+    -- retail buttons; the classic layout leaves a gap under the disc)
     local bg = b:CreateTexture(nil, "BACKGROUND")
     bg:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
-    bg:SetSize(20, 20)
-    bg:SetPoint("TOPLEFT", 7, -5)
+    bg:SetSize(24, 24)
+    bg:SetPoint("CENTER", b, "CENTER")
 
-    -- Same icon as the window portrait (mug, stein or guild emblem).
-    -- the minimap border is the ring: crop off the medallion's own (14% each side)
-    self.icon = ns.Brand:Attach(b, 20, { "TOPLEFT", b, "TOPLEFT", 7, -5 }, { crop = 0.14 })
+    -- Same icon as the window portrait (guild tabard or medallion). The
+    -- minimap border is the ring: crop off the medallion's own (14% each side)
+    self.icon = ns.Brand:Attach(b, 24, { "CENTER", b, "CENTER", 0, 0 }, { crop = 0.14 })
 
     local border = b:CreateTexture(nil, "OVERLAY")
     border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-    border:SetSize(53, 53)
+    border:SetSize(50, 50)
     border:SetPoint("TOPLEFT")
 
     b:SetScript("OnClick", function(_, button)

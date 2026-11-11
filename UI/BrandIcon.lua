@@ -107,7 +107,7 @@ end
 --[[
     host:  frame the textures are drawn on (so they layer with its own art)
     size:  icon size in pixels
-    point: { point, relativeTo, relativePoint, x, y } for the icon's top-left
+    point: { point, relativeTo, relativePoint, x, y } for the icon
     opts:  layer (default ARTWORK), round (default true), style (fixed style),
            crop (0-0.5: trim that much off each edge of the medallion art)
 ]]
