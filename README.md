@@ -1,5 +1,7 @@
 # Nootropic Guild Manager
 
+[![Support on Ko-fi](https://img.shields.io/badge/Support_on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/keasbeexd) [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor_on-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/keasbeexd)
+
 Your whole guild in one window, for **World of Warcraft: Forever**. Profiles,
 crafters, raid readiness, who to play with tonight, a guild census, a Hall
 of Fame and friendly recruiting, shared between everyone in the guild who runs it.
