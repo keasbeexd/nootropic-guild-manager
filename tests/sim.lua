@@ -223,6 +223,7 @@ return function(ROOT)
       return clock - start
     end
 
+    function g:Current() return current end
     function g:ResetStats() self.stats = { bytes = 0, messages = 0, byKind = {}, bySender = {} } end
     function g:As(c, fn) local prev = current current = c local r = { fn() } current = prev return unpack(r) end
     g.printed = {}

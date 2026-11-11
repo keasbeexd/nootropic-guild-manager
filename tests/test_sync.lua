@@ -110,6 +110,34 @@ g:As(BOB, function()
 end)
 check("a member can't name officer ranks", BOB.S:Value("GS:officers") == "Captain")
 
+-- the game's own rank settings: read where the game allows, and written
+-- down by the Guild Master's copy for the rest (here only the Guild
+-- Master's copy may read them)
+C_GuildInfo = {}
+g.ranks = { { index = 0, name = "Guild Master" }, { index = 1, name = "Captain" }, { index = 3, name = "Member" } }
+local FLAGS = { [1] = { [22] = true, [5] = true }, [3] = { [5] = true } } -- by rank index
+C_GuildInfo.GuildControlGetRankFlags = function(order)
+  local c = g:Current()
+  if not c or c.entry.rankIndex ~= 0 then return { false, false } end -- others: all off (not told)
+  local t = {}
+  for k, v in pairs(FLAGS[order - 1] or {}) do t[k] = v end
+  t[1] = true -- guild chat: a rank always has some setting
+  return t
+end
+for _, c in ipairs({ GM, OLA, ANN, BOB }) do c.S.flagCache = {} end
+g:As(GM, function() GM.S:PublishRanks() end)
+g:Settle()
+check("the Guild Master's copy writes down the game's officer ranks", GM.S:Value("GS:officers") == "Captain" and BOB.S:Value("GS:officers") == "Captain")
+check("and its recruiting ranks", BOB.S:Value("GS:recruiters") == "Captain;Member")
+check("members use them: Ann may recruit, Ola is an officer", BOB.S:MayRecruitName("Ann Member") and BOB.S:KnownOfficer("Ola Officer"))
+FLAGS[3] = {}
+for _, c in ipairs({ GM, OLA, ANN, BOB }) do c.S.flagCache = {} end
+g:As(GM, function() GM.S:PublishRanks() end)
+g:Settle()
+check("taking Invite away from a rank in the game updates everyone", not BOB.S:MayRecruitName("Ann Member"))
+C_GuildInfo = nil
+for _, c in ipairs({ GM, OLA, ANN, BOB }) do c.S.flagCache = {} end
+
 ------------------------------------------------------------------------
 -- 7. a guild channel that delivers nothing: through one officer
 ------------------------------------------------------------------------

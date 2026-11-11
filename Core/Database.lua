@@ -206,8 +206,6 @@ end
 ------------------------------------------------------------------------
 DB.PERMS = {
     { key = "links",     label = "Link mains and alts",               hint = "Mark alts, change mains, unlink." },
-    { key = "recruit",   label = "Recruit",
-      hint = "The Recruitment tab and the /who whisper button: search, whisper and invite, and taking people off the Do Not Whisper list (anyone can add to it)." },
     { key = "ownprofile", label = "Edit their own profile",           everyone = true,
       hint = "Spec, roles, professions and contact info on their own characters. What their addon reports by itself (version, professions it reads, usual play hours) isn't affected." },
     { key = "profiles",  label = "Edit other guildmates' profiles",   hint = "Spec, roles, professions and contact info on anyone's profile (their own included)." },

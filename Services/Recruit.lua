@@ -630,8 +630,12 @@ function RC:ClickOnly() return self.clickOnly end
 -- Players anyone in the guild whispered in the last RECONTACT_DAYS, or a
 -- guildmate invited, can't be ticked: one whisper from the guild is enough.
 -- Ranks the Guild Master allows to recruit (everyone by default).
+-- The game's Invite setting for your rank (Guild Control).
 function RC:MayRecruit()
-    return ns.DB:HasPerm("recruit")
+    if not IsInGuild() then return false end
+    if IsGuildLeader and IsGuildLeader() then return true end
+    if CanGuildInvite then return CanGuildInvite() and true or false end
+    return ns.IsOfficer()
 end
 
 function RC:CanSelect(p)

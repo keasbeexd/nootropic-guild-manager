@@ -239,8 +239,14 @@ function ns.Safe(fn, where)
 end
 
 -- Officers are members whose rank can read officer notes.
+-- The game's Officer setting for your rank (Guild Control).
 function ns.IsOfficer()
     if not IsInGuild() then return false end
+    if IsGuildLeader and IsGuildLeader() then return true end
+    if C_GuildInfo and C_GuildInfo.IsGuildOfficer then
+        local ok, yes = pcall(C_GuildInfo.IsGuildOfficer)
+        if ok then return yes and true or false end
+    end
     if C_GuildInfo and C_GuildInfo.CanViewOfficerNote then
         return C_GuildInfo.CanViewOfficerNote() and true or false
     end
@@ -367,6 +373,8 @@ SlashCmdList.NOOTROPICGM = function(msg)
         local me = ns.PlayerFullName()
         ns:Print(("Version %s, playing as %s%s. Sync: %s."):format(ns.version, me,
             ns.Roster.byName[me] and "" or " (|cffff5555not found on the guild roster|r)", select(2, ns.Sync:Health())))
+        ns:Print(("Rank settings (Officer, Invite) of other ranks: %s."):format(ns.Sync:RankFlags(1)
+            and "read from the game" or "not given by the game, taken from the Guild Master's addon"))
         ns.Communities:Diagnose()
         ns.GuildRoster:Diagnose()
         ns.WhoWhisper:Diagnose()

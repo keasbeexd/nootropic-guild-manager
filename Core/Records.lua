@@ -36,9 +36,9 @@
       DN:<player>          Do Not Whisper entry ("" = removed)
       RS:<player>          recruitment status (kept 14 days)
       IR:<member>          reminded to install the addon (kept 30 days)
-      GS:<name>            guild setting; GS:perm_* (who may do what) and
-                           GS:officers (the officer rank names) only from the
-                           Guild Master
+      GS:<name>            guild setting; GS:perm_* (who may do what),
+                           GS:officers and GS:recruiters (rank names, from the
+                           game's rank settings) only from the Guild Master
       L:<member>:<id>      officer log entry                 (officer scope)
       A:<id>               audit entry                       (officer scope)
       JN:<member>          when they joined: "time;inviter"  (officer scope)
@@ -304,7 +304,7 @@ function S:CanWrite(key)
     -- your own profile: the Guild Master decides (everyone by default)
     if def.self and member == Me() and ns.DB:HasPerm("ownprofile") then return true end
     -- permissions only the Guild Master changes
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then return ns.DB:IsGuildMaster() end
+    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers" or rest == "recruiters") then return ns.DB:IsGuildMaster() end
     -- what the Guild Master hands out per rank (Options > Officers > Permissions)
     local perm = def.scope == "guild" and ns.DB.PERM_BY_TYPE[typ]
     if perm then return ns.DB:HasPerm(perm) end
@@ -381,59 +381,123 @@ function S:MayRelay(name, lane)
     return self:KnownOfficer(name)
 end
 
--- Officer ranks, by name: GS:officers = "Officer;Veteran Officer", which
--- only the current Guild Master may write. Members can't see the officer
--- channel, so this is how every copy knows whose relayed data to trust.
--- The Guild Master's copy keeps it current by itself (Options shows it).
-function S:OfficerRanks()
-    local rec = self:Get("GS:officers")
+------------------------------------------------------------------------
+-- Officers and recruiters follow the game's own rank settings (Guild
+-- Control: "Officer" and "Invite"). For you, the game says directly. For
+-- others, every copy reads the rank's settings when the game lets it, and
+-- the Guild Master's copy also writes them down for everyone (GS:officers
+-- and GS:recruiters: rank names, only the current Guild Master may write
+-- them), for copies the game doesn't tell.
+------------------------------------------------------------------------
+S.FLAG_INVITE, S.FLAG_OFFICER = 5, 22 -- Blizzard_GuildControlUI: InviteCheckbox, OfficerCheckbox
+
+-- { officer = bool, invite = bool } for a rank (0 = Guild Master), or nil
+-- when the game won't say. Cached a minute.
+S.flagCache = {}
+function S:RankFlags(rankIndex)
+    local c = self.flagCache[rankIndex]
+    if c and GetTime() - c.at < 60 then return c.flags end
+    local flags
+    local api = C_GuildInfo and C_GuildInfo.GuildControlGetRankFlags
+    if api and rankIndex then
+        local ok, t = pcall(api, rankIndex + 1)
+        -- (every rank has some setting, guild chat at least: all off means
+        -- the game isn't telling us)
+        local any = false
+        if ok and type(t) == "table" then for _, v in pairs(t) do if v == true then any = true break end end end
+        if any then
+            flags = { officer = t[self.FLAG_OFFICER] == true, invite = t[self.FLAG_INVITE] == true }
+        end
+    end
+    self.flagCache[rankIndex or -1] = { at = GetTime(), flags = flags }
+    return flags
+end
+
+local function RankSet(key)
+    local rec = S:Get(key)
     if not rec or (rec.v or "") == "" or not IsGuildMaster(rec.a) then return nil end
     local set = {}
     for r in rec.v:gmatch("[^;]+") do set[r:lower()] = true end
     return set
 end
+function S:OfficerRanks() return RankSet("GS:officers") end
+function S:RecruiterRanks() return RankSet("GS:recruiters") end
 
--- The Guild Master's copy: writes the officer rank names, keeping only ranks
--- the guild still has, in the guild's rank order.
-function S:SetOfficerRanks(set)
-    if not (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then return false end
-    local names = {}
+-- The Guild Master's copy: writes down which ranks are officer and invite
+-- ranks, from the game's settings (or, if the game won't say even to the
+-- Guild Master, ranks it has seen using the officer channel).
+function S:PublishRanks()
+    if not (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then return end
+    local officers, recruiters, known = {}, {}, true
     for _, r in ipairs(ns.DB:GuildRanks()) do
-        if r.index ~= 0 and set[r.name:lower()] and not r.name:find(";", 1, true) then names[#names + 1] = r.name end
+        if r.index ~= 0 and not r.name:find(";", 1, true) then
+            local f = self:RankFlags(r.index)
+            if not f then known = false break end
+            if f.officer then officers[#officers + 1] = r.name end
+            if f.invite then recruiters[#recruiters + 1] = r.name end
+        end
     end
-    local v = table.concat(names, ";")
-    if v == (self:Value("GS:officers") or "") then return true end
-    return self:Set("GS:officers", v, { force = true }) and true or false
+    if not known then return end
+    for key, list in pairs({ ["GS:officers"] = officers, ["GS:recruiters"] = recruiters }) do
+        local v = table.concat(list, ";")
+        if v ~= (self:Value(key) or "") then self:Set(key, v, { force = true }) end
+    end
 end
 
--- The Guild Master's copy: someone of this rank sent on the officer channel,
--- so it's an officer rank; ranks the guild no longer has are dropped.
+-- The Guild Master's copy, when the game won't tell it the rank settings:
+-- someone of this rank used the officer channel, so it's an officer rank.
 function S:NoteOfficer(who)
     if not (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then return end
     local e = RosterEntry(who)
+    if not e or e.rankIndex == 0 or not e.rank or e.rank == "" or e.rank:find(";", 1, true) then return end
+    if self:RankFlags(e.rankIndex) then return end -- the game's settings are written down instead
     local set = self:OfficerRanks() or {}
-    if e and e.rankIndex ~= 0 and e.rank and e.rank ~= "" then set[e.rank:lower()] = true end
-    self:SetOfficerRanks(set)
+    if set[e.rank:lower()] then return end
+    local names = {}
+    for _, r in ipairs(ns.DB:GuildRanks()) do
+        if r.index ~= 0 and (set[r.name:lower()] or r.name == e.rank) then names[#names + 1] = r.name end
+    end
+    self:Set("GS:officers", table.concat(names, ";"), { force = true })
 end
 
--- A player we know to be an officer: the Guild Master, someone of an
--- officer rank (GS:officers; before that's known, the rank just below the
--- Guild Master), or someone seen on the officer channel this session who
--- hasn't been demoted since (or you, when you are one).
+-- An officer: the Guild Master, a rank the game marks Officer (or the
+-- Guild Master's copy wrote down), or someone seen on the officer channel
+-- this session who hasn't been demoted since. Always by current rank, so a
+-- demoted or departed officer stops counting at once. With nothing known
+-- yet (a new install, the Guild Master offline): the rank just below the
+-- Guild Master, the officer rank in almost every guild.
 function S:KnownOfficer(name)
     if not name then return false end
     if Same(name, Me()) then return ns.IsOfficer() end
     local e = RosterEntry(name)
-    if not e then return false end -- not in the guild (any more)
+    if not e then return false end
     if e.rankIndex == 0 then return true end
     for who, rankIndex in pairs(self.officers) do
         if Same(who, name) and e.rankIndex <= rankIndex then return true end
     end
+    return self:RankIsOfficer(e)
+end
+
+-- Is this rank ({ rankIndex, rank }) an officer rank, as far as we know?
+function S:RankIsOfficer(e)
+    local f = self:RankFlags(e.rankIndex)
+    if f then return f.officer end
     local ranks = self:OfficerRanks()
-    -- until the Guild Master's list arrives (a new install, with the Guild
-    -- Master offline): the rank just below the Guild Master, the officer
-    -- rank in almost every guild
     if not ranks then return e.rankIndex == 1 end
+    return e.rank ~= nil and ranks[e.rank:lower()] == true
+end
+
+-- May `name` recruit? The rank's Invite setting, the same way.
+function S:MayRecruitName(name)
+    if not name then return false end
+    if Same(name, Me()) then return self:MayRecruit() end
+    local e = RosterEntry(name)
+    if not e then return false end
+    if e.rankIndex == 0 then return true end
+    local f = self:RankFlags(e.rankIndex)
+    if f then return f.invite end
+    local ranks = self:RecruiterRanks()
+    if not ranks then return self:KnownOfficer(name) end
     return e.rank ~= nil and ranks[e.rank:lower()] == true
 end
 
@@ -443,7 +507,7 @@ function S:MayAuthor(name, typ, member, rest)
     if not (def and name and name ~= "") then return false end
     if def.anyone then return RosterEntry(name) ~= nil end
     if def.selfOnly then return Same(name, member) end
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then return IsGuildMaster(name) end
+    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers" or rest == "recruiters") then return IsGuildMaster(name) end
     if def.self and Same(name, member) and self:RankMay(name, "ownprofile") then return true end
     local e = RosterEntry(name)
     if e and e.rankIndex == 0 then return true end
@@ -476,14 +540,14 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     -- anyone may put someone on the Do Not Whisper list; taking them off
     -- needs the recruit permission
     if typ == "DN" and (rec.v or "") == "" then
-        return self:RankMay(author, "recruit") and (Same(sender, author) or self:KnownOfficer(sender))
+        return self:MayRecruitName(author) and (Same(sender, author) or self:KnownOfficer(sender))
     end
     -- install reminders say who sent them: only that person (or an officer
     -- passing it on) may send one, so nobody can block reminders for the
     -- whole guild in someone else's name
     if typ == "IR" then return Same(sender, author) or self:KnownOfficer(sender) end
     if def.anyone then return true end
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then
+    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers" or rest == "recruiters") then
         return IsGuildMaster(author) and (Same(sender, author) or self:KnownOfficer(sender))
     end
     if Same(sender, author) then return self:MayAuthor(author, typ, member, rest) end
@@ -980,7 +1044,7 @@ function S:PurgeUnknown()
             local dead = {}
             for key, rec in pairs(store) do
                 if not S.ParseKey(key) or key:match("^GS:tab_") or key == "GS:pronouns" or key == "GS:reviews"
-                    or key == "GS:perm_tags" or key == "GS:perm_tagothers" then
+                    or key == "GS:perm_tags" or key == "GS:perm_tagothers" or key == "GS:perm_recruit" then
                     dead[#dead + 1] = key
                 elseif key:sub(1, 2) == "A:" then
                     -- audit entries about removed types

@@ -471,37 +471,10 @@ function O:PermMenu(owner, key)
     W.ShowMenu(owner, items)
 end
 
--- Officer ranks: whose copies guildmates trust to pass on everyone's data.
--- The Guild Master's addon fills this in by itself (ranks it sees on the
--- officer channel); the Guild Master can correct it here.
-function O:OfficerRanksMenu(owner)
-    local S = ns.Sync
-    local items = { { text = "Officer ranks", isTitle = true } }
-    for _, r in ipairs(ns.DB:GuildRanks()) do
-        local gm = r.index == 0
-        items[#items + 1] = {
-            text = r.name .. (gm and "  |cff9d9d9d(always)|r" or ""),
-            checked = function()
-                if gm then return true end
-                local set = S:OfficerRanks()
-                return set ~= nil and set[r.name:lower()] == true
-            end,
-            func = function()
-                if gm then return end
-                local set = S:OfficerRanks() or {}
-                set[r.name:lower()] = not set[r.name:lower()] or nil
-                S:SetOfficerRanks(set)
-                O:Refresh()
-            end,
-        }
-    end
-    W.ShowMenu(owner, items)
-end
-
 function O:BuildPermControls(L)
     L:Header("Permissions  |cff9d9d9d(Guild Master, whole guild)|r")
-    L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers (ranks that can read officer notes). Pick ranks to hand it to them instead; the Guild Master always can.")
-    L:Text("The Officer Log and the Audit always stay with officers: the game only sends that data to officer ranks.", "GameFontDisableSmall")
+    L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers. Pick ranks to hand it to them instead; the Guild Master always can.")
+    L:Text("Who's an officer and who may recruit follow the game's own rank settings (Guild Control: Officer, and Invite Member). The Officer Log and the Audit always stay with officers.", "GameFontDisableSmall")
     self.permRows = {}
     for _, perm in ipairs(ns.DB.PERMS) do
         local y = L:Row(28)
@@ -516,17 +489,6 @@ function O:BuildPermControls(L)
         W.Tooltip(btn, perm.label, perm.hint)
         self.permRows[#self.permRows + 1] = { key = perm.key, btn = btn }
     end
-    local y = L:Row(28)
-    local label = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    label:SetPoint("TOPLEFT", 20, y - 4)
-    label:SetWidth(240)
-    label:SetJustifyH("LEFT")
-    label:SetText("Officer ranks")
-    self.officerRanksBtn = W.Button(L.panel, "", 200, 22)
-    self.officerRanksBtn:SetPoint("TOPLEFT", 270, y)
-    self.officerRanksBtn:SetScript("OnClick", function(btn) O:OfficerRanksMenu(btn) end)
-    W.Tooltip(self.officerRanksBtn, "Officer ranks",
-        "Guildmates' addons accept everyone's data passed on by these ranks (repairs, catching up, and members whose own messages don't get through). Your addon adds ranks it sees using the officer channel by itself, so a rank stays while it can use officer chat. After taking officer chat away from a rank in the game, untick it here.")
     self.permNote = L:Text("")
     L:Space(10)
 end
@@ -537,12 +499,6 @@ function O:RefreshPermControls()
         row.btn:SetText(ns.DB:PermText(row.key))
         row.btn:SetEnabled(gm)
         row.btn:SetAlpha(gm and 1 or 0.6)
-    end
-    if self.officerRanksBtn then
-        local v = ns.Sync:Value("GS:officers")
-        self.officerRanksBtn:SetText((v and v ~= "") and v:gsub(";", ", ") or "Not known yet")
-        self.officerRanksBtn:SetEnabled(gm)
-        self.officerRanksBtn:SetAlpha(gm and 1 or 0.6)
     end
     if self.permNote then
         self.permNote:SetText(gm and "" or "|cffff8080Only the Guild Master can change permissions.|r")

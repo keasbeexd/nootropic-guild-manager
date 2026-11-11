@@ -170,7 +170,7 @@ end
 -- May `name` take part in this lane (as far as we can tell from here)?
 function S:PeerInLane(name, lane)
     if lane == "officer" then return self:KnownOfficer(name) end
-    if lane == "recruit" then return self:RankMay(name, "recruit") end
+    if lane == "recruit" then return self:MayRecruitName(name) end
     return true
 end
 
@@ -920,8 +920,12 @@ function S:StatusLines()
             and ("|cffff5555Your guild messages don't arrive|r (a game issue); sending through %s%s."):format(self.relay, self.relayAcked and "" or ", waiting for them to answer")
             or "|cffff5555Your guild messages don't arrive|r (a game issue), and no officer running the addon is online to send them through."
     end
-    local ranks = self:Value("GS:officers")
-    out[#out + 1] = "Officer ranks: " .. ((ranks and ranks ~= "") and ranks:gsub(";", ", ") or "not known yet (the Guild Master's addon learns them)")
+    local ranks = {}
+    for _, r in ipairs(ns.DB:GuildRanks()) do
+        local e = { rankIndex = r.index, rank = r.name }
+        if r.index == 0 or self:RankIsOfficer(e) then ranks[#ranks + 1] = r.name end
+    end
+    out[#out + 1] = "Officer ranks (from the game's rank settings): " .. (#ranks > 0 and table.concat(ranks, ", ") or "not known yet")
     local st = self.stats
     out[#out + 1] = ("This session: %d sent, %d received, %d changes applied%s."):format(st.sent, st.received, st.applied,
         st.refused > 0 and (", " .. st.refused .. " refused") or "")
@@ -975,9 +979,15 @@ function S:Init()
         S:PruneAudit()
         S:PruneExpired()
         S:RebuildAll()
+        S:PublishRanks()
         announceVersion()
     end
     ns:RegisterEvent("GUILD_ROSTER_UPDATE", ready)
+    -- rank settings changed (Guild Control): read them again
+    ns:RegisterEvent("GUILD_RANKS_UPDATE", function()
+        S.flagCache = {}
+        S:PublishRanks()
+    end)
     ns:RegisterEvent("PLAYER_GUILD_UPDATE", ready)
     ready()
 
