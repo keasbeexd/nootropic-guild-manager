@@ -1262,6 +1262,21 @@ function S:Init()
         if prefix == PREFIX then S:OnMessage(msg, channel, sender) end
     end)
 
+    -- Your version, announced once per session, and only once the roster has
+    -- told us your full name: before that the game gives only your first name
+    -- ("Deja"), and a record under that name is refused by guildmates (it
+    -- doesn't match the sender, "Deja Rollupz"). It's re-sent even when
+    -- unchanged, so a broadcast lost at a quick /reload heals at the next login.
+    local announced = false
+    local function announceVersion()
+        if announced or not S.readyFor or not (ns.Roster and ns.Roster.selfRow) then return end
+        announced = true
+        local key = "AV:" .. Me()
+        S:Set(key, ns.version)
+        S:QueueOutgoing(key)
+    end
+    S.AnnounceVersion = announceVersion
+
     -- Guild data arrives a little after login; prepare once it's there.
     local function ready()
         local key = ns.DB:GuildKey()
@@ -1273,8 +1288,8 @@ function S:Init()
         S:PruneAudit()
         S:PruneExpired()
         S:RebuildAll()
-        -- tell the guild which version of the addon we run
-        S:Set("AV:" .. Me(), ns.version)
+        -- tell the guild which version of the addon we run (once we know our name)
+        announceVersion()
         C_Timer.After(5 + math.random() * 10, function() S:Exchange(true) end)
     end
     ns:RegisterEvent("GUILD_ROSTER_UPDATE", ready)
@@ -1285,9 +1300,11 @@ function S:Init()
     -- your version (and spec/professions) under that spelling
     ns:On("SELF_NAME_CHANGED", function()
         if not S.readyFor then return end
-        S:Set("AV:" .. Me(), ns.version)
+        announced = false
+        announceVersion()
         if ns.Comm then ns.Comm:Report() end
     end)
+    ns:On("ROSTER_UPDATED", announceVersion)
 
     -- flush queued changes when the player logs out or reloads (best effort;
     -- anything missed is repaired by the next digest exchange)

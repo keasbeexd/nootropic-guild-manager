@@ -483,7 +483,8 @@ end
 -- Is this member's copy older than the newest one in the guild?
 function R:IsOutdated(e)
     if not e.hasAddon then return false end
-    if not e.version then return true end -- 1.10 or older never said
+    -- version not received yet: unknown, not outdated (shown as "?")
+    if not e.version then return false end
     return ns.CompareVersions(e.version, self:NewestVersion()) < 0
 end
 

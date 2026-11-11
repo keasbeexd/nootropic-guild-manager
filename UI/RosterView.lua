@@ -960,9 +960,12 @@ function RV:InitRow(row, e)
             else
                 row.Version:SetText("|cff6d6d6d(missing)|r")
             end
+        elseif not e.version then
+            -- uses the addon, but its version hasn't arrived yet
+            row.Version:SetText("|cff9d9d9d?|r")
         elseif ns.Roster:IsOutdated(e) then
             -- red: someone in the guild has a newer version
-            row.Version:SetText("|cffff4040" .. (e.version or "old") .. "|r")
+            row.Version:SetText("|cffff4040" .. e.version .. "|r")
         else
             row.Version:SetText("|cffffffff" .. e.version .. "|r")
         end
@@ -1016,7 +1019,7 @@ function RV:ShowRowTooltip(row, e, hint)
     end
     if e.discord then Pair("Discord", e.discord) end
     if e.hasAddon then
-        Pair("Addon version", e.version or "|cffff40401.10 or older|r (never reported a version)")
+        Pair("Addon version", e.version or "|cff9d9d9dnot received yet|r")
     else
         Pair("Addon version", "|cff9d9d9d(missing)|r")
         local reminded = ns.InstallReminder:StatusLine(e)
