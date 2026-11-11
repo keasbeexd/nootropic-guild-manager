@@ -60,14 +60,14 @@ end
 ------------------------------------------------------------------------
 -- Addon icon choices (window portrait, minimap button, shortcuts)
 ------------------------------------------------------------------------
--- The addon's own medallion (Media/Logo.tga, drawn from docs/logo.svg, the
--- same art as the README). fullArt: it's round already, so it isn't cropped.
+-- Your guild's tabard (the default), or the addon's own medallion
+-- (Media/Logo.tga, drawn from docs/logo.svg, the same art as the README),
+-- which is also what the tabard falls back to outside a guild or without
+-- one. fullArt: it's round already, so it isn't cropped.
 D.LOGO = "Interface\\AddOns\\NootropicGuildManager\\Media\\Logo"
 D.ICON_STYLES = {
+    { key = "emblem",    label = "Guild Tabard",        icon = D.LOGO, fullArt = true },
     { key = "nootropic", label = "Nootropic Medallion", icon = D.LOGO, fullArt = true },
-    { key = "mug",    label = "Ale Mug",        icon = ICON .. "INV_Drink_13" },
-    { key = "stein",  label = "Brewfest Stein", icon = ICON .. "INV_Holiday_BrewfestBuff_01" },
-    { key = "emblem", label = "Guild Emblem",   icon = D.LOGO, fullArt = true }, -- icon = fallback outside a guild
 }
 D.DEFAULT_ICON = D.LOGO
 

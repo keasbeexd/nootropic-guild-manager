@@ -72,7 +72,7 @@ local function Pages()
         text = "A few basics guildmates see on your profile. All optional; you can edit them later from your profile's Edit button." }
     if ns.DB:IsGuildMaster() then
         list[#list + 1] = { key = "perms", icon = "Interface\\Icons\\INV_Crown_01", title = "Permissions (Guild Master)",
-            text = "Choose which ranks may do each of these. \"Officers\" means ranks that can read officer notes. You can change this any time in Options > Officers." }
+            text = "Choose which ranks may do each of these. \"Officers\" means the ranks the game marks Officer (Guild Control). You can change this any time in Options > Officers." }
     end
     list[#list + 1] = { key = "done", icon = D.LOGO, full = true, title = "You're All Set",
         text = "Open the window any time with |cffffd100/ngm|r or the minimap button.\n\n"

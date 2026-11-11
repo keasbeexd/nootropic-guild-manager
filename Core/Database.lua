@@ -2,7 +2,7 @@
     Nootropic Guild Manager - Database
     SavedVariables (NootropicGuildManagerDB):
 
-      settings = { minimap, iconStyle, communitiesButton, titleUseGuild,
+      settings = { minimap, iconStyle, communitiesButton,
                    auditDays, onlineOnly, sortKey, sortAsc, hiddenColumns,
                    columnWidths, frameSize, framePos }
       guilds["<Guild>"] = {     -- "<Guild>-<Realm>" outside WoW: Forever
@@ -23,10 +23,9 @@ local DEFAULTS = {
     version = 1,
     settings = {
         minimap = { angle = 200, hide = false, left = "roster", right = "options", shift = "recruit" },
-        iconStyle = "nootropic",     -- "nootropic" | "mug" | "stein" | "emblem"
+        iconStyle = "emblem",        -- "emblem" (your guild's tabard) | "nootropic" (the medallion)
         communitiesButton = true,    -- shortcut on the Guild & Communities window
         blizzRoster = true,          -- alts and tooltips on the game's guild roster
-        titleUseGuild = false,       -- window title: "<Guild> Guild Manager"
         showAddonCount = true,       -- "x using ... Guild Manager" at the bottom of the window
         whoWhisperButton = true,     -- recruitment whisper button on the game's /who results
         shareReport = true,          -- share my spec and professions (Services/Sharing.lua)
@@ -71,12 +70,14 @@ function DB:Init()
     st.shareLocation, st.showOnMap, st.customDots = nil, nil, nil
     st.reviewed, st.kudosGiven = nil, nil
     sv.inspectLog = nil
-    -- 2.4: the medallion is the new default; the old default (the game's
-    -- mug icon) was saved for everyone, so move it over once
-    if not st.logoMigrated then
-        st.logoMigrated = true
-        if st.iconStyle == "mug" then st.iconStyle = "nootropic" end
+    -- 2.12: the guild tabard is the default and the only other choice is
+    -- the medallion (the mug and stein are gone); everyone moves to the
+    -- tabard once, and can pick the medallion again in Options
+    if not st.tabardDefault then
+        st.tabardDefault = true
+        st.iconStyle = "emblem"
     end
+    st.logoMigrated, st.titleUseGuild = nil, nil
     -- 2.6.1: every column but Second Name starts shown. Anyone still on the
     -- old default (version, second, level, class, zone, rank hidden, nothing
     -- else changed) moves over once; customised columns are kept.
@@ -199,7 +200,7 @@ end
 ------------------------------------------------------------------------
 -- Permissions: the Guild Master picks which ranks may do each of these
 -- (Options > Officers > Permissions). GS:perm_<key> = "" (the default:
--- officers, i.e. ranks that can read officer notes; everyone for ownprofile)
+-- officers, the ranks the game marks Officer; everyone for ownprofile)
 -- or rank numbers "1,3,4" ("-" = nobody but the Guild Master). The Guild Master (rank 0) always may, and only they change
 -- these. Officer-only data (officer log, audit, officer stats) can't be
 -- handed out: the game only delivers it to officer ranks.

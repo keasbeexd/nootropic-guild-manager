@@ -126,7 +126,8 @@ local function NewPage(key, name, subtitle)
     outer:SetScript("OnShow", function() O:Refresh() end)
     O.pages[key] = outer
 
-    local logo = ns.Brand:Attach(panel, 36, { "TOPLEFT", panel, "TOPLEFT", 16, -14 })
+    -- the addon's own logo, whatever the icon choice (this is about the addon)
+    local logo = ns.Brand:Attach(panel, 36, { "TOPLEFT", panel, "TOPLEFT", 16, -14 }, { style = "nootropic" })
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 10, -2)
     title:SetText(key == "main" and PANEL_NAME or (PANEL_NAME .. "  |cffffffff-  " .. name .. "|r"))
@@ -213,11 +214,11 @@ function O:BuildMain()
         for _, style in ipairs(D.ICON_STYLES) do
             items[#items + 1] = {
                 text = style.label, radio = true,
-                checked = function() return (ns.DB:Settings().iconStyle or "nootropic") == style.key end,
+                checked = function() return (ns.DB:Settings().iconStyle or "emblem") == style.key end,
                 func = function()
                     ns.Brand:SetStyle(style.key)
                     if style.key == "emblem" and not ns.Brand:CanShowEmblem() then
-                        ns:Print("You'll see your guild emblem once you're in a guild with a tabard. Until then the mug is shown.")
+                        ns:Print("You'll see your guild's tabard once you're in a guild with one. Until then the Nootropic medallion is shown.")
                     end
                     O:Refresh()
                 end,
@@ -228,11 +229,6 @@ function O:BuildMain()
     W.Tooltip(iconBtn, "Addon icon", "Shown on the window, the minimap button and the Guild & Communities shortcut.")
     self.iconButton = iconBtn
 
-    self.titleCheck = L:Check("Use my guild's name in the window title",
-        "\"<Guild> Guild Manager\" instead of \"Nootropic Guild Manager\".", function(on)
-            ns.DB:Settings().titleUseGuild = on
-            ns:Fire("SETTINGS_CHANGED")
-        end)
     self.addonCountCheck = L:Check("Show how many guildmates use the addon",
         "The \"x using ... Guild Manager\" text at the bottom of the window.", function(on)
             ns.DB:Settings().showAddonCount = on
@@ -441,7 +437,7 @@ function O:PermMenu(owner, key)
     local DB = ns.DB
     local items = { { text = "Who may do this", isTitle = true } }
     items[#items + 1] = { text = DB:PermDefaultText(key) .. " (default)", radio = true,
-        tooltip = { title = DB:PermDefaultText(key), text = DB:PermDef(key).everyone and "Every rank." or "Ranks that can read officer notes." },
+        tooltip = { title = DB:PermDefaultText(key), text = DB:PermDef(key).everyone and "Every rank." or "The ranks the game marks Officer (Guild Control)." },
         checked = function() return DB:PermRanks(key) == nil end,
         func = function()
             local ok, err = DB:SetPermRanks(key, nil)
@@ -506,7 +502,7 @@ function O:RefreshPermControls()
 end
 
 function O:BuildOfficers()
-    local outer, L = NewPage("officers", "Officers", "For ranks that can read officer notes.")
+    local outer, L = NewPage("officers", "Officers", "For the ranks the game marks Officer.")
     self.officerNote = L:Text("|cffff8080Only officers can change these.|r")
 
     self:BuildPermControls(L)
@@ -588,7 +584,7 @@ function O:BuildAbout()
         insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     banner:SetBackdropColor(0.10, 0.07, 0.03, 0.9)
     banner:SetBackdropBorderColor(0.85, 0.65, 0.25, 1)
-    local logo = ns.Brand:Attach(banner, 64, { "LEFT", banner, "LEFT", 12, 0 })
+    local logo = ns.Brand:Attach(banner, 64, { "LEFT", banner, "LEFT", 12, 0 }, { style = "nootropic" })
     O.logos[#O.logos + 1] = logo
     local name = banner:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
     name:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 14, -6)
@@ -660,7 +656,6 @@ function O:Refresh()
     -- main
     self.iconButton:SetText(D:IconStyle(s.iconStyle).label)
     self.iconPreview:Apply()
-    self.titleCheck:SetChecked(s.titleUseGuild and true or false)
     self.addonCountCheck:SetChecked(s.showAddonCount ~= false)
     self.communitiesCheck:SetChecked(s.communitiesButton ~= false)
     self.blizzRosterCheck:SetChecked(s.blizzRoster ~= false)
