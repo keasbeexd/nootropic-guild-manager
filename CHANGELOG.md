@@ -16,6 +16,7 @@ Sync, rebuilt from the ground up: lean, stricter, and fast in big guilds. **Ever
 - Your own records come back on a new install (your usual play hours and Hall of Fame history, from guildmates who have them).
 - **Your guild's tabard is the addon's icon** (window, minimap button, the Guild & Communities tab; the Options header and About page keep the addon's own medallion), and the Nootropic medallion the only other choice in Options, and what's shown outside a guild or without a tabard. Everyone moves to the tabard once; pick the medallion again in Options if you prefer it. The Ale Mug and Brewfest Stein icons are gone.
 - The tabard looks right at small sizes: the minimap button, the Guild & Communities tab and the Options previews show the guild's emblem on its own background color, with one ring (the button's or tab's own), instead of stray pieces of the game's guild portrait art.
+- The minimap button's icon sits centered in its ring, with no gap under it (laid out the way WoW: Forever's own minimap buttons are).
 - The window is always titled "Nootropic Guild Manager" (the option to use your guild's name is gone).
 
 ## 2.11.0
