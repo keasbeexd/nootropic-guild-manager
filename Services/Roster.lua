@@ -33,9 +33,13 @@ function R:Init()
     ns:RegisterEvent("GUILD_ROSTER_UPDATE", queue)
     ns:RegisterEvent("PLAYER_GUILD_UPDATE", queue)
 
+    -- (the whole family: contact info and usual hours are shared by a
+    -- player's characters)
     ns:On("MEMBER_CHANGED", function(full)
-        local e = R.byName[full]
-        if e then R:Decorate(e) end
+        for _, c in ipairs(ns.Profile:Family(full)) do
+            local e = R.byName[c]
+            if e then R:Decorate(e) end
+        end
         ns:Fire("ROSTER_UPDATED")
     end)
     local function redecorate()
