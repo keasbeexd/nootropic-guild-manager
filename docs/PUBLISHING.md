@@ -82,3 +82,11 @@ Missing secrets just skip their post. If Discord is down, the step fails but the
 - Actions are pinned to exact commits (`actions/checkout` v7.0.1, `BigWigsMods/packager` v2.6.1). To update one, check the new release's notes, wait until it's been out a couple of weeks, and pin its commit.
 - The job can only write releases (`permissions: contents: write`), and the checkout doesn't keep the GitHub token.
 - Tokens are repository secrets: GitHub hides them in logs. If one leaks, revoke it on its site and add a new one.
+
+## Test releases (GitHub only)
+
+A tag with "beta" after a dash, like `v2.12.0-beta1`, is published to GitHub only, as a pre-release: not to CurseForge or Wago, and not announced on Discord. Testers install it from the GitHub release (or from WowUp, set to that addon's beta channel). When it checks out, tag the same commit `v2.12.0` for the full release.
+
+```bash
+git tag -a v2.12.0-beta1 -m "v2.12.0-beta1" && git push origin v2.12.0-beta1
+```
