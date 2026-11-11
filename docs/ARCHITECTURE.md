@@ -29,34 +29,37 @@ Modules hang off the addon namespace (`ns.Sync`, `ns.Roster`, `ns.DB`...). `ADDO
 
 ## Sync
 
-Everything the guild shares is a **record**: `key -> { v = value, t = server time, a = author }`. The newest version of a record wins (ties broken by author, then value), so every copy ends up the same whatever order messages arrive in. Records are sent with `C_ChatInfo.SendAddonMessage` under the prefix `NootropicGM` on the **GUILD** channel, or on the **OFFICER** channel for officer-only data; nothing is ever whispered.
+Everything the guild shares is a **record**: `key -> { v = value, t = server time, a = author }`. The newest version of a record wins (ties broken by author, then value), so every copy ends up the same whatever order messages arrive in. Records are sent with `C_ChatInfo.SendAddonMessage` under the prefix `NootropicGM` on the **GUILD** channel, or on the **OFFICER** channel for officer-only data. Only those two channels are read, plus whispers to an officer from a guildmate whose guild channel doesn't deliver (below).
 
 ### Messages
 
-All messages start with the protocol number (`PROTO`, currently 5); other versions are ignored. Fields are tab-separated.
+All messages start with the protocol number (`PROTO`, currently 5); other versions are ignored, and so are kinds a copy doesn't know. Fields are tab-separated.
 
 | Kind | Fields | Meaning |
 | --- | --- | --- |
 | `R` | key, time, author, batch, value | one record |
 | `Z` | same as `R`, value compressed | one big record, Deflate + Base64 (`C_EncodingUtil`) (2.10+) |
-| `D` | lane, 16 checksums | "here's what I have": a digest over 16 buckets of one lane's records |
-| `L` | q or a, lane, target, lists | "here's exactly what I have in these buckets" (2.10+) |
-| `B` | scope, bucket | "I'm re-sending this bucket" (others skip it; older copies only) |
+| `S` | lane, `author:newest:sum,...` | a sync check: per author, their newest record's time and a checksum (base 36) (2.11+) |
+| `Q` | lane, target, author, since | "send me this author's records newer than `since`" (`0`: all) (2.11+) |
 | `C` | id, part, parts, data | a piece of a message longer than 250 bytes (at most 16 parts) |
 
-Local changes are sent together 15 seconds after the first one (a **batch**, which the audit groups). Every 10 minutes, and when the window opens, each copy sends a digest per **lane**:
+Local changes are sent together 15 seconds after the first one (a **batch**, which the audit groups). Every 10 minutes, when the window opens, and when a guildmate's first check of the session arrives, each copy sends a check per **lane**:
 
-| Lane | Digest scope | Channel | Records | Who |
+| Lane | Channel | Records | Who sends a check | Entries |
 | --- | --- | --- | --- | --- |
-| guild | `g` | GUILD | guild records except recruitment statuses | everyone |
-| officer | `officer` | OFFICER | officer records | officers |
-| recruit | `recruit` | GUILD | recruitment statuses (`RS`) | members whose rank may recruit (others don't keep them) |
+| guild | GUILD | guild records except recruitment statuses | everyone | members: only themselves; officers: every author |
+| officer | OFFICER | officer records | officers | every author |
+| recruit | GUILD | recruitment statuses (`RS`) | members whose rank may recruit (others don't keep them) | every author |
 
-When a digest differs, the copy that noticed waits 1-5 seconds and sends the sender an `L q`: for each differing bucket, one `<key hash>.<time>.<value hash>` entry per record (base 36). The sender sends exactly the records the asker lacks or has older, and answers with an `L a` for the buckets where it's the one behind; the asker sends those. An `L a` is never answered with a list, so it can't loop. One `L q` per lane and peer per minute.
+A copy compares each entry with its own. Where the checksum differs and the sender's newest is later, it asks (`Q`) for that author's records since its own newest; where the newest times match but the checksums don't (an older record was lost), it asks for all of them, and then not again for 15 minutes for that author. It only asks someone it would accept those records from: the author, an officer, or (recruit and officer lanes) anyone in the lane. Before asking it waits up to 3 seconds and skips if someone else just asked, since the answer goes to the whole channel. A copy answers a given request at most once per 20 seconds, and one requester at most 30 times a minute.
 
-Who passes on what: everyone sends their own records (fast lane); officers also pass on everyone's guild and officer records, and recruiters everyone's recruitment statuses (slow lane).
+Who passes on what: everyone answers for their own records (fast lane); officers also answer for everyone's guild and officer records, and recruiters for everyone's recruitment statuses (slow lane). The same record is never queued twice while it's waiting to go out.
 
-Records over 150 bytes are sent as `Z` only while every guildmate online with the addon runs 2.10 or later. While anyone online runs an older copy, copies also send the old whole-store digest (scope `guild`), and an older copy's digest is repaired the old way: re-sending whole buckets (`B` markers, then the records).
+**Officers by rank.** Members can't see the officer channel. The Guild Master's copy records the rank of everyone it sees on it in `GS:officers` (rank names, `;`-separated), which only the current Guild Master may write. Every copy treats the Guild Master, those ranks, and anyone it has seen on the officer channel as officers.
+
+**A guild channel that doesn't deliver.** The game echoes guild addon messages back to their sender. A copy that has sent 3 or more over 20 seconds and heard none back whispers its messages to an online officer running 2.11 or later instead (its sync checks still go on the guild channel too, so it notices if that starts working). The officer applies that member's records as if they came on the guild channel, passes on only records that member wrote, and answers or forwards their requests.
+
+Records over 150 bytes are sent as `Z` only while every guildmate online with the addon runs 2.10 or later. Copies before 2.11 send their own kind of checks (`D`, `L`, `B`), which 2.11 ignores: they still exchange live changes, but not repairs.
 
 ### Record types
 
@@ -83,7 +86,7 @@ Hall of Fame extras (Services/HallOfFame.lua): `social` is a count of 15-minute 
 | `PS:<member>` | sharing choices others must respect (`together` = leave me out of Play Together) | guild | the member only |
 | `DN:<player>` | `time;what they said` ("" = removed) | guild | anyone adds; removing needs **recruit** |
 | `RS:<player>` | `whispered;replied;invited;reply` (kept 14 days) | guild | anyone in the guild |
-| `GS:<name>` | guild setting, e.g. `GS:perm_links = "1,3"` | guild | officers; `perm_*` only the Guild Master |
+| `GS:<name>` | guild setting, e.g. `GS:perm_links = "1,3"` | guild | officers; `perm_*` and `officers` only the Guild Master |
 | `L:<member>:<id>` | officer log entry | officer | officers |
 | `A:<id>` | audit entry | officer | officers (written locally from changes, or by the roster log) |
 | `JN:<member>` | `time;inviter` (joined) | officer | officers |

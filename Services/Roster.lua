@@ -107,6 +107,8 @@ function R:Rebuild()
                     online = online and true or false,
                     status = status or 0,
                     lastOnline = 0,
+                    -- the shard tag the game adds on Forever ("CAMWOWUS1Realm2PvP"), for diagnostics
+                    shard = type(name) == "string" and name:match("%-(.+)$") or nil,
                 }
                 -- race isn't in the guild roster; the game knows it from their character id
                 local guid = select(17, GetGuildRosterInfo(i))
