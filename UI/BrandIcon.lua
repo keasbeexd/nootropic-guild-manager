@@ -41,25 +41,49 @@ end
 
 local IconMixin = {}
 
+-- Small icons (the minimap button, the Guild & Communities tab, Options
+-- previews) can't use the guild portrait's art: it's drawn for 60 pixels,
+-- and its ring doubles the host's own frame. They get the guild's
+-- background color and the emblem instead.
+local SMALL = 48
+
 function IconMixin:ShowEmblem(on)
+    local small = self.size < SMALL
     self.Bg:SetShown(on)
-    -- where the host already draws a ring (the minimap button: `crop`), the
-    -- tabard's own border would be a second ring inside it
-    self.Border:SetShown(on and not self.crop)
+    self.Border:SetShown(on and not small)
     self.Emblem:SetShown(on)
     self.Icon:SetShown(not on)
+end
+
+-- The guild's tabard background color, or a dark gray.
+local function TabardBackground()
+    if C_GuildInfo and C_GuildInfo.GetGuildTabardInfo then
+        local ok, info = pcall(C_GuildInfo.GetGuildTabardInfo, "player")
+        local c = ok and info and info.backgroundColor
+        if c and c.GetRGB then return c:GetRGB() end
+    end
+    return 0.15, 0.15, 0.15
 end
 
 function IconMixin:Apply()
     local key = self.fixedStyle or Brand:Style()
     if key == "emblem" and Brand:CanShowEmblem() then
         local s = self.size / 60
-        self.Bg:SetTexture(GUILD_ART)
-        self.Bg:SetTexCoord(unpack(BG_COORDS))
-        self.Border:SetTexture(GUILD_ART)
-        self.Border:SetTexCoord(unpack(BORDER_COORDS))
         self.Emblem:SetSize(56 * s, 64 * s) -- the game sets width from height (7:8)
-        local ok = pcall(SetLargeGuildTabardTextures, "player", self.Emblem, self.Bg, self.Border)
+        local ok
+        if self.size < SMALL then
+            -- the game colors the emblem; the rest it would draw goes to
+            -- textures that are never shown
+            ok = pcall(SetLargeGuildTabardTextures, "player", self.Emblem, self.SpareBg, self.SpareBorder)
+            self.Bg:SetColorTexture(TabardBackground())
+            self.Bg:SetTexCoord(0, 1, 0, 1)
+        else
+            self.Bg:SetTexture(GUILD_ART)
+            self.Bg:SetTexCoord(unpack(BG_COORDS))
+            self.Border:SetTexture(GUILD_ART)
+            self.Border:SetTexCoord(unpack(BORDER_COORDS))
+            ok = pcall(SetLargeGuildTabardTextures, "player", self.Emblem, self.Bg, self.Border)
+        end
         if ok then
             self:ShowEmblem(true)
             return
@@ -106,6 +130,10 @@ function Brand:Attach(host, size, point, opts)
     icon.Emblem = host:CreateTexture(nil, layer, nil, 2)
     icon.Emblem:SetSize(56 * s, 64 * s)
     icon.Emblem:SetPoint("CENTER", slot, "CENTER", 0, 1 * s)
+    icon.SpareBg = host:CreateTexture(nil, layer)
+    icon.SpareBorder = host:CreateTexture(nil, layer)
+    icon.SpareBg:Hide()
+    icon.SpareBorder:Hide()
     icon.Border = host:CreateTexture(nil, layer, nil, 3)
     icon.Border:SetSize(size, 59 * s)
     icon.Border:SetPoint("TOPLEFT", slot, "TOPLEFT", 0, -1 * s)

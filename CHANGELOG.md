@@ -14,7 +14,7 @@ Sync, rebuilt from the ground up: lean, stricter, and fast in big guilds. **Ever
 - **Only guild and officer messages are read** (plus, on officers' copies, those whispers from guildmates). Party, raid and other whispers are ignored.
 - **Sync at a glance:** a dot next to the version number in the window: green in sync, yellow working on it, grey nobody online to compare with, red a problem. Hover for details, click to check now. `/ngm sync` shows the same, and `/ngm diag` is shorter.
 - Your own records come back on a new install (your usual play hours and Hall of Fame history, from guildmates who have them).
-- The minimap button with the Guild Tabard icon style shows one gold ring instead of two (the tabard's own border is left off there, as the medallion's ring already is).
+- The Guild Tabard icon style looks right at small sizes: the minimap button, the tab on the game's Guild & Communities window and the Options previews show the guild's emblem on its own background color, with one ring (the button's or tab's own) instead of stray pieces of the game's guild portrait art.
 
 ## 2.11.0
 
