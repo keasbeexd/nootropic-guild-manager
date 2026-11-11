@@ -33,24 +33,28 @@ local function ParseContact(v)
     return discord, note
 end
 
--- discord, note (each "" when empty) a member set, without their main's.
-function PF:OwnContact(full)
+-- A player's characters: their main and its alts (just them, if unlinked).
+function PF:Family(full)
     local m = ns.DB:GetMember(full)
-    return ParseContact(m and m.contact)
+    local main = (m and m.main) or full
+    local list = { main }
+    local index = ns.Roster and ns.Roster.altIndex
+    for _, alt in ipairs((index and index[main]) or {}) do list[#list + 1] = alt end
+    return list
 end
 
--- discord, note, fromMain: an alt without its own shows its main's.
--- Returns nil when neither has one.
+-- discord, note, from: contact info is the player's, not one character's,
+-- so every character of theirs shows the one set most recently on any of
+-- them (from: that character, when it isn't `full`). nil when none has any.
 function PF:Contact(full)
-    local d, n = self:OwnContact(full)
-    if d ~= "" or n ~= "" then return d, n end
-    local m = ns.DB:GetMember(full)
-    local main = m and m.main
-    if main then
-        d, n = self:OwnContact(main)
-        if d ~= "" or n ~= "" then return d, n, main end
+    local best, from
+    for _, c in ipairs(self:Family(full)) do
+        local rec = ns.Sync:Get("CN:" .. c)
+        if rec and (not best or ns.Sync.Newer(rec, best)) then best, from = rec, c end
     end
-    return nil
+    local d, n = ParseContact(best and best.v)
+    if d == "" and n == "" then return nil end
+    return d, n, from ~= full and from or nil
 end
 
 -- "keasbeexd" -> "@keasbeexd" for display (a leading @ typed by hand isn't doubled).
@@ -63,11 +67,14 @@ function PF:CanEditContact(full)
     return full ~= nil and ns.Sync:CanWrite("CN:" .. full)
 end
 
--- Either value may be nil to keep what's there.
+-- Either value may be nil to keep what's there (the player's current
+-- contact info, from whichever of their characters has it). Saved on this
+-- character; being the newest, it's what all their characters show.
 function PF:SetContact(full, discord, note)
     if not (full and ns.DB:Guild()) then return nil, "You are not in a guild." end
     if not self:CanEditContact(full) then return nil, "Only officers can change someone else's contact info." end
-    local curD, curN = self:OwnContact(full)
+    local curD, curN = self:Contact(full)
+    curD, curN = curD or "", curN or ""
     -- saved without a leading @ (it's added when shown)
     discord = discord == nil and curD or ns.Trim((discord:gsub("[;\r\n]", ""))):gsub("^@+", ""):sub(1, self.DISCORD_MAX)
     note = note == nil and curN or ns.Trim((note:gsub("[\r\n]+", " "))):sub(1, self.CONTACT_NOTE_MAX)
@@ -249,12 +256,20 @@ function PF:Publish()
     return ns.Sync:Set("SC:" .. me, value)
 end
 
--- A member's hours as your clock shows them: index -> true, or nil. mode:
--- "local" or "server" (default: follow the game clock).
+-- A player's hours as your clock shows them: index -> true, or nil. All
+-- their characters' hours together (when the player is usually on, whatever
+-- they play), the same for each of them. mode: "local" or "server"
+-- (default: follow the game clock).
 function PF:Hours(full, mode)
-    local m = ns.DB:GetMember(full)
-    if not (m and m.schedule) then return nil end
-    local bits = Decode(m.schedule)
+    local bits
+    for _, c in ipairs(self:Family(full)) do
+        local m = ns.DB:GetMember(c)
+        if m and m.schedule then
+            bits = bits or {}
+            for h, on in pairs(Decode(m.schedule)) do if on then bits[h] = true end end
+        end
+    end
+    if not bits then return nil end
     mode = mode or self.ClockMode()
     if mode == "local" then
         local off = self.LocalMinusServer()

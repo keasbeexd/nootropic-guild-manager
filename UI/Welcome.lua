@@ -298,7 +298,7 @@ function WL:RefreshProfile()
     local me = ns.PlayerFullName()
     local canContact = ns.DB:Guild() and ns.Profile:CanEditContact(me)
     local canRoles = ns.DB:Guild() and ns.Sync:CanWrite("RL:" .. me)
-    local d, n = ns.Profile:OwnContact(me)
+    local d, n = ns.Profile:Contact(me)
     p.discord:SetText(d or "")
     p.note:SetText(n or "")
     p.discord:SetEnabled(canContact and true or false)
@@ -324,7 +324,7 @@ function WL:SaveProfile()
     if not (p and IsInGuild() and ns.DB:Guild()) then return end
     local me = ns.PlayerFullName()
     if ns.Profile:CanEditContact(me) then
-        local d, n = ns.Profile:OwnContact(me)
+        local d, n = ns.Profile:Contact(me)
         local nd, nn = ns.Trim(p.discord:GetText() or ""), ns.Trim(p.note:GetText() or "")
         if nd ~= (d or "") or nn ~= (n or "") then ns.Profile:SetContact(me, nd, nn) end
     end

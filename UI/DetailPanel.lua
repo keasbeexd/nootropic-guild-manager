@@ -408,7 +408,7 @@ function DP:RefreshContactBox(e)
     if note ~= "" then y = y - 2 - math.ceil(s.Note:GetStringHeight()) end
     s.From:ClearAllPoints()
     s.From:SetPoint("TOPLEFT", 0, y - 3)
-    s.From:SetText(fromMain and ("From their main, " .. ns.ShortName(fromMain)) or "")
+    s.From:SetText(fromMain and ("Set on " .. ns.ShortName(fromMain) .. " (the same for all their characters)") or "")
     if fromMain then y = y - 15 end
     s:SetHeight(-y + 2)
     return true
@@ -1463,9 +1463,9 @@ function DP:Refresh(forceText)
     if self.editing then
         local ec = self.editContact
         if ns.Profile:CanEditContact(e.full) then
-            local d, n = ns.Profile:OwnContact(e.full)
-            if forceText or not ec.DiscordBox:HasFocus() then ec.DiscordBox:SetText(d) end
-            if forceText or not ec.NoteBox:HasFocus() then ec.NoteBox:SetText(n) end
+            local d, n = ns.Profile:Contact(e.full)
+            if forceText or not ec.DiscordBox:HasFocus() then ec.DiscordBox:SetText(d or "") end
+            if forceText or not ec.NoteBox:HasFocus() then ec.NoteBox:SetText(n or "") end
         end
         if ns.DB:CanEditLinks() then self:RefreshAlts(e) end
         self:RefreshSpec(e)
