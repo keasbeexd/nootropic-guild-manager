@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.9.3
+
+- Fix: a new member's data (version, professions, Hall of Fame…) could take ages to reach anyone, or never seem to. When copies compare data, every copy also passed on every recruitment status and Do Not Whisper entry it knew (600+ in our guild), queuing hundreds of messages, and the member's own records waited behind them. Now a member passes on only their own records, first; officers still pass on everything. The same record is also never queued twice while it's waiting to go out.
+
 ## 2.9.2
 
 - Fix: changing someone's rank in the game's guild window could be blocked ("NootropicGuildManager has been blocked from an action only available to the Blizzard UI"). The addon's alt labels on that roster were added in a way that left Blizzard's row data marked as touched by an addon, and the rank dropdown reads that data. They're now added the way Blizzard intends (after their code, without touching it).

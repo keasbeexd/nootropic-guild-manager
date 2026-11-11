@@ -1013,15 +1013,21 @@ function S:SendBuckets(scope, buckets)
         self:Send(table.concat({ PROTO, "B", scope, tostring(b) }, FS), channel, nil, "bulk")
     end
     local now = Now()
-    -- officers pass on everything; others only what guildmates will take
-    -- from them (their own records, and lists anyone may write)
+    -- Officers pass on everything; everyone else only their own records.
+    -- (Passing on every recruitment status and Do Not Whisper entry too, as
+    -- before, queued hundreds of messages per repair on every copy, and a
+    -- member's own records waited behind them: a new member's data could
+    -- take ages to reach anyone. Those lists still spread through officers
+    -- and the people who wrote them.)
+    -- Your own records go in the fast lane, ahead of anything passed on.
     local relayAll = scope == "officer" or ns.IsOfficer()
     local me = Me()
     for key, rec in pairs(store) do
         if want[Bucket(key)] and not self:Excluded(key, rec, now) then
-            local typ = S.ParseKey(key)
-            if relayAll or Same(rec.a, me) or (typ and S.TYPES[typ].anyone) then
-                self:Send(self:EncodeRecord(key, rec), channel, nil, "bulk")
+            local mine = Same(rec.a, me)
+            if mine or relayAll then
+                local msg = self:EncodeRecord(key, rec)
+                self:Send(msg, channel, nil, mine and "high" or "bulk", msg)
             end
         end
     end
@@ -1138,18 +1144,28 @@ local function RawSend(msg, channel, target)
     return "drop"
 end
 
-function S:Send(msg, channel, target, prio)
+-- dedupe: messages already waiting to go out (identical text), so repeated
+-- repairs don't pile the same record into the queue again and again
+local waiting = {}
+S.waiting = waiting
+
+function S:Send(msg, channel, target, prio, dedupe)
     local q = queues[prio or "high"]
+    if dedupe then
+        if waiting[dedupe] then return end
+        waiting[dedupe] = true
+    end
     if #msg > self.MAX_MSG then
         chunkId = (chunkId + 1) % 46656
         local id = Base36(chunkId)
         local n = math.ceil(#msg / self.CHUNK)
         for i = 1, n do
             local part = msg:sub((i - 1) * self.CHUNK + 1, i * self.CHUNK)
-            q[#q + 1] = { table.concat({ PROTO, "C", id, tostring(i), tostring(n), part }, FS), channel, target }
+            -- the last part releases the dedupe mark once it's gone
+            q[#q + 1] = { table.concat({ PROTO, "C", id, tostring(i), tostring(n), part }, FS), channel, target, i == n and dedupe or nil }
         end
     else
-        q[#q + 1] = { msg, channel, target }
+        q[#q + 1] = { msg, channel, target, dedupe }
     end
     self:Pump()
 end
@@ -1179,6 +1195,7 @@ function S:Pump()
                 return
             end
             table.remove(q, 1)
+            if item[4] then waiting[item[4]] = nil end
             tokens = tokens - cost
             if result == "ok" then
                 S.stats.sent = S.stats.sent + 1
