@@ -380,8 +380,13 @@ SlashCmdList.NOOTROPICGM = function(msg)
         local started = ns.Sync:Exchange(true)
         local st = ns.Sync.stats
         ns:Print(started and "Comparing data with guildmates now." or "A sync just ran; it repeats automatically every few minutes.")
-        ns:Print(("Sync this session: %d sent, %d received, %d applied, %d queued, %d dropped."):format(
-            st.sent, st.received, st.applied, ns.Sync:QueueSize(), st.dropped))
+        ns:Print(("Sync this session: %d sent, %d received, %d applied, %d refused, %d queued, %d dropped."):format(
+            st.sent, st.received, st.applied, st.refused or 0, ns.Sync:QueueSize(), st.dropped))
+        local lr = ns.Sync.lastRefused
+        if lr then
+            ns:Print(("  Last refused: %s from %s (written as %s): %s."):format(
+                tostring(lr.key), tostring(lr.sender), tostring(lr.author), lr.why))
+        end
     elseif cmd == "audit" then
         ns.UI:Show()
         ns.UI:SelectTab(ns.UI.TAB_AUDIT)

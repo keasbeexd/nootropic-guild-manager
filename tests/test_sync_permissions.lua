@@ -49,6 +49,7 @@ check("member links a main once his rank is allowed", rec("Bob Member-R", "M:Ann
 check("member edits own spec", rec("Bob Member-R", "MS:Bob Member-R", "Bob Member-R", "Holy"), "Holy")
 check("member edits someone else's spec", rec("Bob Member-R", "MS:Ann Member-R", "Bob Member-R", "Holy"), nil)
 check("member forges someone's own record (claims to be them)", rec("Bob Member-R", "AV:Ann Member-R", "Ann Member-R", "9.9"), nil)
+check("the refusal is remembered for /ngm sync", S.lastRefused and S.lastRefused.key == "AV:Ann Member-R" and S.lastRefused.sender == "Bob Member-R" and S.lastRefused.why ~= nil, true)
 check("member sends own version", rec("Ann Member-R", "AV:Ann Member-R", "Ann Member-R", "2.1"), "2.1")
 check("officer relays someone's own record", rec("Mira Officer-R", "SC:Ann Member-R", "Ann Member-R", "ff"), "ff")
 check("member adds to Do Not Whisper (anyone may)", rec("Bob Member-R", "DN:Spammer-R", "Bob Member-R", "1;no"), "1;no")

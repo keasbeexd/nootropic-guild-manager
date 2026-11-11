@@ -738,6 +738,11 @@ end
 -- key: nil for the main page, or "recruiting", "officers".
 function O:Open(key)
     if not self.panel then return end
+    -- the game blocks opening its settings panel in combat (and logs taint)
+    if InCombatLockdown and InCombatLockdown() then
+        ns:Print("Options can't open during combat. Try again once you're out of combat.")
+        return
+    end
     if Settings and Settings.OpenToCategory and self.category then
         local cat = key and self.subcats[key] or self.category
         local id = cat.GetID and cat:GetID() or cat.ID

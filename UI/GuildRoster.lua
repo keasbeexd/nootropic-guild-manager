@@ -9,8 +9,12 @@
       Alt+click a member opens their profile docked beside the window
 
     Only additive, taint-safe hooks are used: our own child frames on the
-    rows, HookScript on tooltips, ScrollUtil's row callback, and the
-    official Menu.ModifyMenu. Blizzard's frames, sorting and protected
+    rows, HookScript on tooltips, hooksecurefunc on the rows' SetMember
+    (Blizzard's way to run after their code without tainting it), and the
+    official Menu.ModifyMenu. We never register callbacks inside Blizzard's
+    member list: doing that from addon code left its row data tainted, and
+    the rank dropdown (a protected action) reads that data, which got rank
+    changes blocked now and then. Blizzard's frames, sorting and protected
     actions (invite, promote, remove) are left untouched.
     Off switch: Options > "Show alts and profiles on the Guild roster".
 ]]
@@ -81,16 +85,15 @@ local function Badge(row)
     b:SetSize(ICON * 2, ICON)
     b:SetFrameLevel(row:GetFrameLevel() + 3)
     b:EnableMouse(false)
+    -- a dark backing, so a long name running under it stays readable
+    b.Bg = b:CreateTexture(nil, "BACKGROUND")
+    b.Bg:SetAllPoints()
+    b.Bg:SetColorTexture(0.05, 0.04, 0.03, 0.9)
     b.Alt = b:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     b.Alt:SetText("alt")
+    b.Alt:SetPoint("CENTER", 0, 0)
     row.NGMBadge = b
     return b
-end
-
--- The name text on a Blizzard roster row, if this client has one where we expect it.
-local function NameText(row)
-    local nf = row.NameFrame
-    return (nf and nf.Name) or row.Name
 end
 
 function GR:DecorateRow(row)
@@ -100,23 +103,22 @@ function GR:DecorateRow(row)
         if b then b:Hide() end
         return
     end
+    if not e.isAlt then
+        if b then b:Hide() end
+        return
+    end
     b = Badge(row)
-    local x = 0
-    b.Alt:ClearAllPoints()
-    b.Alt:SetPoint("LEFT", 0, 0)
-    b.Alt:SetShown(e.isAlt and true or false)
-    if e.isAlt then x = x + 3 + math.ceil(b.Alt:GetStringWidth()) end
-    b:SetWidth(math.max(1, x))
+    b:SetWidth(math.ceil(b.Alt:GetStringWidth()) + 6)
     b:ClearAllPoints()
-    local name = NameText(row)
-    if name then
-        -- right after the visible name, never past the name column
-        local w = math.min(math.ceil(name:GetStringWidth() or 0), math.max(0, (name:GetWidth() or 0) - x - 4))
-        b:SetPoint("LEFT", name, "LEFT", w + 4, 0)
+    -- the same spot on every row: the right edge of the name column (its
+    -- width is fixed by Blizzard), so it never lands in another column
+    local nf = row.NameFrame
+    if nf then
+        b:SetPoint("RIGHT", nf, "RIGHT", -2, 0)
     else
         b:SetPoint("RIGHT", row, "RIGHT", -6, 0)
     end
-    b:SetShown(x > 0)
+    b:Show()
 end
 
 -- Tooltip lines: added after Blizzard's own (HookScript runs after theirs).
@@ -236,21 +238,28 @@ function GR:Attach()
     local sb = ScrollBox()
     if not sb then return end
     self.attached = true
-    if ScrollUtil and ScrollUtil.AddInitializedFrameCallback then
-        ScrollUtil.AddInitializedFrameCallback(sb, function(_, row)
+    -- Rows are filled by Blizzard's SetMember: run after it, securely.
+    -- Hooking the mixin covers rows created from now on; rows that already
+    -- exist get the same hook on themselves.
+    local function after(row)
+        HookRow(row)
+        GR:DecorateRow(row)
+    end
+    if hooksecurefunc and CommunitiesMemberListEntryMixin and CommunitiesMemberListEntryMixin.SetMember then
+        hooksecurefunc(CommunitiesMemberListEntryMixin, "SetMember", after)
+    end
+    local function hookExisting()
+        if not sb.ForEachFrame then return end
+        sb:ForEachFrame(function(row)
+            if not decorated[row] and row.SetMember then hooksecurefunc(row, "SetMember", after) end
             HookRow(row)
             GR:DecorateRow(row)
-        end, GR, true)
-    elseif sb.ForEachFrame then
-        -- older ScrollBox: decorate whatever is shown whenever the list updates
-        sb:ForEachFrame(function(row) HookRow(row) end)
+        end)
     end
+    hookExisting()
     local list = CommunitiesFrame.MemberList
     if list and list.RefreshListDisplay then
-        hooksecurefunc(list, "RefreshListDisplay", function()
-            if sb.ForEachFrame then sb:ForEachFrame(function(row) HookRow(row) end) end
-            GR:RefreshRows()
-        end)
+        hooksecurefunc(list, "RefreshListDisplay", hookExisting)
     end
 end
 
@@ -263,9 +272,9 @@ function GR:Diagnose()
             if RowEntry(row) then named = named + 1 end
         end)
     end
-    ns:Print(("Guild roster: hooked=%s, guild view=%s, rows=%d, matched=%d, menus=%s, ScrollUtil=%s"):format(
+    ns:Print(("Guild roster: hooked=%s, guild view=%s, rows=%d, matched=%d, menus=%s"):format(
         tostring(self.attached or false), tostring(IsGuildView()), rows, named,
-        tostring(self.menus or false), tostring(ScrollUtil ~= nil)))
+        tostring(self.menus or false)))
 end
 
 function GR:Init()
