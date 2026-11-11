@@ -133,22 +133,38 @@ end
 
 -- Finds your own row (by character GUID, else by name) and makes sure the
 -- addon uses that exact spelling for you.
+local function Plain(v)
+    if v == nil or (issecretvalue and issecretvalue(v)) then return nil end
+    return v
+end
+
 function R:FindSelf(total)
-    local myGuid = UnitGUID and UnitGUID("player")
-    local myName = (UnitName("player") or ""):lower()
-    local found, byName
+    local myGuid = Plain(UnitGUID and UnitGUID("player"))
+    local myName = (Plain(UnitName("player")) or ""):lower()
+    local myClass = Plain(UnitClass and select(2, UnitClass("player")))
+    local myLevel = Plain(UnitLevel and UnitLevel("player"))
+    local found, best, bestScore
     for i = 1, total do
-        local name = GetGuildRosterInfo(i)
+        local name, _, _, level, _, _, _, _, online, _, classFile = GetGuildRosterInfo(i)
+        name = Plain(name)
         if name then
-            local guid = select(17, GetGuildRosterInfo(i))
+            local guid = Plain(select(17, GetGuildRosterInfo(i)))
             if myGuid and guid and guid == myGuid then
                 found = ns.NormalizeName(name)
                 break
             end
-            if not byName and ns.ShortName(name):lower() == myName then byName = ns.NormalizeName(name) end
+            -- On Forever the game may give only your first name, and one
+            -- player can have several characters with the same first name:
+            -- prefer the one that's online, with your class and level.
+            if ns.ShortName(name):lower() == myName then
+                local score = (Plain(online) and 4 or 0)
+                    + ((myClass and Plain(classFile) == myClass) and 2 or 0)
+                    + ((myLevel and Plain(level) == myLevel) and 1 or 0)
+                if not bestScore or score > bestScore then best, bestScore = ns.NormalizeName(name), score end
+            end
         end
     end
-    found = found or byName
+    found = found or best
     self.selfRow = found
     if found and found ~= ns.PlayerFullName() then
         ns.selfName = found
