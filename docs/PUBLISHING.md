@@ -51,6 +51,25 @@ Nothing is published to a site until both of its pieces are in place, so these c
 
 The workflow passes these to the packager as `CF_API_KEY` and `WAGO_API_TOKEN`. If a project ID is in the TOC but its secret is empty, the release stops at **Check upload tokens** instead of quietly skipping that site.
 
+### Discord announcements (optional)
+
+Each release posts to Discord: the version, its CHANGELOG.md section, and links to CurseForge, Wago and the GitHub release.
+- **Every release** → the addon's channel (#guild-manager-addon), **no ping**.
+- **Feature releases** (versions ending in `.0`, like 2.10.0 or 3.0.0) → also **#announcements**, pinging one role (Announcements). Fix releases (2.9.1) never ping.
+
+Setup:
+1. In Discord, create two webhooks: **Server Settings → Integrations → Webhooks → New Webhook**, one for #guild-manager-addon and one for #announcements. Copy each URL. They're secrets: anyone with one can post there.
+2. In the GitHub repository, go to **Settings → Secrets and variables → Actions**:
+   - secret `DISCORD_RELEASE_WEBHOOK` = the #guild-manager-addon URL
+   - secret `DISCORD_ANNOUNCE_WEBHOOK` = the #announcements URL
+   - **variable** (Variables tab) `DISCORD_ANNOUNCE_ROLE_ID` = the Announcements role's ID (Discord: Server Settings → Roles → right-click the role → Copy Role ID, with Developer Mode on). Not a secret.
+3. Optional test, from the repository folder (`--dry-run` only prints):
+   ```bash
+   DISCORD_RELEASE_WEBHOOK='paste-url' GITHUB_REF_NAME=v2.9.1 python3 .github/scripts/discord_release.py
+   ```
+
+Missing secrets just skip their post. If Discord is down, the step fails but the release (already uploaded) doesn't. Nothing but the one role is ever pinged (never @everyone).
+
 ## Rules the sites share
 
 - Blizzard's [UI Add-On Development Policy](https://us.forums.blizzard.com/en/wow/t/ui-add-on-development-policy/24534) applies: the addon is free, has no ads, and doesn't ask for donations in game. Donation links (GitHub Sponsors, Ko-fi) belong on the project pages and the repository, never inside the addon.
