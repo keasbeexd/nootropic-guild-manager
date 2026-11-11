@@ -51,6 +51,20 @@ Nothing is published to a site until both of its pieces are in place, so these c
 
 The workflow passes these to the packager as `CF_API_KEY` and `WAGO_API_TOKEN`. If a project ID is in the TOC but its secret is empty, the release stops at **Check upload tokens** instead of quietly skipping that site.
 
+### Discord announcement (optional)
+
+Each release can post to a Discord channel: the version, its CHANGELOG.md section, and links to CurseForge, Wago and the GitHub release. It pings nobody.
+
+1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**. Choose the channel (for example #ngm), and copy the webhook URL. It's a secret: anyone with it can post there.
+2. In the GitHub repository: **Settings → Secrets and variables → Actions → New repository secret**, named `DISCORD_RELEASE_WEBHOOK`, with the URL as its value.
+3. Optional test (posts the current version's announcement now), from the repository folder:
+   ```bash
+   DISCORD_RELEASE_WEBHOOK='paste-url' GITHUB_REF_NAME=v2.9.1 python3 .github/scripts/discord_release.py
+   ```
+   Add `--dry-run` to only print the message.
+
+Without the secret the step is skipped. If Discord is down, the step fails but the release (already uploaded) doesn't.
+
 ## Rules the sites share
 
 - Blizzard's [UI Add-On Development Policy](https://us.forums.blizzard.com/en/wow/t/ui-add-on-development-policy/24534) applies: the addon is free, has no ads, and doesn't ask for donations in game. Donation links (GitHub Sponsors, Ko-fi) belong on the project pages and the repository, never inside the addon.
