@@ -29,8 +29,8 @@ the more of your guild runs it, the more it knows. It was made for the
 - **Hall of Fame** — guild leaderboards from everyone's character
   statistics: quests, kills, dungeon bosses, deaths and more, all time or by
   month.
-- **Profiles** — spec, roles, professions with skill levels, Discord and a
-  contact note, usual play hours, raid readiness (Onyxia attunement, the
+- **Profiles** — spec, roles, professions with skill levels, Discord,
+  usual play hours, raid readiness (Onyxia attunement, the
   Barrow Deeps key) and your own private notes.
 - **On the game's guild roster** — alt markers, richer tooltips, and Profile
   and Main / Alt on the right-click menu.
@@ -84,7 +84,7 @@ Whichever you pick, it offers each new release as an update.
 
 ## First launch
 
-The first time you log in with the addon (and once after updating to 2.5.0), a short **welcome tour** opens: a page for each tab (Find, Play Together, Who Can Craft?, Profiles and Raids, and Recruitment or Audit if your rank uses them), then your **sharing choices**, your **profile basics** (Discord name, contact note and roles), a **permissions** page for the Guild Master, and where to find things later. Skip it any time; reopen it from **Options** or with `/ngm welcome`.
+The first time you log in with the addon (and once after updating to 2.5.0), a short **welcome tour** opens: a page for each tab (Find, Play Together, Who Can Craft?, Profiles and Raids, and Recruitment or Audit if your rank uses them), then your **sharing choices**, your **profile basics** (Discord name and roles), a **permissions** page for the Guild Master, and where to find things later. Skip it any time; reopen it from **Options** or with `/ngm welcome`.
 
 ## Opening it
 
@@ -102,7 +102,7 @@ The first time you log in with the addon (and once after updating to 2.5.0), a s
 - **Alt+click a member** (or **Profile** in the menu) opens their profile docked beside the window, next to Blizzard's own member details when those are open.
 - Only shown on your guild, not other communities. **Options > Show alts and profiles on the Guild roster** turns all of it off. Nothing Blizzard does is changed or replaced, so inviting, promoting and removing keep working normally.
 
-**Find tab** (in this addon's window) — for what the game's roster can't do: search by professions, spec, Discord and more (see **Searching**), group mains with their alts, and filter. It lists every guild member with first name (with class icon), second name, level, class, location, spec, Main / Alt ("Main" or "Alt of Markpri"), up to three professions with skill levels, guild rank, and the Addon Version of Nootropic Guild Manager they run (shown in red when someone in the guild has a newer version, "(missing)" if they don't use the addon, "(reminded)" once someone has reminded them). A blue "(missing)" is a button: one click sends the install reminder (hover it first to see the whisper). For anyone without the addon, **Remind to install the addon** on the right-click menu (and on their profile, and on the game's roster menu) sends them a one-click whisper saying why it's worth having and where to get it. Each person is reminded at most once per 30 days, shared across the whole guild so nobody is asked twice; the text is yours to change in the multi-line box under **Options > Install Reminder**. Discord names show with an @ (type them with or without one), and profiles with one get an **On Discord** badge. Every column but second name starts shown; right-click a column header to choose columns. Click a column header to sort; sorting by Main / Alt groups each main with their alts. Offline members are dimmed.
+**Find tab** (in this addon's window) — for what the game's roster can't do: search by professions, spec, Discord and more (see **Searching**), group mains with their alts, and filter. It lists every guild member with first name (with class icon), second name, level, class, location, spec, Main / Alt ("Main" or "Alt of Markpri"), up to three professions with skill levels, guild rank, and the Addon Version of Nootropic Guild Manager they run (the newest seen on any of the player's linked characters: an alt shows its main's, and the other way round) (shown in red when someone in the guild has a newer version, "(missing)" if they don't use the addon, "(reminded)" once someone has reminded them). A blue "(missing)" is a button: one click sends the install reminder (hover it first to see the whisper). For anyone without the addon, **Remind to install the addon** on the right-click menu (and on their profile, and on the game's roster menu) sends them a one-click whisper saying why it's worth having and where to get it. Each person is reminded at most once per 30 days, shared across the whole guild so nobody is asked twice; the text is yours to change in the multi-line box under **Options > Install Reminder**. Discord names show with an @ (type them with or without one), and profiles with one get an **On Discord** badge. Every column but second name starts shown; right-click a column header to choose columns. Click a column header to sort; sorting by Main / Alt groups each main with their alts. Offline members are dimmed.
 
 - **Right-click any column header** to show or hide columns. Your choice is saved between logins. Name can't be hidden.
 - **Rearrange columns** by dragging a header left or right; a gold marker shows where it will land. The order is saved between logins. "Reset column order" in the Columns menu, or **List Columns** in Options (order, widths and shown columns), puts things back.
@@ -119,10 +119,10 @@ The first time you log in with the addon (and once after updating to 2.5.0), a s
 **Character profile** — opens beside the roster when you click a member. It reads like a profile card, with an **Edit** button when you can change it.
 
 - **Header**: name, "Level 22 Feral Druid - Veteran" (with the spec icon), online status and zone. Under it, one line for **main / alts** (click a name to open that profile).
-- **Contact**: their **Discord** name (click it to copy) and a contact note (up to 80 characters: BattleTag, timezone, "DM me before raids"). Set by the member, or by anyone whose rank may edit other guildmates' profiles (handy for guildmates without the addon). It belongs to the player, not one character: all their characters (main and alts) show the one set most recently on any of them, and editing it on any of them changes it for all. Searchable with `discord:`.
+- **Discord**: their **Discord** name (click it to copy). Set by the member, or by anyone whose rank may edit other guildmates' profiles (handy for guildmates without the addon). It belongs to the player, not one character: all their characters (main and alts) show the one set most recently on any of them, and editing it on any of them changes it for all. Searchable with `discord:`.
 - **Usually online**: a one-line summary of when the player usually plays, on any of their characters (the same on their main and alts) (e.g. "Mon-Fri 8 pm-11 pm - Sat-Sun 2 pm-12 am"). Times follow **your game clock**: if its **Use Local Time** box is ticked you see your local time, otherwise server time, and **24 Hour Mode** shows "20:00-23:00". **Show week** unfolds a week grid; hover a block to see it on the other clock too. Hours are **learned automatically**: while you play, your own copy of the addon notes the server hour every 10 minutes and keeps the last 4 weeks (an hour counts once you've played it in two different weeks), and only the result is shared. Don't want that? Untick **Learn when I usually play** in Options; nothing is noted or shared then. Everything is kept in server time, the same for the whole guild, so no time zone settings are needed.
 - **Tabs**: **Profile** (professions: primary first, then secondary; the ones their addon reports stay up to date by themselves; **Recipes (N)** lists every recipe they've shared), **Raids** (raid readiness, see below), **Notes** (your **private notes** about them; only you ever see these), and **Officer** (officers only: the **officer log** and **change history**, headed by when they **joined** (and who invited them) and since when they've held their **current rank**; these two are kept even after the audit's history expires). Officers also see **Joined** and **Rank since** on the profile.
-- **Edit** (your own characters, or others if your rank may): **Contact**, **specialization**, **roles**, **professions** (add, remove, set levels) and **main & alt links**. **Done** goes back.
+- **Edit** (your own characters, or others if your rank may): **Discord**, **specialization**, **roles**, **professions** (add, remove, set levels) and **main & alt links**. **Done** goes back.
 
 **Who Can Craft?** (everyone) — every recipe your guildmates know, in one search. Type part of a recipe or item name ("flask", "bracers") and see who can make it, guildmates online now first (in green); hover a recipe for the full tooltip and every crafter, click it to open a crafter's profile. Open it from the Find tab's **Who Can Craft?** button or with `/ngm craft <name>`. Recipes are **shared automatically** when someone with the addon opens one of their own profession windows: the addon reads the recipes they've learned the same way the game's window lists them, and shares just the recipe numbers (every copy of the addon looks up the names). Recipes hidden by the window's own search or filters are kept from earlier visits, and a profession you drop is cleared. The game doesn't let addons read anyone else's recipes, so guildmates without the addon don't appear.
 
@@ -206,17 +206,17 @@ Messages and keywords are saved per guild.
 
 | | Everyone with the addon | Officers |
 | --- | --- | --- |
-| See roster, mains/alts, specs, professions, contact info | yes | yes |
+| See roster, mains/alts, specs, professions, Discord | yes | yes |
 | Add someone to the Do Not Whisper list | yes | yes |
-| Edit their **own** spec, roles, professions and contact info | yes (by default) | yes |
+| Edit their **own** spec, roles, professions and Discord | yes (by default) | yes |
 | Recruit; take someone off the Do Not Whisper list | | yes (by default) |
 | Link mains and alts | | yes (by default) |
-| Edit others' spec, roles, professions and contact info | | yes (by default) |
+| Edit others' spec, roles, professions and Discord | | yes (by default) |
 | Officer Log, Change History, Audit tab | | yes |
 
 "Officers" are the ranks the game marks **Officer**, and recruiters the ranks with **Invite Member** (Guild Control, the game's own rank settings). Change those in the game and the addon follows, on the spot.
 
-**Permissions** (Guild Master only, in **Options > Officers > Permissions**): every row marked "by default" can be given to other ranks or taken away: **edit their own profile** (everyone by default; spec, roles, professions and contact info, not what their addon reports by itself), **link mains and alts**, and **edit other guildmates' profiles** (spec, roles, professions, contact; this includes their own). Pick ranks from each row's menu, or the default to go back. Untick everyone and only the Guild Master can. The Guild Master always can. Officer Log and Audit always stay with officers: the game only delivers that data to officer ranks. Permission changes show in the Audit tab.
+**Permissions** (Guild Master only, in **Options > Officers > Permissions**): every row marked "by default" can be given to other ranks or taken away: **edit their own profile** (everyone by default; spec, roles, professions and Discord, not what their addon reports by itself), **link mains and alts**, and **edit other guildmates' profiles** (spec, roles, professions, contact; this includes their own). Pick ranks from each row's menu, or the default to go back. Untick everyone and only the Guild Master can. The Guild Master always can. Officer Log and Audit always stay with officers: the game only delivers that data to officer ranks. Permission changes show in the Audit tab.
 
 ## Options
 
@@ -247,7 +247,7 @@ Type any words. A member is shown when every word matches their name, class, spe
 | `zone:"elwynn forest"` | quotes keep a phrase together |
 | `prof:herb` `spec:holy` `class:mage` `name:ann` | one field only |
 | `rank:officer` `zone:stormwind` `note:healer` | rank, zone, notes |
-| `discord:mira` | Discord name or contact note |
+| `discord:mira` | Discord name |
 | `level>=55` | level filter |
 | `main:markpri` | Markpri and all their alts |
 | `is:alt` / `is:main` | only alts / only mains |
@@ -274,7 +274,7 @@ Spec is detected from the modern specialization API when the client has it, othe
 
 ## How syncing works
 
-Every shared value (a member's main, spec, professions, contact info, an officer log entry, a permission) is stored with the time it was changed and who changed it. The newest change always wins, so everyone ends up with the same data no matter the order messages arrive in.
+Every shared value (a member's main, spec, professions, Discord, an officer log entry, a permission) is stored with the time it was changed and who changed it. The newest change always wins, so everyone ends up with the same data no matter the order messages arrive in.
 
 - **Changes:** yours show up for you instantly and are sent once, 15 seconds after the first one, together and compressed. Everything in one batch is grouped in the audit.
 - **Logging in:** your copy sends one tiny fingerprint of its data. One guildmate answers (every copy agrees who). If the fingerprints match, that's it: two short messages. If not, the two compare in steps (32 groups, then the people in the groups that differ) and your copy asks for exactly what it's missing: from each person who wrote it, if they're online, otherwise from an officer, with the work spread over the officers online.
@@ -294,7 +294,7 @@ The dot next to the version number in the window shows sync at a glance: green i
 Everything is saved per guild in `WTF/Account/<account>/SavedVariables/NootropicGuildManager.lua`, along with your settings. **Private notes never leave your computer**; shared data syncs as described above.
 
 What is shared:
-- With everyone running the addon (each part can be switched off in **Options > Sharing**, except the basics like your version): each player's own professions and spec, mains/alts, spec/profession overrides, contact info (Discord name and note), roles, when each person usually plays (only the learned summary), the recipes they know, their raid readiness, the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, and the Guild Master's permissions.
+- With everyone running the addon (each part can be switched off in **Options > Sharing**, except the basics like your version): each player's own professions and spec, mains/alts, spec/profession overrides, Discord names, roles, when each person usually plays (only the learned summary), the recipes they know, their raid readiness, the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, and the Guild Master's permissions.
 - With officers only: Officer Log entries (140 characters max; deleting one deletes it for every officer) and the audit trail.
 
 Each of 1.x, 2.0, 2.1 and 2.12 uses its own sync protocol, so guildmates on different ones don't exchange data (2.12 still shows older copies' version, so they're told to update); everyone should run the latest release. When you first load 2.0, data from removed features (reviews, ratings, map dots, polls, stats, goals, kudos, About me, status, pronouns, tab settings) is deleted from your saved data. Loading 2.1 does the same for tags, tag assignments, tag icons and the tag permissions.

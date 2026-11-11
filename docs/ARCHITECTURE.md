@@ -9,7 +9,7 @@ The addon is plain Lua and Blizzard frames, no libraries. Files load in the orde
 | Folder | What's in it |
 | --- | --- |
 | `Core/` | `Core.lua` (namespace, events, helpers, slash commands, start-up), `Data.lua` (classes, specs, professions, roles, recruiting defaults, raid readiness checks, About links), `Database.lua` (saved data, settings, permissions), `Records.lua` (shared records: types, who may write what, limits, newest wins, working data), `Sync.lua` (carrying records between guildmates in game: checks, requests, bundles, relays, transport) |
-| `Services/` | Logic with no windows: `Roster.lua` (guild roster, search, sort), `Comm.lua` (your own spec and professions), `Profile.lua` (contact info, usual play hours), `Recruit.lua` (/who, whispers, lockouts, Do Not Whisper, invites), `Messages.lua` (custom recruitment messages), `Audit.lua` (audit text), `RosterLog.lua` (joins, leaves, promotions from the guild event log and roster), `Recipes.lua` (shared recipes), `Readiness.lua` (raid attunements and keys), `HallOfFame.lua` (your character statistics for the leaderboards), `Sharing.lua` (what you share: switches that stop and clear your shared data) |
+| `Services/` | Logic with no windows: `Roster.lua` (guild roster, search, sort), `Comm.lua` (your own spec and professions), `Profile.lua` (Discord name and usual play hours, both shared by a player's main and alts), `Recruit.lua` (/who, whispers, lockouts, Do Not Whisper, invites), `Messages.lua` (custom recruitment messages), `Audit.lua` (audit text), `RosterLog.lua` (joins, leaves, promotions from the guild event log and roster), `Recipes.lua` (shared recipes), `Readiness.lua` (raid attunements and keys), `HallOfFame.lua` (your character statistics for the leaderboards), `Sharing.lua` (what you share: switches that stop and clear your shared data) |
 | `UI/` | Windows and hooks: `MainFrame.lua` (the window and its tabs), `RosterView.lua` (Find), `TogetherView.lua` (Play Together), `OverviewView.lua` (Overview: census and play-time heatmap), `HallOfFameView.lua` (Hall of Fame leaderboards), `RecruitView.lua` + `MessagesView.lua` (Recruitment), `AuditView.lua`, `DetailPanel.lua` (profiles), `RecipesView.lua` (Who Can Craft?), `DNWView.lua` (Do Not Whisper window and name menus), `InvitePrompt.lua`, `Options.lua`, `Welcome.lua` (first-launch tour), `GuildRoster.lua` + `Communities.lua` (hooks on the game's Guild & Communities window), `WhoWhisper.lua` (button on the game's /who results), `MinimapButton.lua`, and shared pieces (`Widgets.lua`, `Columns.lua`, `ScheduleGrid.lua`, `BrandIcon.lua`, `MemberPicker.lua`) |
 | `docs/` | This file |
 | `tests/` | Offline tests that run the real files against stand-ins for the game (see [Testing](#testing)) |
@@ -95,7 +95,7 @@ The officer treats those whispers as guild messages from that player, answers th
 | `MS:<member>` | spec override | guild | the member (**own profile** permission) or ranks with **profiles** |
 | `RL:<member>` | roles: `tank,healer,damage` | guild | same as `MS` |
 | `MP:<member>` | manual professions | guild | same as `MS` |
-| `CN:<member>` | `discord;note` | guild | same as `MS` |
+| `CN:<member>` | `discord;` (the note after `;` is no longer used) | guild | same as `MS` |
 | `P:<member>` | spec and professions their addon read | guild | the member only |
 | `AV:<member>` | addon version | guild | the member only |
 | `SC:<member>` | usual play hours (168 bits as hex) | guild | the member only |

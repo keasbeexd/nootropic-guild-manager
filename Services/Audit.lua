@@ -143,9 +143,8 @@ function AU:Describe(e)
         local function D2(v) return (v or ""):match("^([^;]*)") or "" end
         local od, nd = D2(old), D2(new)
         local who = e.author and e.member and e.author ~= e.member and (" by " .. ShortChar(e.author)) or ""
-        if new == "" then return RED .. "Contact info cleared|r" .. who end
-        if od ~= nd then return ("Discord changed%s: %s"):format(who, nd ~= "" and nd or (GRAY .. "none|r")) end
-        return "Contact note changed" .. who
+        if nd == "" then return RED .. "Discord cleared|r" .. who end
+        return ("Discord changed%s: %s"):format(who, nd)
     elseif t == "RL" then
         local function Names(v)
             local out = {}

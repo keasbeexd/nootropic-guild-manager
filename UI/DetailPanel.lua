@@ -372,7 +372,7 @@ StaticPopupDialogs.NOOTROPICGM_COPY = {
     EditBoxOnEnterPressed = function(self) self:GetParent():Hide() end,
 }
 
--- Contact: Discord name (click to copy) and the contact note.
+-- Discord name (click to copy).
 function DP:BuildContactBox(parent)
     local s = NewSection(parent)
     s.Label = s:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -385,27 +385,16 @@ function DP:BuildContactBox(parent)
     end)
     s.Discord:SetPoint("LEFT", s.Label, "RIGHT", 6, 0)
     W.Tooltip(s.Discord, "Discord", "Click to copy.")
-    s.Note = Para(s, "GameFontHighlightSmall", INNER)
     s.From = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     return s
 end
 
 function DP:RefreshContactBox(e)
     local s = self.contactBox
-    local discord, note, fromMain = ns.Profile:Contact(e.full)
+    local discord, fromMain = ns.Profile:Contact(e.full)
     if not discord then return false end
-    local y = 0
-    local hasDiscord = discord ~= ""
-    s.Label:SetShown(hasDiscord)
-    s.Discord:SetShown(hasDiscord)
-    if hasDiscord then
-        s.Discord:SetLabel(ns.Profile.DiscordLabel(discord))
-        y = -16
-    end
-    s.Note:ClearAllPoints()
-    s.Note:SetPoint("TOPLEFT", 0, y - 2)
-    s.Note:SetText(note ~= "" and ("|cffffd100Contact:|r " .. note) or "")
-    if note ~= "" then y = y - 2 - math.ceil(s.Note:GetStringHeight()) end
+    s.Discord:SetLabel(ns.Profile.DiscordLabel(discord))
+    local y = -16
     s.From:ClearAllPoints()
     s.From:SetPoint("TOPLEFT", 0, y - 3)
     s.From:SetText(fromMain and ("Set on " .. ns.ShortName(fromMain) .. " (the same for all their characters)") or "")
@@ -1060,39 +1049,22 @@ function DP:FlushText()
     end
 end
 
--- Contact: Discord name and a note. Yours, or anyone's for officers (for
--- guildmates without the addon).
+-- Discord name: yours, or anyone's for ranks allowed to edit profiles (for
+-- guildmates without the addon). The player's, on all their characters.
 function DP:BuildEditContact(parent)
-    local s = NewSection(parent, "Contact")
+    local s = NewSection(parent, "Discord")
     local PF = ns.Profile
     EditText(s, PF.DISCORD_MAX, 26, false, function(text)
         local e = DP.entry
         if not e then return true end
-        return PF:SetContact(e.full, text, nil)
+        return PF:SetContact(e.full, text)
     end)
     s.Line:SetPoint("RIGHT", s.Count, "LEFT", -6, 0)
-    s.DiscordBox, s.DiscordBg, s.DiscordCount = s.Box, s.Bg, s.Count
-    local dl = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    dl:SetPoint("TOPLEFT", s.Bg, "BOTTOMLEFT", 0, -3)
-    dl:SetText("Discord name")
-    -- second box: the note, under the first
-    local holder = CreateFrame("Frame", nil, s)
-    holder:SetPoint("TOPLEFT", 0, -22 - 26 - 18)
-    holder:SetSize(INNER, 22 + 26)
-    EditText(holder, PF.CONTACT_NOTE_MAX, 26, false, function(text)
-        local e = DP.entry
-        if not e then return true end
-        return PF:SetContact(e.full, nil, text)
-    end)
-    holder.Bg:ClearAllPoints()
-    holder.Bg:SetPoint("TOPLEFT", 0, -2)
-    holder.Count:ClearAllPoints()
-    holder.Count:SetPoint("TOPRIGHT", s.DiscordCount, "TOPRIGHT", 0, -(26 + 18))
-    s.NoteBox = holder.Box
+    s.DiscordBox = s.Box
     s.Hint = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    s.Hint:SetPoint("TOPLEFT", holder.Bg, "BOTTOMLEFT", 0, -3)
-    s.Hint:SetText("Contact note: BattleTag, timezone, best way to reach you. Seen by the guild.")
-    s:SetHeight(22 + 26 + 18 + 2 + 26 + 18)
+    s.Hint:SetPoint("TOPLEFT", s.Bg, "BOTTOMLEFT", 0, -3)
+    s.Hint:SetText("Discord name, the same for all of this player's characters. Seen by the guild.")
+    s:SetHeight(22 + 26 + 18)
     return s
 end
 
@@ -1463,9 +1435,8 @@ function DP:Refresh(forceText)
     if self.editing then
         local ec = self.editContact
         if ns.Profile:CanEditContact(e.full) then
-            local d, n = ns.Profile:Contact(e.full)
+            local d = ns.Profile:Contact(e.full)
             if forceText or not ec.DiscordBox:HasFocus() then ec.DiscordBox:SetText(d or "") end
-            if forceText or not ec.NoteBox:HasFocus() then ec.NoteBox:SetText(n or "") end
         end
         if ns.DB:CanEditLinks() then self:RefreshAlts(e) end
         self:RefreshSpec(e)

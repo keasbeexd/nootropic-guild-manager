@@ -180,7 +180,7 @@ function RV:Refresh()
         self.empty:SetText(#list == 0 and "Nobody in the guild has shared that recipe." or "")
     end
     self.summary:SetText(#list > MAX_RESULTS and (("Showing %d of %d recipes; type more to narrow it down."):format(MAX_RESULTS, #list))
-        or (#list > 0 and (("%d recipe%s"):format(#list, #list == 1 and "" or "s")) .. GRAY .. "  -  green: online now|r" or ""))
+        or (#list > 0 and (("%d recipe%s"):format(#list, #list == 1 and "" or "s")) or ""))
 end
 
 function RV:Open(opts)

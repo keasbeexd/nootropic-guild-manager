@@ -8,7 +8,7 @@
                 Profiles and Raids, Recruitment (ranks that may recruit),
                 Audit (officers)
       sharing   the Sharing switches (Services/Sharing.lua)
-      profile   your Discord name, contact note and roles
+      profile   your Discord name and roles
       perms     Guild Master only: who may do what
       done      where to find things later
 
@@ -222,24 +222,22 @@ function WL:BuildSharing(f)
     end
 end
 
--- Profile page: Discord, contact note, roles
+-- Profile page: Discord, roles
 function WL:BuildProfile(f)
     local p = CreateFrame("Frame", nil, f)
     p:SetSize(BODY_W, 220)
     self.extras.profile = p
     p.discord = Input(p, "Discord name", ns.Profile.DISCORD_MAX, 220)
     p.discord.Label:SetPoint("TOPLEFT", 0, 0)
-    p.note = Input(p, "Contact note  " .. GRAY .. "(timezone, BattleTag, \"DM me before raids\"...)|r", ns.Profile.CONTACT_NOTE_MAX, BODY_W - 10)
-    p.note.Label:SetPoint("TOPLEFT", 0, -52)
     local rl = p:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    rl:SetPoint("TOPLEFT", 0, -104)
+    rl:SetPoint("TOPLEFT", 0, -52)
     rl:SetText("Roles you play on this character")
     p.roles = {}
     local x = 0
     for _, r in ipairs(D.ROLES) do
         local cb = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
         cb:SetSize(26, 26)
-        cb:SetPoint("TOPLEFT", x - 4, -120)
+        cb:SetPoint("TOPLEFT", x - 4, -68)
         local label = cb.Text or cb.text
         if type(label) ~= "table" then
             label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -253,7 +251,7 @@ function WL:BuildProfile(f)
         x = x + 130
     end
     p.locked = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    p.locked:SetPoint("TOPLEFT", 0, -156)
+    p.locked:SetPoint("TOPLEFT", 0, -104)
     p.locked:SetWidth(BODY_W)
     p.locked:SetJustifyH("LEFT")
 end
@@ -298,11 +296,8 @@ function WL:RefreshProfile()
     local me = ns.PlayerFullName()
     local canContact = ns.DB:Guild() and ns.Profile:CanEditContact(me)
     local canRoles = ns.DB:Guild() and ns.Sync:CanWrite("RL:" .. me)
-    local d, n = ns.Profile:Contact(me)
-    p.discord:SetText(d or "")
-    p.note:SetText(n or "")
+    p.discord:SetText(ns.Profile:Contact(me) or "")
     p.discord:SetEnabled(canContact and true or false)
-    p.note:SetEnabled(canContact and true or false)
     local m = ns.DB:GetMember(me)
     local have = {}
     for k in ((m and m.roles) or ""):gmatch("[^,]+") do have[k] = true end
@@ -324,9 +319,9 @@ function WL:SaveProfile()
     if not (p and IsInGuild() and ns.DB:Guild()) then return end
     local me = ns.PlayerFullName()
     if ns.Profile:CanEditContact(me) then
-        local d, n = ns.Profile:Contact(me)
-        local nd, nn = ns.Trim(p.discord:GetText() or ""), ns.Trim(p.note:GetText() or "")
-        if nd ~= (d or "") or nn ~= (n or "") then ns.Profile:SetContact(me, nd, nn) end
+        local d = ns.Profile:Contact(me)
+        local nd = ns.Trim(p.discord:GetText() or "")
+        if nd ~= (d or "") then ns.Profile:SetContact(me, nd) end
     end
 end
 

@@ -1,12 +1,12 @@
 --[[
     Nootropic Guild Manager - Profile extras
-    Contact info and usual online hours.
+    Discord name and usual online hours, both the player's: the same on
+    their main and alts.
 
-    Contact (CN:<member>)
-      Discord name (up to 32 characters) and a contact note (up to 80:
-      BattleTag, timezone, "DM me before raids"...). Set by the member or
-      ranks allowed to edit other profiles (for guildmates without the
-      addon). An alt without one shows its main's.
+    Discord (CN:<member> = "discord;", the part after ";" is no longer used)
+      Up to 32 characters. Set by the member or ranks allowed to edit other
+      profiles (for guildmates without the addon). Every character of the
+      player shows the one set most recently on any of them.
 
     Usually online (SC:<member>)
       Learned from when you actually play (your own copy notes it, last 4
@@ -19,20 +19,12 @@ ns.Profile = PF
 
 PF.DISCORD_MAX = 32
 PF.DISCORD_BADGE = "|cff8c9effOn Discord|r"
-PF.CONTACT_NOTE_MAX = 80
 
 local function Me() return ns.PlayerFullName() end
 
 ------------------------------------------------------------------------
--- Contact (CN:<member> = "discord;note")
+-- Discord (CN:<member> = "discord;")
 ------------------------------------------------------------------------
-local function ParseContact(v)
-    if not v or v == "" then return "", "" end
-    local discord, note = v:match("^([^;]*);(.*)$")
-    if not discord then return v, "" end
-    return discord, note
-end
-
 -- A player's characters: their main and its alts (just them, if unlinked).
 function PF:Family(full)
     local m = ns.DB:GetMember(full)
@@ -43,18 +35,18 @@ function PF:Family(full)
     return list
 end
 
--- discord, note, from: contact info is the player's, not one character's,
--- so every character of theirs shows the one set most recently on any of
--- them (from: that character, when it isn't `full`). nil when none has any.
+-- discord, from: the player's, not one character's, so every character of
+-- theirs shows the one set most recently on any of them (from: that
+-- character, when it isn't `full`). nil when none has one.
 function PF:Contact(full)
     local best, from
     for _, c in ipairs(self:Family(full)) do
         local rec = ns.Sync:Get("CN:" .. c)
         if rec and (not best or ns.Sync.Newer(rec, best)) then best, from = rec, c end
     end
-    local d, n = ParseContact(best and best.v)
-    if d == "" and n == "" then return nil end
-    return d, n, from ~= full and from or nil
+    local d = best and (best.v or ""):match("^([^;]*)") or ""
+    if d == "" then return nil end
+    return d, from ~= full and from or nil
 end
 
 -- "keasbeexd" -> "@keasbeexd" for display (a leading @ typed by hand isn't doubled).
@@ -67,19 +59,14 @@ function PF:CanEditContact(full)
     return full ~= nil and ns.Sync:CanWrite("CN:" .. full)
 end
 
--- Either value may be nil to keep what's there (the player's current
--- contact info, from whichever of their characters has it). Saved on this
--- character; being the newest, it's what all their characters show.
-function PF:SetContact(full, discord, note)
+-- Saved on this character; being the newest, it's what all the player's
+-- characters show. "" clears it.
+function PF:SetContact(full, discord)
     if not (full and ns.DB:Guild()) then return nil, "You are not in a guild." end
-    if not self:CanEditContact(full) then return nil, "Only officers can change someone else's contact info." end
-    local curD, curN = self:Contact(full)
-    curD, curN = curD or "", curN or ""
+    if not self:CanEditContact(full) then return nil, "Only officers can change someone else's Discord name." end
     -- saved without a leading @ (it's added when shown)
-    discord = discord == nil and curD or ns.Trim((discord:gsub("[;\r\n]", ""))):gsub("^@+", ""):sub(1, self.DISCORD_MAX)
-    note = note == nil and curN or ns.Trim((note:gsub("[\r\n]+", " "))):sub(1, self.CONTACT_NOTE_MAX)
-    local v = (discord == "" and note == "") and "" or (discord .. ";" .. note)
-    return ns.Sync:Set("CN:" .. full, v)
+    discord = ns.Trim(((discord or ""):gsub("[;\r\n]", ""))):gsub("^@+", ""):sub(1, self.DISCORD_MAX)
+    return ns.Sync:Set("CN:" .. full, discord == "" and "" or (discord .. ";"))
 end
 
 

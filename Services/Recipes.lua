@@ -135,8 +135,30 @@ function RCP.RecipeName(id)
     return n or nil
 end
 
+-- The icon of what a recipe makes (the crafted item's), else the recipe
+-- spell's own (recipes that make no item, like a campfire). On Forever many
+-- crafting spells carry a placeholder icon, so the item's is the right one.
+local iconCache = {}
 function RCP.RecipeIcon(id)
-    return (C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(id)) or nil
+    local icon = iconCache[id]
+    if icon ~= nil then return icon or nil end
+    local T = C_TradeSkillUI
+    if T and T.GetRecipeSchematic then
+        local ok, sch = pcall(T.GetRecipeSchematic, id, false)
+        local item = ok and type(sch) == "table" and sch.outputItemID
+        if item and C_Item and C_Item.GetItemIconByID then
+            local ok2, i = pcall(C_Item.GetItemIconByID, item)
+            if ok2 then icon = i end
+        end
+    end
+    if not icon and T and T.GetRecipeOutputItemData then
+        local ok, out = pcall(T.GetRecipeOutputItemData, id)
+        if ok and type(out) == "table" and out.itemID then icon = out.icon end
+    end
+    icon = icon or (C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(id)) or nil
+    -- (not cached while the game hasn't loaded the item yet: asked again later)
+    if icon then iconCache[id] = icon end
+    return icon
 end
 
 -- Every shared list: { { full, prof, ids }, ... }

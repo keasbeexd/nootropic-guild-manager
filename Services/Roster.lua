@@ -200,10 +200,18 @@ function R:Decorate(e)
         e.spec, e.specSource = nil, nil
     end
     e.dist = auto and auto.dist ~= "" and auto.dist or nil
-    e.version = m and m.version
+    -- The addon version: the newest seen on any of the player's linked
+    -- characters (it's one install). Worked out from the current links, so
+    -- unlinking an alt shows what that character itself syncs again.
     e.isSelf = e.full == ns.PlayerFullName()
-    if e.isSelf then e.version = ns.version end -- you're running this copy right now
-    e.hasAddon = auto ~= nil or e.version ~= nil
+    e.ownVersion = e.isSelf and ns.version or (m and m.version) -- you're running this copy right now
+    e.version, e.hasAddon = nil, false
+    for _, c in ipairs(ns.Profile:Family(e.full)) do
+        local cm = ns.DB:GetMember(c)
+        local v = (c == ns.PlayerFullName() and ns.version) or (cm and cm.version)
+        if v and (not e.version or ns.CompareVersions(v, e.version) > 0) then e.version = v end
+        if v or (cm and cm.auto) then e.hasAddon = true end
+    end
     e.syncedAt = auto and auto.ts
 
     -- Professions: addon-reported data first, manual entries fill the gaps.
@@ -272,9 +280,9 @@ function R:Decorate(e)
     s.zone  = e.zone:lower()
     s.note  = ((e.note or "") .. "\n" .. e.publicNote .. "\n" .. e.officerNote .. "\n" .. logText):lower()
     s.main  = (e.mainShort or e.short):lower()
-    local discord, contactNote = ns.Profile:Contact(e.full)
+    local discord = ns.Profile:Contact(e.full)
     e.discord = (discord and discord ~= "") and ns.Profile.DiscordLabel(discord) or nil
-    s.contact = ((discord or "") .. "\n" .. (contactNote or "")):lower()
+    s.contact = (discord or ""):lower()
     s.is    = (e.isAlt and "alt" or "main") .. (e.hasAddon and "\naddon" or "\nmissing") .. (e.online and "\nonline" or "")
 end
 
