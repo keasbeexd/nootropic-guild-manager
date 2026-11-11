@@ -54,7 +54,7 @@ The workflow passes these to the packager as `CF_API_KEY` and `WAGO_API_TOKEN`. 
 ### Discord announcements (optional)
 
 Each release posts to Discord: the version, its CHANGELOG.md section, and links to CurseForge, Wago and the GitHub release.
-- **Every release** → the addon's channel (#guild-manager-addon), **no ping**.
+- **Every release** → the addon's channel (#guild-manager-addon), **no ping**. Posts appear as **Minor NGM Release** (fixes, like 2.9.1) or **Major NGM Release** (versions ending in `.0`).
 - **Feature releases** (versions ending in `.0`, like 2.10.0 or 3.0.0) → also **#announcements**, pinging one role (Announcements). Fix releases (2.9.1) never ping.
 
 Setup:

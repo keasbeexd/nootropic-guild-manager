@@ -49,10 +49,15 @@ def is_feature_release(version: str) -> bool:
     return len(parts) == 2 or (len(parts) == 3 and parts[2] == "0")
 
 
+# The name the post appears under in Discord.
+MINOR_NAME = "Minor NGM Release"   # fixes: 2.9.1
+MAJOR_NAME = "Major NGM Release"   # feature releases: 2.10.0, 3.0.0
+
+
 def payload(version: str, notes: str, repo: str, tag: str, ping_role: str | None = None) -> dict:
     release = f"https://github.com/{repo}/releases/tag/{tag}"
     body = {
-        "username": "Nootropic Guild Manager",
+        "username": MAJOR_NAME if is_feature_release(version) else MINOR_NAME,
         # only the one role, and only when asked; never @everyone
         "allowed_mentions": {"parse": [], "roles": [ping_role] if ping_role else []},
         "embeds": [{
