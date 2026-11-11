@@ -446,6 +446,11 @@ local SORTERS = {
         local za, zb = a.zone ~= "" and a.zone or "~", b.zone ~= "" and b.zone or "~"
         if za ~= zb then return za < zb end
     end,
+    -- online first (ascending), then whoever was on most recently
+    seen = function(a, b)
+        if a.online ~= b.online then return a.online end
+        if not a.online and (a.lastOnline or 0) ~= (b.lastOnline or 0) then return (a.lastOnline or 0) < (b.lastOnline or 0) end
+    end,
     main = function(a, b)
         local fa, fb = (a.mainShort or a.short), (b.mainShort or b.short)
         if fa ~= fb then return fa < fb end
@@ -466,7 +471,11 @@ local SORTERS = {
 }
 R.DEFAULT_DESC = { level = true }
 
-function R:Sort(list, key, asc)
+-- groupAlts: each alt goes right under its main (in the same order among
+-- themselves), and the family sits where its first character sorts (an
+-- online alt brings its main up when sorting by who's online). An alt
+-- whose main isn't in the list keeps its own place.
+function R:Sort(list, key, asc, groupAlts)
     local cmp = SORTERS[key]
     table.sort(list, function(a, b)
         if cmp then
@@ -480,6 +489,25 @@ function R:Sort(list, key, asc)
         if a.short ~= b.short then return a.short < b.short end
         return a.full < b.full
     end)
+    if not groupAlts then return list end
+    local inList, alts = {}, {}
+    for _, e in ipairs(list) do inList[e.full] = e end
+    for _, e in ipairs(list) do
+        if e.isAlt and inList[e.main] then
+            alts[e.main] = alts[e.main] or {}
+            table.insert(alts[e.main], e)
+        end
+    end
+    local out, placed = {}, {}
+    for _, e in ipairs(list) do
+        local head = (e.isAlt and inList[e.main]) and e.main or e.full
+        if not placed[head] then
+            placed[head] = true
+            out[#out + 1] = inList[head]
+            for _, alt in ipairs(alts[head] or {}) do out[#out + 1] = alt end
+        end
+    end
+    for i = 1, #out do list[i] = out[i] end
     return list
 end
 
