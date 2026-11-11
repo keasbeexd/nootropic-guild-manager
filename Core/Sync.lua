@@ -614,6 +614,8 @@ function S:Apply(key, rec, ctx)
     rec.t = tonumber(rec.t) or 0
     rec.v = rec.v or ""
     ctx.key = key
+    -- recruitment statuses are only kept by members who may recruit
+    if ctx.origin == "remote" and typ == "RS" and not self:MayRecruit() then return false end
     if ctx.origin == "remote" and not self:Accept(typ, member, def, rec, ctx) then return false end
     local cur = store[key]
     if cur and not Newer(rec, cur) then return false end
@@ -917,14 +919,45 @@ end
 ------------------------------------------------------------------------
 local function Bucket(key) return Hash(key) % S.BUCKETS + 1 end
 
+------------------------------------------------------------------------
+-- Lanes: what's compared together.
+--   guild    guild records, except recruitment statuses
+--   officer  officer records (officer channel)
+--   recruit  recruitment statuses (RS), only between members who may
+--            recruit: 600+ of them churn constantly, and nobody else needs
+--            them, so they no longer upset everyone's guild checksums
+------------------------------------------------------------------------
+local function LaneOf(key)
+    local typ = key:match("^(%u+):")
+    if typ == "RS" then return "recruit" end
+    local def = typ and S.TYPES[typ]
+    return def and def.scope
+end
+S.LaneOf = LaneOf
+
+local function StoreScope(lane) return lane == "officer" and "officer" or "guild" end
+
+function S:MayRecruit()
+    return ns.Recruit and ns.Recruit.MayRecruit and ns.Recruit:MayRecruit() and true or false
+end
+
+-- May we (and our peer) use this lane on this channel?
+function S:LaneOpen(lane, channel)
+    if lane == "officer" then return channel == "OFFICER" and ns.IsOfficer() end
+    if lane == "guild" then return channel == "GUILD" end
+    if lane == "recruit" then return channel == "GUILD" and self:MayRecruit() end
+    return false
+end
+
 function S:Digest(scope)
     local sums = {}
     for i = 1, self.BUCKETS do sums[i] = 0 end
-    local store = self:Store(scope)
+    -- "legacy" is the whole guild store, as copies before 2.10 compare it
+    local store = self:Store(StoreScope(scope))
     if not store then return sums end
     local now = Now()
     for key, rec in pairs(store) do
-        if not self:Excluded(key, rec, now) then
+        if (scope == "legacy" or LaneOf(key) == scope) and not self:Excluded(key, rec, now) then
             local b = Bucket(key)
             -- the value is included so same-time copies with different contents still get reconciled
             sums[b] = (sums[b] + Hash(key .. FS .. rec.t .. FS .. (rec.a or "") .. FS .. (rec.v or ""))) % 4294967291
@@ -952,28 +985,68 @@ function S:Exchange(force)
     local since = now - (self.lastExchange or -1e9)
     if since < (force and 10 or self.EXCHANGE_COOLDOWN) then return false end
     self.lastExchange = now
-    self:Send(table.concat({ PROTO, "D", "guild", EncodeDigest(self:Digest("guild")) }, FS), "GUILD", nil, "high")
+    -- "g" is the guild lane (2.10+); "guild" the old whole-store checksums,
+    -- only while someone online still runs an older copy
+    self:Send(table.concat({ PROTO, "D", "g", EncodeDigest(self:Digest("guild")) }, FS), "GUILD", nil, "high")
+    if not self:AllOnlineCurrent() then
+        self:Send(table.concat({ PROTO, "D", "guild", EncodeDigest(self:Digest("legacy")) }, FS), "GUILD", nil, "high")
+    end
     if ns.IsOfficer() then
         self:Send(table.concat({ PROTO, "D", "officer", EncodeDigest(self:Digest("officer")) }, FS), "OFFICER", nil, "high")
+    end
+    if self:MayRecruit() then
+        self:Send(table.concat({ PROTO, "D", "recruit", EncodeDigest(self:Digest("recruit")) }, FS), "GUILD", nil, "high")
     end
     return true
 end
 
 S.dumped = { guild = {}, officer = {} } -- bucket -> GetTime() someone last re-sent it
 
+S.LIST_VERSION = "2.10.0" -- copies from this version on compare record lists
+
+-- Does `who` run a copy that understands record lists ("L")?
+function S:PeerHasLists(who)
+    local rec = self:Get("AV:" .. who)
+    return rec ~= nil and ns.CompareVersions and ns.CompareVersions(rec.v or "", self.LIST_VERSION) >= 0
+end
+
+S.listAsked = {} -- "lane|who" -> GetTime() we last asked them
+
 function S:OnDigest(scope, digest, sender, channel)
-    if scope == "officer" then
-        if channel ~= "OFFICER" or not ns.IsOfficer() then return end
-    elseif scope ~= "guild" or channel ~= "GUILD" then
-        return
+    if scope == "guild" then
+        -- old-style checksums: a 2.10+ copy also sends "g", which we use instead
+        if channel ~= "GUILD" or self:PeerHasLists(sender) then return end
+        return self:OnLegacyDigest("legacy", "guild", DecodeDigest(digest))
     end
+    if scope == "g" then scope = "guild" end
+    if not self:LaneOpen(scope, channel) then return end
     local theirs = DecodeDigest(digest)
     local diff = self:DiffBuckets(scope, theirs)
     if #diff == 0 then return end
-    -- A short random wait, so when several clients notice the same gap only
-    -- the first one re-sends it (the others see its B marker and skip).
+    -- "g" and "recruit" only come from 2.10+ copies
+    if scope ~= "officer" or self:PeerHasLists(sender) then
+        -- exact: send them our record list for the differing groups; they
+        -- send back only what we're missing, and ask for what they are
+        local k = scope .. "|" .. sender
+        if GetTime() - (self.listAsked[k] or -1e9) < self.LIST_COOLDOWN then return end
+        self.listAsked[k] = GetTime()
+        C_Timer.After(1 + math.random() * 4, function()
+            local still = S:DiffBuckets(scope, theirs, diff)
+            if #still > 0 then S:SendList("q", scope, sender, still) end
+        end)
+        return
+    end
+    return self:OnLegacyDigest(scope, scope, theirs)
+end
+
+-- An older copy: the old way (re-send whole groups). A short random wait,
+-- so when several clients notice the same gap only the first one re-sends
+-- it (the others see its B marker and skip).
+function S:OnLegacyDigest(digestScope, scope, theirs)
+    local diff = self:DiffBuckets(digestScope, theirs)
+    if #diff == 0 then return end
     C_Timer.After(2 + math.random() * 6, function()
-        local still = S:DiffBuckets(scope, theirs, diff)
+        local still = S:DiffBuckets(digestScope, theirs, diff)
         local now = GetTime()
         local send = {}
         for _, b in ipairs(still) do
@@ -983,6 +1056,183 @@ function S:OnDigest(scope, digest, sender, channel)
         -- they may have newer data than us: let them compare against ours
         S:Exchange(true)
     end)
+end
+
+------------------------------------------------------------------------
+-- Record lists (2.10+). For each differing group, a compact list of what's
+-- in it: "<key hash>.<time>.<version hash>" per record. The other copy then
+-- sends exactly the records we lack or have older, and (for a query) sends
+-- back its own list so we can send what it lacks.
+--   PROTO L q|a <lane> <target> <bucket>:<entry>,<entry>;<bucket>:...
+-- q (query) is answered with records plus an "a" list; an "a" list is
+-- answered with records only, so it never loops.
+------------------------------------------------------------------------
+S.LIST_COOLDOWN = 60
+S.LIST_MAX = 2600 -- characters of list per message (chunked under MAX_PARTS)
+
+local function Entry(key, rec)
+    return Base36(Hash(key)) .. "." .. Base36(rec.t) .. "." .. Base36(Hash((rec.a or "") .. FS .. (rec.v or "")) % 1679616)
+end
+
+-- Our records of a lane in the given buckets: { [bucket] = { key = rec } }
+function S:LaneRecords(lane, buckets)
+    local want, out = {}, {}
+    for _, b in ipairs(buckets) do want[b] = true; out[b] = {} end
+    local now = Now()
+    for key, rec in pairs(self:Store(StoreScope(lane)) or {}) do
+        local b = Bucket(key)
+        if want[b] and LaneOf(key) == lane and not self:Excluded(key, rec, now) then out[b][key] = rec end
+    end
+    return out
+end
+
+function S:SendList(mode, lane, target, buckets)
+    local channel = lane == "officer" and "OFFICER" or "GUILD"
+    local parts, size = {}, 0
+    local function flush()
+        if #parts == 0 then return end
+        self:Send(table.concat({ PROTO, "L", mode, lane, target, table.concat(parts, ";") }, FS), channel, nil, "high")
+        parts, size = {}, 0
+    end
+    for b, recs in pairs(self:LaneRecords(lane, buckets)) do
+        local entries = {}
+        for key, rec in pairs(recs) do entries[#entries + 1] = Entry(key, rec) end
+        table.sort(entries)
+        -- a group too big for one message is split across several
+        local chunk = {}
+        local function emit()
+            local text = b .. ":" .. table.concat(chunk, ",")
+            if size + #text > self.LIST_MAX then flush() end
+            parts[#parts + 1] = text
+            size = size + #text + 1
+            chunk = {}
+        end
+        for _, e in ipairs(entries) do
+            chunk[#chunk + 1] = e
+            if #chunk >= 120 then emit() end
+        end
+        emit()
+    end
+    flush()
+end
+
+local function ParseList(payload)
+    local out = {}
+    for group in (payload or ""):gmatch("[^;]+") do
+        local b, list = group:match("^(%d+):(.*)$")
+        b = tonumber(b)
+        if b and b >= 1 and b <= S.BUCKETS then
+            out[b] = out[b] or {}
+            for e in list:gmatch("[^,]+") do
+                local kh, t, vh = e:match("^(%w+)%.(%w+)%.(%w+)$")
+                if kh then out[b][kh] = { t = tonumber(t, 36) or 0, vh = vh } end
+            end
+        end
+    end
+    return out
+end
+S.ParseList = ParseList
+
+S.listAnswered = {} -- "lane|who" -> GetTime() we last answered their query
+
+function S:OnList(mode, lane, target, payload, who, channel)
+    if mode ~= "q" and mode ~= "a" then return end
+    if not self:LaneOpen(lane, channel) or not Same(target, Me()) then return end
+    if mode == "q" then
+        local k = lane .. "|" .. who
+        if GetTime() - (self.listAnswered[k] or -1e9) < 10 then return end
+        self.listAnswered[k] = GetTime()
+    end
+    local theirs = ParseList(payload)
+    local buckets = {}
+    for b in pairs(theirs) do buckets[#buckets + 1] = b end
+    if #buckets == 0 then return end
+    local mine = self:LaneRecords(lane, buckets)
+    -- officers pass on everything; in the recruit lane every recruiter does;
+    -- everyone else only their own records
+    local relayAll = lane == "officer" or lane == "recruit" or ns.IsOfficer()
+    local me = Me()
+    local channelName = lane == "officer" and "OFFICER" or "GUILD"
+    local needBack = {}
+    for b, recs in pairs(mine) do
+        local seen = {}
+        for key, rec in pairs(recs) do
+            local kh = Base36(Hash(key))
+            seen[kh] = true
+            local t = theirs[b][kh]
+            local myEntry = Entry(key, rec)
+            local differs = not t or rec.t > t.t or (rec.t == t.t and myEntry:match("%.(%w+)$") ~= t.vh)
+            if differs then
+                local own = Same(rec.a, me)
+                if own or relayAll then
+                    self:Send(self:EncodeForWire(key, rec), channelName, nil, own and "high" or "bulk", self:EncodeRecord(key, rec))
+                end
+            end
+            if t and (t.t > rec.t or (t.t == rec.t and myEntry:match("%.(%w+)$") ~= t.vh)) then needBack[b] = true end
+        end
+        for kh in pairs(theirs[b]) do
+            if not seen[kh] then needBack[b] = true end
+        end
+    end
+    if mode == "q" then
+        local back = {}
+        for b in pairs(needBack) do back[#back + 1] = b end
+        if #back > 0 then self:SendList("a", lane, who, back) end
+    end
+end
+
+------------------------------------------------------------------------
+-- Compression (2.10+): big records (recipe lists, Hall of Fame) are sent
+-- compressed ("Z") with the game's own Deflate + Base64, but only while
+-- every guildmate online with the addon runs a copy that can read them.
+------------------------------------------------------------------------
+S.COMPRESS_OVER = 150
+
+function S:CanCompress()
+    local E = C_EncodingUtil
+    if not (E and E.CompressString and E.DecompressString and E.EncodeBase64 and E.DecodeBase64) then return false end
+    return self:AllOnlineCurrent()
+end
+
+-- Is every guildmate online with the addon on 2.10 or later? (cached 30 s)
+function S:AllOnlineCurrent()
+    local now = GetTime()
+    if self.compressCheckedAt and now - self.compressCheckedAt < 30 then return self.compressOk end
+    local ok = true
+    for _, e in ipairs((ns.Roster and ns.Roster.members) or {}) do
+        if e.online and e.hasAddon and not e.isSelf then
+            if not (e.version and ns.CompareVersions and ns.CompareVersions(e.version, self.LIST_VERSION) >= 0) then
+                ok = false
+                break
+            end
+        end
+    end
+    self.compressCheckedAt, self.compressOk = now, ok
+    return ok
+end
+
+-- The message for a record: compressed when that's worth it and safe.
+function S:EncodeForWire(key, rec)
+    local v = rec.v or ""
+    if #v > self.COMPRESS_OVER and self:CanCompress() then
+        local okC, packed = pcall(C_EncodingUtil.CompressString, v)
+        local okB, text = false, nil
+        if okC then okB, text = pcall(C_EncodingUtil.EncodeBase64, packed) end
+        if okB and type(text) == "string" and #text + 20 < #v then
+            return table.concat({ PROTO, "Z", key, tostring(rec.t), rec.a or "", rec.b or "", text }, FS)
+        end
+    end
+    return self:EncodeRecord(key, rec)
+end
+
+local function Unpack(text)
+    local E = C_EncodingUtil
+    if not (E and E.DecodeBase64 and E.DecompressString) then return nil end
+    local okB, packed = pcall(E.DecodeBase64, text)
+    if not okB or type(packed) ~= "string" then return nil end
+    local okD, v = pcall(E.DecompressString, packed)
+    if not okD or type(v) ~= "string" or #v > S.MAX_VALUE then return nil end
+    return v
 end
 
 function S:DiffBuckets(scope, theirs, only)
@@ -1045,7 +1295,7 @@ function S:Broadcast(key, rec)
     local def = S.TYPES[typ]
     local scope = def.scope
     if scope == "officer" and not ns.IsOfficer() then return end
-    self:Send(self:EncodeRecord(key, rec), CHANNEL[scope], nil, def.low and "bulk" or "high")
+    self:Send(self:EncodeForWire(key, rec), CHANNEL[scope], nil, def.low and "bulk" or "high")
 end
 
 local partials = {}
@@ -1061,13 +1311,18 @@ function S:OnMessage(msg, channel, sender)
     if f[1] ~= PROTO then return end -- other protocol versions are ignored
     self.stats.received = self.stats.received + 1
     local kind = f[2]
-    if kind == "R" then
+    if kind == "R" or kind == "Z" then
         local key, t, author, batch = f[3], tonumber(f[4]), f[5], f[6]
         if not key or not t then return end
         -- our own values never contain "|" (Clean); one arriving would be a
         -- hand-made escape code (textures, colors, links) for our tooltips
         if key:find("[|%c]") or (author or ""):find("[|%c]") then return end
-        local value = table.concat(f, FS, 7):gsub("|", "/")
+        local raw = table.concat(f, FS, 7)
+        if kind == "Z" then
+            raw = Unpack(raw)
+            if not raw then return end
+        end
+        local value = raw:gsub("|", "/")
         -- the same as our own edits (Clean): no line breaks or other control
         -- characters (fake extra lines in tooltips); audit entries keep their
         -- field separator
@@ -1082,6 +1337,8 @@ function S:OnMessage(msg, channel, sender)
         self:Notify("member") -- schedule a flush
     elseif kind == "D" then
         self:OnDigest(f[3], f[4], who, channel)
+    elseif kind == "L" then
+        self:OnList(f[3], f[4], f[5], table.concat(f, FS, 6), who, channel)
     elseif kind == "B" then
         -- "I'm re-sending bucket b": skip ours only if theirs will be
         -- accepted in full, i.e. an officer is sending it (SenderAllowed)
