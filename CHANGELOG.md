@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## Unreleased
+
+- The minimap button with the Guild Tabard icon style shows one gold ring instead of two (the tabard's own border is left off there, as the medallion's ring already is).
+
 ## 2.10.1
 
 - Fix: a player with more than one character sharing a first name (say "Mykkie Sickyy" and "Mykkie Frost") could have the addon think they were playing the other one. Everything they sent was then signed with the wrong character's name, and guildmates rightly refused it: their version never showed, and none of their data arrived. The addon now picks the character that's online with your class and level.
