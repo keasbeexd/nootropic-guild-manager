@@ -378,6 +378,17 @@ SlashCmdList.NOOTROPICGM = function(msg)
     elseif cmd == "sync" and rest ~= "" then
         -- /ngm sync <name>: what arrived from that guildmate this session
         local S, want, shown = ns.Sync, rest:lower(), false
+        local function Shard(who)
+            local e = ns.Roster.byName[who]
+            return e and e.shard or "?"
+        end
+        local me = ns.PlayerFullName()
+        ns:Print(("You (%s) are on shard %s."):format(me, Shard(me)))
+        for _, e in ipairs(ns.Roster.members) do
+            if e.full:lower():find(want, 1, true) then
+                ns:Print(("  %s: shard %s, %s."):format(e.full, e.shard or "?", e.online and "online" or "offline"))
+            end
+        end
         for who, f in pairs(S.from) do
             if who:lower():find(want, 1, true) then
                 shown = true
@@ -386,6 +397,11 @@ SlashCmdList.NOOTROPICGM = function(msg)
                 table.sort(kinds)
                 ns:Print(("From %s this session: %d messages (%s), last %ds ago; %d records applied, %d already had, %d refused."):format(
                     who, f.messages, table.concat(kinds, ", "), math.floor(GetTime() - (f.last or GetTime())), f.applied, f.older, f.refused))
+            end
+        end
+        for who, f in pairs(S.from) do
+            if who:lower():find(want, 1, true) and f.raw then
+                ns:Print(("  Their messages arrive signed \"%s\"."):format(f.raw))
             end
         end
         if not shown then ns:Print(("Nothing has arrived from anyone matching \"%s\" this session."):format(rest)) end

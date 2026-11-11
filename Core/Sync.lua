@@ -1331,6 +1331,7 @@ function S:OnMessage(msg, channel, sender)
     from.messages = from.messages + 1
     from.kinds[kind or "?"] = (from.kinds[kind or "?"] or 0) + 1
     from.last = GetTime()
+    from.raw = sender
     if kind == "R" or kind == "Z" then
         local key, t, author, batch = f[3], tonumber(f[4]), f[5], f[6]
         if not key or not t then return end
