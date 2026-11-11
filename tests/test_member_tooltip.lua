@@ -31,6 +31,12 @@ assert(text:find("Herbalism", 1, true) and text:find("Alchemy", 1, true), "the t
 assert(not text:find("First Aid", 1, true) and not text:find("Cooking", 1, true) and not text:find("Fishing", 1, true), "no secondary skills")
 assert(text:find("Discord = @keasbeexd", 1, true), "Discord")
 assert(not text:find("Usually", 1, true) and not text:find("Addon version", 1, true) and not text:find("Rank", 1, true), "nothing else")
+-- our lists start the way the game's guild roster does
+lines = {}
+RV:ShowRowTooltip({}, { full = "Faldorn Xzar", rank = "Trial", level = 29, race = "Tauren", className = "Druid",
+  zone = "Ashenvale", isAlt = false, alts = {}, profs = {} })
+assert(lines[1] == "Faldorn Xzar" and lines[2] == "Trial" and lines[3] == "Level 29 Tauren Druid" and lines[4] == "Ashenvale",
+  "name, rank, level race class, zone: " .. table.concat(lines, " | "))
 lines = {}
 RV:AddMemberLines({ isAlt = true, mainShort = "Mykkie", profs = {} })
 assert(lines[1] == "Alt of = Mykkie", "alt of whom")

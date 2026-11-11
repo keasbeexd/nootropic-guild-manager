@@ -1004,8 +1004,12 @@ end
 function RV:ShowRowTooltip(row, e, hint)
     if not e then return end
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
-    GameTooltip:AddLine(e.short, ns.ClassColor(e.classFile))
-    GameTooltip:AddLine(("Level %d %s"):format(e.level, e.className), 1, 1, 1)
+    -- the same header as the game's own guild roster tooltip
+    GameTooltip:AddLine(e.full, ns.ClassColor(e.classFile))
+    if e.rank and e.rank ~= "" then GameTooltip:AddLine(e.rank, 1, 0.82, 0) end
+    GameTooltip:AddLine(("Level %d %s%s"):format(e.level or 0, e.race and e.race ~= "" and (e.race .. " ") or "", e.className or ""), 1, 1, 1)
+    if e.zone and e.zone ~= "" then GameTooltip:AddLine(e.zone, 1, 1, 1) end
+    GameTooltip:AddLine(" ")
     self:AddMemberLines(e)
     GameTooltip:AddLine(hint or "Click for details, right-click for quick actions.", 0.5, 0.5, 0.5)
     GameTooltip:Show()
