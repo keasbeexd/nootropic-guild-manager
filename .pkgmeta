@@ -9,6 +9,7 @@ ignore:
   - CHANGELOG.md
   - .github
   - .gitattributes
+  - .luajit
 
 manual-changelog:
   filename: CHANGELOG.md

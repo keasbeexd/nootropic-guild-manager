@@ -1,5 +1,6 @@
 # Publishes a release when a version tag (v1.2.3) is pushed:
-#   1. runs the offline tests (tests/run.sh); a failure stops the release
+#   1. builds LuaJIT and runs the offline tests (tests/run.sh); a failure
+#      stops the release
 #   2. packages the addon with the BigWigs packager and uploads it to
 #      GitHub (with release.json, which WowUp reads), CurseForge and Wago.
 #   3. announces it in Discord (version, changelog, links): every release in
@@ -43,10 +44,22 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # LuaJIT from its own repository (pinned), not from Ubuntu's package
+      # servers, which a release must not depend on (they were unreachable
+      # from GitHub's runners on 2026-11-11 and hung the release).
+      # actions/checkout v7.0.1; LuaJIT v2.1 branch, 2026-10-21
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: LuaJIT/LuaJIT
+          ref: a4c064539ea931274d407e1249b4bb575424a0f4
+          path: .luajit
+          persist-credentials: false
+
       - name: Offline tests
+        timeout-minutes: 10
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq luajit lua5.1
+          make -C .luajit -j4 -s
+          export PATH="$PWD/.luajit/src:$PATH"
           tests/run.sh
 
       # The packager skips a site silently when its token is missing, so
