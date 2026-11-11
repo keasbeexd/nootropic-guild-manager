@@ -1,4 +1,4 @@
--- Test: Forged and legitimate sync records: Guild Master permissions, links, profiles, own-profile permission, self-only records, officer relays, Do Not Whisper removal, escape codes, re-send markers.
+-- Test: Forged and legitimate sync records: Guild Master permissions, links, profiles, own-profile permission, self-only records, officer relays, Do Not Whisper removal, escape codes, officer ranks.
 -- Run with tests/run.sh (it passes the repo root as arg[1]).
 local ROOT = arg[1]
 local NOW = 1800000000
@@ -60,10 +60,11 @@ check("officer-channel record from an officer", rec("Mira Officer-R", "L:Ann Mem
 S:OnMessage(table.concat({ P, "C", "zz", "1", "999", "x" }, "\t"), "GUILD", "Bob Member-R")
 local n = 0 for _ in pairs(debug and {} or {}) do n = n + 1 end
 for i = 1, 20 do S:OnMessage(table.concat({ P, "C", "id" .. i, "1", "2", "x" }, "\t"), "GUILD", "Bob Member-R") end
--- bucket markers
-S.dumped = { guild = {}, officer = {} }
-S:OnMessage(P .. "\tB\tguild\t3", "GUILD", "Bob Member-R"); check("member's re-send marker is ignored", S.dumped.guild[3], nil)
-S:OnMessage(P .. "\tB\tguild\t3", "GUILD", "Mira Officer-R"); check("officer's re-send marker counts", S.dumped.guild[3], 100)
+-- officers by rank: only a Guild Master's record names officer ranks
+check("Ann isn't known as an officer", S:KnownOfficer("Ann Member-R"), false)
+rec("Bob Member-R", "GS:officers", "Bob Member-R", "Member")
+check("a member can't name officer ranks", S:KnownOfficer("Ann Member-R"), false)
+check("the Guild Master is always an officer", S:KnownOfficer("Gm Boss-R"), true)
 check("officer edits a member's spec (default: officers)", rec("Mira Officer-R", "MS:Ann Member-R", "Mira Officer-R", "Frost"), "Frost")
 check("member edits someone's contact (no permission)", rec("Bob Member-R", "CN:Ann Member-R", "Bob Member-R", "x;y"), nil)
 permRanks.profiles = { [4] = true }

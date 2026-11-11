@@ -11,19 +11,24 @@
                Sent on the GUILD addon channel.
       officer  officer log and audit trail. Sent only on the OFFICER
                addon channel (the game delivers it only to ranks that can read
-               officer chat). Nothing is ever whispered.
+               officer chat).
 
     Delivery
       1. Batches: local changes apply instantly but are sent together 15
          seconds after the first one (one BATCH id, also used to group the
          audit trail).
-      2. Repair: clients regularly broadcast a DIGEST (16 checksums over all
-         their records). Anyone whose checksums differ re-broadcasts just the
-         mismatched buckets on the same channel (never by whisper), announced
-         with a B marker so other clients don't send the same bucket again.
-         Lost messages, offline officers and late joiners all heal this way.
+      2. Repair, by author (2.11): every 10 minutes each copy sends a short
+         check per lane: for each author, the time of their newest record and
+         a checksum. Members name only themselves; officers name everyone.
+         Whoever sees a difference asks for exactly that author's records
+         since a time, and gets them on the same channel. Lost messages,
+         offline officers and late joiners all heal this way.
       3. Transport: a byte-budget queue (live changes first), retries when the
          game reports throttling or combat lockdown, and splits long messages.
+         A copy whose guild messages never come back to it (the game isn't
+         delivering them) whispers them to an online officer, who passes on
+         that member's own records. Nothing else is ever whispered, and only
+         guild and officer messages (and those whispers, by officers) are read.
 
     Record keys
       M:<member>           member's main ("" = main) officers
@@ -38,6 +43,7 @@
                                                    blocks new whispers to them meanwhile)
       AV:<member>          addon version in use    the member only
       GS:<name>            guild-wide setting, e.g. GS:perm_links = "1,3" (who may link mains)   officers
+                           (GS:perm_* and GS:officers, the officer rank names, the Guild Master only)
       CN:<member>          contact: "discord;note" (Discord name, then
                            anything else: BattleTag, timezone...)   officers, or the member
       JN:<member>          when they joined: "time;inviter"   officers (officer scope)
@@ -78,12 +84,10 @@ S.FS = "\t"
 local FS = "\t"
 local US = "\031" -- separator inside audit values
 
-S.BUCKETS = 16
 S.AUDIT_SYNC_WINDOW = 30 * 86400 -- audit older than this isn't compared (retention differs per officer)
-S.DIGEST_INTERVAL = 600          -- routine digest every 10 minutes
+S.DIGEST_INTERVAL = 600          -- routine sync check every 10 minutes
 S.EXCHANGE_COOLDOWN = 120        -- at most one routine exchange every 2 minutes
 S.BATCH_DELAY = 15               -- local changes are sent together after this many seconds
-S.DUMP_SUPPRESS = 60             -- don't re-send a bucket someone just re-sent
 S.BYTES_PER_SEC = 600            -- gentler than ChatThrottleLib's 800
 S.BURST = 1800
 S.CHUNK = 200
@@ -335,7 +339,7 @@ function S:CanWrite(key)
     -- your own profile: the Guild Master decides (everyone by default)
     if def.self and member == Me() and ns.DB:HasPerm("ownprofile") then return true end
     -- permissions only the Guild Master changes
-    if typ == "GS" and rest:sub(1, 5) == "perm_" then return ns.DB:IsGuildMaster() end
+    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then return ns.DB:IsGuildMaster() end
     -- what the Guild Master hands out per rank (Options > Officers > Permissions)
     local perm = def.scope == "guild" and ns.DB.PERM_BY_TYPE[typ]
     if perm then return ns.DB:HasPerm(perm) end
@@ -368,20 +372,50 @@ local function RosterEntry(name)
     end
 end
 
--- A player we know to be an officer: seen on the officer channel this
--- session, or you (when you are one).
+local function IsGuildMaster(name)
+    local e = RosterEntry(name)
+    return e ~= nil and e.rankIndex == 0
+end
+
+-- Officer ranks, by name, as the Guild Master's copy has seen them on the
+-- officer channel (members can't see that channel, so they learn it from
+-- this record, which only the current Guild Master may write).
+function S:OfficerRanks()
+    local rec = self:Get("GS:officers")
+    if not rec or (rec.v or "") == "" or not IsGuildMaster(rec.a) then return nil end
+    local set = {}
+    for r in rec.v:gmatch("[^;]+") do set[r:lower()] = true end
+    return set
+end
+
+-- The Guild Master's copy: someone sent on the officer channel, so their
+-- rank is an officer rank.
+function S:NoteOfficer(who)
+    if not (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then return end
+    local e = RosterEntry(who)
+    if not e or e.rankIndex == 0 or not e.rank or e.rank == "" or e.rank:find(";", 1, true) then return end
+    local ranks = self:OfficerRanks() or {}
+    if ranks[e.rank:lower()] then return end
+    local cur = self:Value("GS:officers")
+    self:Set("GS:officers", ((cur and cur ~= "") and (cur .. ";") or "") .. e.rank, { force = true })
+end
+
+-- A player we know to be an officer: the Guild Master, someone of an
+-- officer rank, someone seen on the officer channel this session, or you
+-- (when you are one).
 function S:KnownOfficer(name)
     if not name then return false end
     if Same(name, Me()) then return ns.IsOfficer() end
     for who in pairs(self.officers) do
         if Same(who, name) then return true end
     end
-    return false
-end
-
-local function IsGuildMaster(name)
     local e = RosterEntry(name)
-    return e ~= nil and e.rankIndex == 0
+    if e then
+        if e.rankIndex == 0 then return true end
+        local ranks = self:OfficerRanks()
+        if ranks and e.rank and ranks[e.rank:lower()] then return true end
+    end
+    return false
 end
 
 -- Would `name` be allowed to write this record themselves?
@@ -390,7 +424,7 @@ function S:MayAuthor(name, typ, member, rest)
     if not (def and name and name ~= "") then return false end
     if def.anyone then return RosterEntry(name) ~= nil end
     if def.selfOnly then return Same(name, member) end
-    if typ == "GS" and rest:sub(1, 5) == "perm_" then return IsGuildMaster(name) end
+    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then return IsGuildMaster(name) end
     if def.self and Same(name, member) and self:RankMay(name, "ownprofile") then return true end
     local e = RosterEntry(name)
     if e and e.rankIndex == 0 then return true end
@@ -430,7 +464,7 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     -- whole guild in someone else's name
     if typ == "IR" then return Same(sender, author) or self:KnownOfficer(sender) end
     if def.anyone then return true end
-    if typ == "GS" and rest:sub(1, 5) == "perm_" then
+    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers") then
         return IsGuildMaster(author) and (Same(sender, author) or self:KnownOfficer(sender))
     end
     if Same(sender, author) then return self:MayAuthor(author, typ, member, rest) end
@@ -635,6 +669,7 @@ function S:Apply(key, rec, ctx)
         return false
     end
     store[key] = rec
+    self.storeVersion = (self.storeVersion or 0) + 1
     if ctx.origin == "remote" and ctx.sender then self:From(ctx.sender).applied = self:From(ctx.sender).applied + 1 end
     self:Materialize(typ, key, member, rec)
     if not def.noAudit and not ctx.migration and ns.IsOfficer() then
@@ -931,17 +966,11 @@ function S:PruneAudit()
 end
 
 ------------------------------------------------------------------------
--- Digests (repair)
-------------------------------------------------------------------------
-local function Bucket(key) return Hash(key) % S.BUCKETS + 1 end
-
-------------------------------------------------------------------------
--- Lanes: what's compared together.
---   guild    guild records, except recruitment statuses
---   officer  officer records (officer channel)
+-- Lanes: what's compared together, and on which channel.
+--   guild    guild records, except recruitment statuses     GUILD
 --   recruit  recruitment statuses (RS), only between members who may
---            recruit: 600+ of them churn constantly, and nobody else needs
---            them, so they no longer upset everyone's guild checksums
+--            recruit (nobody else keeps them)                GUILD
+--   officer  officer records                                 OFFICER
 ------------------------------------------------------------------------
 local function LaneOf(key)
     local typ = key:match("^(%u+):")
@@ -951,13 +980,14 @@ local function LaneOf(key)
 end
 S.LaneOf = LaneOf
 
-local function StoreScope(lane) return lane == "officer" and "officer" or "guild" end
+local LANE_STORE = { guild = "guild", recruit = "guild", officer = "officer" }
+local LANE_CHANNEL = { guild = "GUILD", recruit = "GUILD", officer = "OFFICER" }
 
 function S:MayRecruit()
     return ns.Recruit and ns.Recruit.MayRecruit and ns.Recruit:MayRecruit() and true or false
 end
 
--- May we (and our peer) use this lane on this channel?
+-- May we use this lane on this channel?
 function S:LaneOpen(lane, channel)
     if lane == "officer" then return channel == "OFFICER" and ns.IsOfficer() end
     if lane == "guild" then return channel == "GUILD" end
@@ -965,235 +995,243 @@ function S:LaneOpen(lane, channel)
     return false
 end
 
-function S:Digest(scope)
-    local sums = {}
-    for i = 1, self.BUCKETS do sums[i] = 0 end
-    -- "legacy" is the whole guild store, as copies before 2.10 compare it
-    local store = self:Store(StoreScope(scope))
-    if not store then return sums end
-    local now = Now()
-    for key, rec in pairs(store) do
-        if (scope == "legacy" or LaneOf(key) == scope) and not self:Excluded(key, rec, now) then
-            local b = Bucket(key)
-            -- the value is included so same-time copies with different contents still get reconciled
-            sums[b] = (sums[b] + Hash(key .. FS .. rec.t .. FS .. (rec.a or "") .. FS .. (rec.v or ""))) % 4294967291
+-- Will guildmates accept other people's records of this lane from `name`?
+-- (Recruitment statuses from anyone; the officer channel is officers only;
+-- guild records only from officers. See SenderAllowed.)
+function S:MayRelay(name, lane)
+    if lane == "recruit" or lane == "officer" then return true end
+    return self:KnownOfficer(name)
+end
+
+------------------------------------------------------------------------
+-- Sync checks, by author. For each author: the time of their newest record
+-- and a checksum over all of their records in the lane.
+--   PROTO S <lane> <author>:<newest>:<sum>,<author>:<newest>:<sum>,...
+-- A member's check names only themselves; officers (and, in the recruit
+-- lane, recruiters) name every author, since guildmates accept everyone's
+-- records from them. Whoever sees a difference asks for exactly what they
+-- lack:
+--   PROTO Q <lane> <target> <author> <since>
+-- and the target sends that author's records newer than <since> ("0": all) on
+-- the lane's channel, so everyone else who lacked them gets them as well.
+------------------------------------------------------------------------
+S.SUMMARY_MAX = 2400   -- characters of entries per check message
+S.ASK_COOLDOWN = 30    -- per lane and author
+S.FULL_COOLDOWN = 900  -- after asking for everything: a difference left is a tie, not a loss
+S.ANSWER_COOLDOWN = 20 -- the same request answered at most this often
+S.MAX_ANSWERS = 30     -- requests answered per requester per minute
+
+S.storeVersion = 0
+S.sumCache = {}
+S.asked = {}       -- "lane|author" -> { at, full }
+S.heardAsk = {}    -- "lane|author" -> { at, since }: someone asked; the answer reaches us too
+S.answered = {}    -- "lane|author|since" -> GetTime()
+S.answerCount = {} -- requester -> { n, since }
+S.peers = {}       -- who has sent a check this session
+
+local function Entry(author, s) return author .. ":" .. Base36(s.t) .. ":" .. Base36(s.h) end
+
+-- { [author] = { t = newest, h = checksum, n = count } } for a lane
+function S:AuthorSums(lane)
+    local c = self.sumCache[lane]
+    if c and c.version == self.storeVersion and GetTime() - c.at < 30 then return c.sums end
+    local out = {}
+    local store = self:Store(LANE_STORE[lane])
+    if store then
+        local now = Now()
+        for key, rec in pairs(store) do
+            if rec.a and LaneOf(key) == lane and not self:Excluded(key, rec, now) then
+                local s = out[rec.a]
+                if not s then s = { t = 0, h = 0, n = 0 }; out[rec.a] = s end
+                if rec.t > s.t then s.t = rec.t end
+                s.h = (s.h + Hash(key .. FS .. rec.t .. FS .. (rec.v or ""))) % 4294967291
+                s.n = s.n + 1
+            end
         end
     end
-    return sums
+    self.sumCache[lane] = { version = self.storeVersion, at = GetTime(), sums = out }
+    return out
 end
 
-local function EncodeDigest(sums)
-    local parts = {}
-    for i, s in ipairs(sums) do parts[i] = Base36(s) end
-    return table.concat(parts, ",")
+function S:SendSummary(lane)
+    local sums = self:AuthorSums(lane)
+    local me = Me()
+    local entries = {}
+    if lane == "guild" and not ns.IsOfficer() then
+        if sums[me] then entries[1] = Entry(me, sums[me]) end
+    else
+        for author, s in pairs(sums) do entries[#entries + 1] = Entry(author, s) end
+        table.sort(entries)
+    end
+    -- with nothing yet, still say hello (others answer with their checks,
+    -- and the Guild Master's copy learns the officer ranks from the officer
+    -- channel); only an empty recruit check is skipped
+    if #entries == 0 and lane == "recruit" then return end
+    local channel = LANE_CHANNEL[lane]
+    local part, size = {}, 0
+    local function flush()
+        self:Send(table.concat({ PROTO, "S", lane, table.concat(part, ",") }, FS), channel, nil, "high")
+        part, size = {}, 0
+    end
+    for _, e in ipairs(entries) do
+        if size > 0 and size + #e + 1 > self.SUMMARY_MAX then flush() end
+        part[#part + 1] = e
+        size = size + #e + 1
+    end
+    if size > 0 or #entries == 0 then flush() end
 end
 
-local function DecodeDigest(str)
-    local sums = {}
-    for part in (str or ""):gmatch("[^,]+") do sums[#sums + 1] = tonumber(part, 36) or -1 end
-    return sums
-end
-
--- Broadcast our digests so peers can tell us what we're missing (and vice versa).
+-- Send our checks so others can tell what they're missing (and ask us).
 function S:Exchange(force)
     if not IsInGuild() or not ns.DB:Guild() then return false end
     local now = GetTime()
     local since = now - (self.lastExchange or -1e9)
     if since < (force and 10 or self.EXCHANGE_COOLDOWN) then return false end
     self.lastExchange = now
-    -- "g" is the guild lane (2.10+); "guild" the old whole-store checksums,
-    -- only while someone online still runs an older copy
-    self:Send(table.concat({ PROTO, "D", "g", EncodeDigest(self:Digest("guild")) }, FS), "GUILD", nil, "high")
-    if not self:AllOnlineCurrent() then
-        self:Send(table.concat({ PROTO, "D", "guild", EncodeDigest(self:Digest("legacy")) }, FS), "GUILD", nil, "high")
-    end
-    if ns.IsOfficer() then
-        self:Send(table.concat({ PROTO, "D", "officer", EncodeDigest(self:Digest("officer")) }, FS), "OFFICER", nil, "high")
-    end
-    if self:MayRecruit() then
-        self:Send(table.concat({ PROTO, "D", "recruit", EncodeDigest(self:Digest("recruit")) }, FS), "GUILD", nil, "high")
-    end
+    self:SendSummary("guild")
+    if ns.IsOfficer() then self:SendSummary("officer") end
+    if self:MayRecruit() then self:SendSummary("recruit") end
     return true
 end
 
-S.dumped = { guild = {}, officer = {} } -- bucket -> GetTime() someone last re-sent it
-
-S.LIST_VERSION = "2.10.0" -- copies from this version on compare record lists
-
--- Does `who` run a copy that understands record lists ("L")?
-function S:PeerHasLists(who)
-    local rec = self:Get("AV:" .. who)
-    return rec ~= nil and ns.CompareVersions and ns.CompareVersions(rec.v or "", self.LIST_VERSION) >= 0
-end
-
-S.listAsked = {} -- "lane|who" -> GetTime() we last asked them
-
-function S:OnDigest(scope, digest, sender, channel)
-    if scope == "guild" then
-        -- old-style checksums: a 2.10+ copy also sends "g", which we use instead
-        if channel ~= "GUILD" or self:PeerHasLists(sender) then return end
-        return self:OnLegacyDigest("legacy", "guild", DecodeDigest(digest))
-    end
-    if scope == "g" then scope = "guild" end
-    if not self:LaneOpen(scope, channel) then return end
-    local theirs = DecodeDigest(digest)
-    local diff = self:DiffBuckets(scope, theirs)
-    if #diff == 0 then return end
-    -- "g" and "recruit" only come from 2.10+ copies
-    if scope ~= "officer" or self:PeerHasLists(sender) then
-        -- exact: send them our record list for the differing groups; they
-        -- send back only what we're missing, and ask for what they are
-        local k = scope .. "|" .. sender
-        if GetTime() - (self.listAsked[k] or -1e9) < self.LIST_COOLDOWN then return end
-        self.listAsked[k] = GetTime()
-        C_Timer.After(1 + math.random() * 4, function()
-            local still = S:DiffBuckets(scope, theirs, diff)
-            if #still > 0 then S:SendList("q", scope, sender, still) end
-        end)
-        return
-    end
-    return self:OnLegacyDigest(scope, scope, theirs)
-end
-
--- An older copy: the old way (re-send whole groups). A short random wait,
--- so when several clients notice the same gap only the first one re-sends
--- it (the others see its B marker and skip).
-function S:OnLegacyDigest(digestScope, scope, theirs)
-    local diff = self:DiffBuckets(digestScope, theirs)
-    if #diff == 0 then return end
-    C_Timer.After(2 + math.random() * 6, function()
-        local still = S:DiffBuckets(digestScope, theirs, diff)
-        local now = GetTime()
-        local send = {}
-        for _, b in ipairs(still) do
-            if now - (S.dumped[scope][b] or -1e9) > S.DUMP_SUPPRESS then send[#send + 1] = b end
+local function ParseSummary(payload)
+    local out, n = {}, 0
+    for e in (payload or ""):gmatch("[^,]+") do
+        local a, t, h = e:match("^([^:]+):(%w+):(%w+)$")
+        if a and #a <= 48 and not a:find("[|%c]") then
+            out[CN(a)] = { t = tonumber(t, 36) or 0, h = tonumber(h, 36) or -1 }
+            n = n + 1
+            if n >= 1000 then break end
         end
-        if #send > 0 then S:SendBuckets(scope, send) end
-        -- they may have newer data than us: let them compare against ours
-        S:Exchange(true)
+    end
+    return out
+end
+S.ParseSummary = ParseSummary
+
+function S:OnSummary(lane, payload, who, channel)
+    if not self:LaneOpen(lane, channel) then return end
+    -- someone new this session (just logged in?): send ours, so they can
+    -- catch up from us too
+    if not self.peers[who] then
+        self.peers[who] = true
+        C_Timer.After(1 + math.random() * 4, function() S:Exchange(true) end)
+    end
+    local mine = self:AuthorSums(lane)
+    for author, theirs in pairs(ParseSummary(payload)) do
+        -- only ask someone whose copies of these records we'd accept
+        if Same(author, who) or self:MayRelay(who, lane) then
+            self:MaybeAsk(lane, who, author, theirs, mine[author])
+        end
+    end
+end
+
+function S:MaybeAsk(lane, target, author, theirs, mine)
+    if mine and mine.h == theirs.h then return end
+    local since
+    if not mine then
+        since = 0
+    elseif theirs.t > mine.t then
+        since = mine.t                 -- the usual case: newer records
+    elseif theirs.t == mine.t then
+        since = 0                      -- an older record lost somewhere: all of them
+    else
+        return                         -- they're behind; they'll ask
+    end
+    local k = lane .. "|" .. author
+    local now = GetTime()
+    local last = self.asked[k]
+    if last and now - last.at < (last.full and self.FULL_COOLDOWN or self.ASK_COOLDOWN) then return end
+    self.asked[k] = { at = now, full = since == 0 and mine ~= nil }
+    -- a short random wait: when several copies notice the same gap, the
+    -- first one asks and the rest get the answer with it
+    C_Timer.After(0.5 + math.random() * 2.5, function()
+        local h = S.heardAsk[k]
+        if h and GetTime() - h.at < 15 and h.since <= since then return end
+        local cur = S:AuthorSums(lane)[author]
+        if cur and cur.h == theirs.h then return end
+        S.heardAsk[k] = { at = GetTime(), since = since }
+        S:Send(table.concat({ PROTO, "Q", lane, target, author, Base36(since) }, FS), LANE_CHANNEL[lane], nil, "high")
     end)
 end
 
-------------------------------------------------------------------------
--- Record lists (2.10+). For each differing group, a compact list of what's
--- in it: "<key hash>.<time>.<version hash>" per record. The other copy then
--- sends exactly the records we lack or have older, and (for a query) sends
--- back its own list so we can send what it lacks.
---   PROTO L q|a <lane> <target> <bucket>:<entry>,<entry>;<bucket>:...
--- q (query) is answered with records plus an "a" list; an "a" list is
--- answered with records only, so it never loops.
-------------------------------------------------------------------------
-S.LIST_COOLDOWN = 60
-S.LIST_MAX = 2600 -- characters of list per message (chunked under MAX_PARTS)
-
-local function Entry(key, rec)
-    return Base36(Hash(key)) .. "." .. Base36(rec.t) .. "." .. Base36(Hash((rec.a or "") .. FS .. (rec.v or "")) % 1679616)
+function S:OnAsk(lane, target, author, since, who, channel)
+    if not self:LaneOpen(lane, channel) then return end
+    author = CN(author)
+    since = tonumber(since or "", 36)
+    if not (author and target and since) then return end
+    local k = lane .. "|" .. author
+    local h = self.heardAsk[k]
+    if not h or GetTime() - h.at > 15 or since < h.since then self.heardAsk[k] = { at = GetTime(), since = since } end
+    if not Same(target, Me()) then return end
+    if not (Same(author, Me()) or self:MayRelay(Me(), lane)) then return end
+    local now = GetTime()
+    local ak = k .. "|" .. since
+    if now - (self.answered[ak] or -1e9) < self.ANSWER_COOLDOWN then return end
+    local r = self.answerCount[who]
+    if not r or now - r.since > 60 then
+        r = { n = 0, since = now }
+        self.answerCount[who] = r
+    end
+    if r.n >= self.MAX_ANSWERS then return end
+    r.n = r.n + 1
+    self.answered[ak] = now
+    self:SendAuthor(lane, author, since)
 end
 
--- Our records of a lane in the given buckets: { [bucket] = { key = rec } }
-function S:LaneRecords(lane, buckets)
-    local want, out = {}, {}
-    for _, b in ipairs(buckets) do want[b] = true; out[b] = {} end
+-- Sends an author's records of a lane newer than `since` (0: all of them).
+function S:SendAuthor(lane, author, since)
+    local store = self:Store(LANE_STORE[lane]) or {}
+    local own = Same(author, Me())
     local now = Now()
-    for key, rec in pairs(self:Store(StoreScope(lane)) or {}) do
-        local b = Bucket(key)
-        if want[b] and LaneOf(key) == lane and not self:Excluded(key, rec, now) then out[b][key] = rec end
-    end
-    return out
-end
-
-function S:SendList(mode, lane, target, buckets)
-    local channel = lane == "officer" and "OFFICER" or "GUILD"
-    local parts, size = {}, 0
-    local function flush()
-        if #parts == 0 then return end
-        self:Send(table.concat({ PROTO, "L", mode, lane, target, table.concat(parts, ";") }, FS), channel, nil, "high")
-        parts, size = {}, 0
-    end
-    for b, recs in pairs(self:LaneRecords(lane, buckets)) do
-        local entries = {}
-        for key, rec in pairs(recs) do entries[#entries + 1] = Entry(key, rec) end
-        table.sort(entries)
-        -- a group too big for one message is split across several
-        local chunk = {}
-        local function emit()
-            local text = b .. ":" .. table.concat(chunk, ",")
-            if size + #text > self.LIST_MAX then flush() end
-            parts[#parts + 1] = text
-            size = size + #text + 1
-            chunk = {}
-        end
-        for _, e in ipairs(entries) do
-            chunk[#chunk + 1] = e
-            if #chunk >= 120 then emit() end
-        end
-        emit()
-    end
-    flush()
-end
-
-local function ParseList(payload)
-    local out = {}
-    for group in (payload or ""):gmatch("[^;]+") do
-        local b, list = group:match("^(%d+):(.*)$")
-        b = tonumber(b)
-        if b and b >= 1 and b <= S.BUCKETS then
-            out[b] = out[b] or {}
-            for e in list:gmatch("[^,]+") do
-                local kh, t, vh = e:match("^(%w+)%.(%w+)%.(%w+)$")
-                if kh then out[b][kh] = { t = tonumber(t, 36) or 0, vh = vh } end
-            end
+    local channel = LANE_CHANNEL[lane]
+    for key, rec in pairs(store) do
+        if Same(rec.a, author) and rec.t > since and LaneOf(key) == lane and not self:Excluded(key, rec, now) then
+            self:Send(self:EncodeForWire(key, rec), channel, nil, own and "high" or "bulk", self:EncodeRecord(key, rec))
         end
     end
-    return out
 end
-S.ParseList = ParseList
 
-S.listAnswered = {} -- "lane|who" -> GetTime() we last answered their query
+------------------------------------------------------------------------
+-- A guild channel that doesn't deliver. Rarely, the game accepts someone's
+-- guild addon messages and delivers them to nobody, while their whispers
+-- still arrive. Every guild message normally comes back to its sender too,
+-- so a copy that has sent a few and heard none back sends through an online
+-- officer instead: it whispers them, and the officer passes on that
+-- member's own records (only theirs) to the guild.
+------------------------------------------------------------------------
+S.RELAY_VERSION = "2.11.0"
+S.MAX_WHISPERS = 120 -- whispered messages read per guildmate per minute
+S.whispers = {}
+S.ECHO_GRACE = 20
 
-function S:OnList(mode, lane, target, payload, who, channel)
-    if mode ~= "q" and mode ~= "a" then return end
-    if not self:LaneOpen(lane, channel) or not Same(target, Me()) then return end
-    if mode == "q" then
-        local k = lane .. "|" .. who
-        if GetTime() - (self.listAnswered[k] or -1e9) < 10 then return end
-        self.listAnswered[k] = GetTime()
+function S:NoteGuildSent()
+    if self.guildEcho then return end
+    self.unechoed = (self.unechoed or 0) + 1
+    self.firstUnechoed = self.firstUnechoed or GetTime()
+end
+
+function S:GuildBroken()
+    return not self.guildEcho and (self.unechoed or 0) >= 3
+        and GetTime() - (self.firstUnechoed or GetTime()) > self.ECHO_GRACE
+end
+
+-- An online officer running a copy that passes messages on.
+function S:PickRelay()
+    local cur = self.relay
+    if cur then
+        local e = RosterEntry(cur)
+        if e and e.online then return cur end
     end
-    local theirs = ParseList(payload)
-    local buckets = {}
-    for b in pairs(theirs) do buckets[#buckets + 1] = b end
-    if #buckets == 0 then return end
-    local mine = self:LaneRecords(lane, buckets)
-    -- officers pass on everything; in the recruit lane every recruiter does;
-    -- everyone else only their own records
-    local relayAll = lane == "officer" or lane == "recruit" or ns.IsOfficer()
+    self.relay = nil
     local me = Me()
-    local channelName = lane == "officer" and "OFFICER" or "GUILD"
-    local needBack = {}
-    for b, recs in pairs(mine) do
-        local seen = {}
-        for key, rec in pairs(recs) do
-            local kh = Base36(Hash(key))
-            seen[kh] = true
-            local t = theirs[b][kh]
-            local myEntry = Entry(key, rec)
-            local differs = not t or rec.t > t.t or (rec.t == t.t and myEntry:match("%.(%w+)$") ~= t.vh)
-            if differs then
-                local own = Same(rec.a, me)
-                if own or relayAll then
-                    self:Send(self:EncodeForWire(key, rec), channelName, nil, own and "high" or "bulk", self:EncodeRecord(key, rec))
-                end
+    for _, e in ipairs((ns.Roster and ns.Roster.members) or {}) do
+        if e.online and not Same(e.full, me) and self:KnownOfficer(e.full) then
+            local av = self:Get("AV:" .. e.full)
+            if av and ns.CompareVersions and ns.CompareVersions(av.v or "", self.RELAY_VERSION) >= 0 then
+                self.relay = e.full
+                return e.full
             end
-            if t and (t.t > rec.t or (t.t == rec.t and myEntry:match("%.(%w+)$") ~= t.vh)) then needBack[b] = true end
         end
-        for kh in pairs(theirs[b]) do
-            if not seen[kh] then needBack[b] = true end
-        end
-    end
-    if mode == "q" then
-        local back = {}
-        for b in pairs(needBack) do back[#back + 1] = b end
-        if #back > 0 then self:SendList("a", lane, who, back) end
     end
 end
 
@@ -1203,27 +1241,30 @@ end
 -- every guildmate online with the addon runs a copy that can read them.
 ------------------------------------------------------------------------
 S.COMPRESS_OVER = 150
+S.Z_VERSION = "2.10.0"
 
 function S:CanCompress()
     local E = C_EncodingUtil
     if not (E and E.CompressString and E.DecompressString and E.EncodeBase64 and E.DecodeBase64) then return false end
-    return self:AllOnlineCurrent()
+    return self:AllOnlineAtLeast(self.Z_VERSION)
 end
 
--- Is every guildmate online with the addon on 2.10 or later? (cached 30 s)
-function S:AllOnlineCurrent()
+-- Is every guildmate online with the addon on `version` or later? (cached 30 s)
+function S:AllOnlineAtLeast(version)
     local now = GetTime()
-    if self.compressCheckedAt and now - self.compressCheckedAt < 30 then return self.compressOk end
+    self.versionCheck = self.versionCheck or {}
+    local c = self.versionCheck[version]
+    if c and now - c.at < 30 then return c.ok end
     local ok = true
     for _, e in ipairs((ns.Roster and ns.Roster.members) or {}) do
         if e.online and e.hasAddon and not e.isSelf then
-            if not (e.version and ns.CompareVersions and ns.CompareVersions(e.version, self.LIST_VERSION) >= 0) then
+            if not (e.version and ns.CompareVersions and ns.CompareVersions(e.version, version) >= 0) then
                 ok = false
                 break
             end
         end
     end
-    self.compressCheckedAt, self.compressOk = now, ok
+    self.versionCheck[version] = { at = now, ok = ok }
     return ok
 end
 
@@ -1250,55 +1291,6 @@ local function Unpack(text)
     if not okD or type(v) ~= "string" or #v > S.MAX_VALUE then return nil end
     return v
 end
-
-function S:DiffBuckets(scope, theirs, only)
-    local mine = self:Digest(scope)
-    local out = {}
-    local list = only
-    if not list then
-        list = {}
-        for i = 1, self.BUCKETS do list[i] = i end
-    end
-    for _, b in ipairs(list) do
-        if mine[b] ~= theirs[b] then out[#out + 1] = b end
-    end
-    return out
-end
-
--- Re-broadcasts every record in the given buckets on the scope's channel.
-function S:SendBuckets(scope, buckets)
-    local store = self:Store(scope)
-    if not store then return end
-    if scope == "officer" and not ns.IsOfficer() then return end
-    local channel = CHANNEL[scope]
-    local want = {}
-    local now = GetTime()
-    for _, b in ipairs(buckets) do
-        want[b] = true
-        self.dumped[scope][b] = now
-        self:Send(table.concat({ PROTO, "B", scope, tostring(b) }, FS), channel, nil, "bulk")
-    end
-    local now = Now()
-    -- Officers pass on everything; everyone else only their own records.
-    -- (Passing on every recruitment status and Do Not Whisper entry too, as
-    -- before, queued hundreds of messages per repair on every copy, and a
-    -- member's own records waited behind them: a new member's data could
-    -- take ages to reach anyone. Those lists still spread through officers
-    -- and the people who wrote them.)
-    -- Your own records go in the fast lane, ahead of anything passed on.
-    local relayAll = scope == "officer" or ns.IsOfficer()
-    local me = Me()
-    for key, rec in pairs(store) do
-        if want[Bucket(key)] and not self:Excluded(key, rec, now) then
-            local mine = Same(rec.a, me)
-            if mine or relayAll then
-                local msg = self:EncodeRecord(key, rec)
-                self:Send(msg, channel, nil, mine and "high" or "bulk", msg)
-            end
-        end
-    end
-end
-
 ------------------------------------------------------------------------
 -- Messages
 ------------------------------------------------------------------------
@@ -1321,8 +1313,35 @@ local MAX_PENDING = 8  -- unfinished chunked messages kept per sender
 
 function S:OnMessage(msg, channel, sender)
     local who = ns.NormalizeName(sender)
-    if not who or who == Me() then return end
-    if channel == "OFFICER" then self.officers[who] = true end
+    if not who then
+        self.stats.unreadable = (self.stats.unreadable or 0) + 1
+        self.lastUnreadable = ("no usable sender name (\"%s\")"):format(tostring(sender))
+        return
+    end
+    if who == Me() then
+        -- our own guild message came back: the guild channel delivers
+        if channel == "GUILD" then self.guildEcho = GetTime() end
+        return
+    end
+    if channel == "WHISPER" then
+        -- only from a guildmate whose guild channel doesn't deliver, to an
+        -- officer who passes their records on (see GuildBroken)
+        if not ns.IsOfficer() or not RosterEntry(who) then return end
+        -- and not so many that passing them on floods the guild channel
+        local w = self.whispers[who]
+        if not w or GetTime() - w.since > 60 then
+            w = { n = 0, since = GetTime() }
+            self.whispers[who] = w
+        end
+        w.n = w.n + 1
+        if w.n > self.MAX_WHISPERS then return end
+    elseif channel ~= "GUILD" and channel ~= "OFFICER" then
+        return -- party, raid, instance: not ours to read
+    end
+    if channel == "OFFICER" then
+        self.officers[who] = true
+        self:NoteOfficer(who)
+    end
     local f = ns.Split(msg, FS)
     if f[1] ~= PROTO then return end -- other protocol versions are ignored
     self.stats.received = self.stats.received + 1
@@ -1331,6 +1350,7 @@ function S:OnMessage(msg, channel, sender)
     from.messages = from.messages + 1
     from.kinds[kind or "?"] = (from.kinds[kind or "?"] or 0) + 1
     from.last = GetTime()
+    from.raw = sender
     if kind == "R" or kind == "Z" then
         local key, t, author, batch = f[3], tonumber(f[4]), f[5], f[6]
         if not key or not t then return end
@@ -1353,19 +1373,27 @@ function S:OnMessage(msg, channel, sender)
         if batch and not batch:match("^%w%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?%w?$") then batch = "" end
         local rec = { v = value, t = t, a = author, b = (batch ~= "" and batch) or nil }
         key, rec = S.Canon(key, rec)
-        self:Apply(key, rec, { origin = "remote", channel = channel, sender = who })
-        self:Notify("member") -- schedule a flush
-    elseif kind == "D" then
-        self:OnDigest(f[3], f[4], who, channel)
-    elseif kind == "L" then
-        self:OnList(f[3], f[4], f[5], table.concat(f, FS, 6), who, channel)
-    elseif kind == "B" then
-        -- "I'm re-sending bucket b": skip ours only if theirs will be
-        -- accepted in full, i.e. an officer is sending it (SenderAllowed)
-        local scope, b = f[3], tonumber(f[4])
-        if b and self.dumped[scope] and (scope == "officer" or self:KnownOfficer(who)) then
-            self.dumped[scope][b] = GetTime()
+        if channel == "WHISPER" then
+            -- passing on: their own guild records only
+            if not Same(rec.a, who) or LaneOf(key) == "officer" then return end
+            self:Apply(key, rec, { origin = "remote", channel = "GUILD", sender = who })
+            local cur = self:Get(key)
+            if cur and cur.t == rec.t and Same(cur.a, rec.a) then
+                self:Send(self:EncodeForWire(key, cur), "GUILD", nil, "high", self:EncodeRecord(key, cur))
+            end
+        else
+            self:Apply(key, rec, { origin = "remote", channel = channel, sender = who })
         end
+        self:Notify("member") -- schedule a flush
+    elseif kind == "S" then
+        self:OnSummary(f[3], f[4], who, channel == "WHISPER" and "GUILD" or channel)
+    elseif kind == "Q" then
+        if channel == "WHISPER" and not Same(f[4], Me()) then
+            -- their request for someone else: ask on their behalf
+            self:Send(table.concat({ PROTO, "Q", f[3] or "", f[4] or "", f[5] or "", f[6] or "" }, FS), "GUILD", nil, "high")
+            return
+        end
+        self:OnAsk(f[3], f[4], f[5], f[6], who, channel == "WHISPER" and "GUILD" or channel)
     elseif kind == "C" then
         if reassembling then return end -- a chunk can't contain chunks
         -- chunk: id, index, total, data
@@ -1465,7 +1493,17 @@ function S:Pump()
             local item = q[1]
             local cost = #item[1] + #PREFIX + 10
             if tokens < cost then break end
-            local result, wait = RawSend(item[1], item[2], item[3])
+            local channel, target = item[2], item[3]
+            if channel == "GUILD" and S:GuildBroken() then
+                local relay = S:PickRelay()
+                if relay then channel, target = "WHISPER", ns.ChatName(relay) end
+            end
+            local result, wait = RawSend(item[1], channel, target)
+            -- sync checks also still go on the guild channel: if they start
+            -- coming back, the guild channel works again
+            if result == "ok" and channel == "WHISPER" and item[2] == "GUILD" and item[1]:find("^[^\t]+\tS\t") then
+                if RawSend(item[1], "GUILD") == "ok" then S:NoteGuildSent() end
+            end
             if result == "retry" then
                 S.stats.retries = S.stats.retries + 1
                 C_Timer.After(wait, step)
@@ -1476,6 +1514,8 @@ function S:Pump()
             tokens = tokens - cost
             if result == "ok" then
                 S.stats.sent = S.stats.sent + 1
+                if channel == "GUILD" then S:NoteGuildSent() end
+                if channel == "WHISPER" then S.stats.relayed = (S.stats.relayed or 0) + 1 end
             else
                 S.stats.dropped = S.stats.dropped + 1
             end
@@ -1558,7 +1598,19 @@ function S:Init()
         RegisterAddonMessagePrefix(PREFIX)
     end
     ns:RegisterEvent("CHAT_MSG_ADDON", function(_, prefix, msg, channel, sender)
-        if prefix == PREFIX then S:OnMessage(msg, channel, sender) end
+        if prefix ~= PREFIX then return end
+        -- counted before anything else, so a message we can't read still shows
+        S.stats.heard = (S.stats.heard or 0) + 1
+        if issecretvalue and (issecretvalue(sender) or issecretvalue(msg)) then
+            S.stats.unreadable = (S.stats.unreadable or 0) + 1
+            S.lastUnreadable = "protected sender or message"
+            return
+        end
+        local ok, err = pcall(S.OnMessage, S, msg, channel, sender)
+        if not ok then
+            S.stats.unreadable = (S.stats.unreadable or 0) + 1
+            S.lastUnreadable = ("from \"%s\" on %s: %s"):format(tostring(sender), tostring(channel), tostring(err))
+        end
     end)
 
     -- Your version, announced once per session, and only once the roster has

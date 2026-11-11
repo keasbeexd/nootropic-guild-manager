@@ -277,7 +277,8 @@ Spec is detected from the modern specialization API when the client has it, othe
 Every shared value (a member's main, spec, professions, contact info, an officer log entry, a permission) is stored with the time it was changed and who changed it. The newest change always wins, so everyone ends up with the same data no matter the order messages arrive in.
 
 - **Batches:** your changes show up for you instantly but are sent 15 seconds after the first one, all together. Everything in one batch is grouped in the audit.
-- **Repair:** every few minutes, and whenever you open the window, each copy of the addon sends a short checksum of its data. If a guildmate's checksums differ, the records that differ are re-sent on the same channel, and other clients skip re-sending what someone just sent. Missed messages, officers who were offline, and new installs all catch up this way, with no "Sync" button needed. Nothing is ever whispered.
+- **Repair:** every few minutes, and whenever you open the window, each copy of the addon sends a short check: for each author, when their newest record was written and a checksum. Whoever is missing something asks for exactly that author's records since then, from the author or an officer, and gets them on the same channel. Missed messages, officers who were offline, and new installs all catch up this way, with no "Sync" button needed.
+- **Whispers:** only when the game doesn't deliver someone's guild addon messages (their copy notices its own messages never come back): their copy whispers them to an online officer, who passes on that member's own data. Nothing else is ever whispered.
 - **Officer-only data** (officer log, audit) only ever travels on the game's officer addon channel, which the game delivers only to officer ranks.
 - **Pacing:** messages are rate-limited to stay well under the game's limits; if the game reports throttling, messages are retried rather than lost.
 

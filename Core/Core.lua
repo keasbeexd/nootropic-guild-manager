@@ -378,6 +378,17 @@ SlashCmdList.NOOTROPICGM = function(msg)
     elseif cmd == "sync" and rest ~= "" then
         -- /ngm sync <name>: what arrived from that guildmate this session
         local S, want, shown = ns.Sync, rest:lower(), false
+        local function Shard(who)
+            local e = ns.Roster.byName[who]
+            return e and e.shard or "?"
+        end
+        local me = ns.PlayerFullName()
+        ns:Print(("You (%s) are on shard %s."):format(me, Shard(me)))
+        for _, e in ipairs(ns.Roster.members) do
+            if e.full:lower():find(want, 1, true) then
+                ns:Print(("  %s: shard %s, %s."):format(e.full, e.shard or "?", e.online and "online" or "offline"))
+            end
+        end
         for who, f in pairs(S.from) do
             if who:lower():find(want, 1, true) then
                 shown = true
@@ -388,6 +399,11 @@ SlashCmdList.NOOTROPICGM = function(msg)
                     who, f.messages, table.concat(kinds, ", "), math.floor(GetTime() - (f.last or GetTime())), f.applied, f.older, f.refused))
             end
         end
+        for who, f in pairs(S.from) do
+            if who:lower():find(want, 1, true) and f.raw then
+                ns:Print(("  Their messages arrive signed \"%s\"."):format(f.raw))
+            end
+        end
         if not shown then ns:Print(("Nothing has arrived from anyone matching \"%s\" this session."):format(rest)) end
     elseif cmd == "sync" then
         ns.Comm:Report()
@@ -396,6 +412,19 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns:Print(started and "Comparing data with guildmates now." or "A sync just ran; it repeats automatically every few minutes.")
         ns:Print(("Sync this session: %d sent, %d received, %d applied, %d refused, %d queued (%d own/live, %d passed on), %d dropped, %d held back by the game."):format(
             st.sent, st.received, st.applied, st.refused or 0, ns.Sync:QueueSize(), #ns.Sync.queues.high, #ns.Sync.queues.bulk, st.dropped, st.retries or 0))
+        local S2 = ns.Sync
+        if S2.guildEcho then
+            ns:Print("  Guild channel: working (your messages come back to you).")
+        elseif S2:GuildBroken() then
+            local relay = S2:PickRelay()
+            ns:Print(("  Guild channel: |cffff5555not delivering your messages|r. %s"):format(relay
+                and ("Sending through " .. relay .. " instead (" .. (st.relayed or 0) .. " so far).")
+                or "No officer with 2.11 or later is online to send them through; they'll go when one is."))
+        else
+            ns:Print("  Guild channel: checking...")
+        end
+        ns:Print(("  Addon messages heard: %d, unreadable: %d%s."):format(st.heard or 0, st.unreadable or 0,
+            ns.Sync.lastUnreadable and (" (last: " .. ns.Sync.lastUnreadable .. ")") or ""))
         local lr = ns.Sync.lastRefused
         if lr then
             ns:Print(("  Last refused: %s from %s (written as %s): %s."):format(
