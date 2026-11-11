@@ -484,6 +484,13 @@ function S:WithinLimits(typ, member, rest, rec, ctx, store)
 end
 
 -- Should we accept this record from someone else?
+-- Counts a refused record and remembers the last one, for /ngm sync.
+function S:Refuse(ctx, rec, why)
+    self.stats.refused = (self.stats.refused or 0) + 1
+    self.lastRefused = { sender = ctx.sender, key = ctx.key, author = rec.a, why = why, at = Now() }
+    return false
+end
+
 function S:Accept(typ, member, def, rec, ctx)
     if def.scope == "officer" then
         -- the game only delivers the officer channel to officer ranks
@@ -491,18 +498,16 @@ function S:Accept(typ, member, def, rec, ctx)
     elseif ctx.channel ~= "GUILD" then
         return false
     end
-    if def.selfOnly and rec.a ~= member then return false end
+    if def.selfOnly and rec.a ~= member then return self:Refuse(ctx, rec, "its author isn't the member it's about") end
     if not self:SenderAllowed(typ, member, select(3, S.ParseKey(ctx.key)) or "", def, rec, ctx) then
-        self.stats.refused = (self.stats.refused or 0) + 1
-        return false
+        return self:Refuse(ctx, rec, "the sender may not write it")
     end
-    if rec.t > Now() + 300 then return false end -- refuse timestamps from the future
+    if rec.t > Now() + 300 then return self:Refuse(ctx, rec, "its time is in the future (clock?)") end
     if typ == "A" and rec.t < Now() - self:RetentionSeconds() then return false end
     local expires = self:ExpiresAt(ctx.key, rec)
     if expires and expires < Now() then return false end
     if not self:WithinLimits(typ, member, select(3, S.ParseKey(ctx.key)) or "", rec, ctx, self:Store(def.scope) or {}) then
-        self.stats.refused = (self.stats.refused or 0) + 1
-        return false
+        return self:Refuse(ctx, rec, "over a size or rate limit")
     end
     return true
 end

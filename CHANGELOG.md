@@ -8,6 +8,7 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 - The "alt" label on the game's guild roster sits at the right edge of the name column on every row, with a dark backing, instead of sometimes landing in the Rank column.
 - The /who whisper buttons no longer read protected text on screen (it filled the game's error log on every search).
 - Opening Options during combat says to wait, instead of being blocked by the game.
+- `/ngm sync` also shows how many records from guildmates were refused this session, and the last one with the reason (who sent it, which record, why), to track down a guildmate whose data never shows up.
 
 ## 2.9.1
 
