@@ -485,8 +485,20 @@ end
 
 -- Should we accept this record from someone else?
 -- Counts a refused record and remembers the last one, for /ngm sync.
+-- What arrived from each guildmate this session (for /ngm sync <name>)
+S.from = {}
+function S:From(who)
+    local f = self.from[who]
+    if not f then
+        f = { messages = 0, kinds = {}, applied = 0, refused = 0, older = 0 }
+        self.from[who] = f
+    end
+    return f
+end
+
 function S:Refuse(ctx, rec, why)
     self.stats.refused = (self.stats.refused or 0) + 1
+    if ctx.sender then self:From(ctx.sender).refused = self:From(ctx.sender).refused + 1 end
     self.lastRefused = { sender = ctx.sender, key = ctx.key, author = rec.a, why = why, at = Now() }
     return false
 end
@@ -618,8 +630,12 @@ function S:Apply(key, rec, ctx)
     if ctx.origin == "remote" and typ == "RS" and not self:MayRecruit() then return false end
     if ctx.origin == "remote" and not self:Accept(typ, member, def, rec, ctx) then return false end
     local cur = store[key]
-    if cur and not Newer(rec, cur) then return false end
+    if cur and not Newer(rec, cur) then
+        if ctx.origin == "remote" and ctx.sender then self:From(ctx.sender).older = self:From(ctx.sender).older + 1 end
+        return false
+    end
     store[key] = rec
+    if ctx.origin == "remote" and ctx.sender then self:From(ctx.sender).applied = self:From(ctx.sender).applied + 1 end
     self:Materialize(typ, key, member, rec)
     if not def.noAudit and not ctx.migration and ns.IsOfficer() then
         self:Audit(typ, key, member, cur, rec)
@@ -1311,6 +1327,10 @@ function S:OnMessage(msg, channel, sender)
     if f[1] ~= PROTO then return end -- other protocol versions are ignored
     self.stats.received = self.stats.received + 1
     local kind = f[2]
+    local from = self:From(who)
+    from.messages = from.messages + 1
+    from.kinds[kind or "?"] = (from.kinds[kind or "?"] or 0) + 1
+    from.last = GetTime()
     if kind == "R" or kind == "Z" then
         local key, t, author, batch = f[3], tonumber(f[4]), f[5], f[6]
         if not key or not t then return end

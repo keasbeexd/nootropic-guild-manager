@@ -375,13 +375,27 @@ SlashCmdList.NOOTROPICGM = function(msg)
     elseif cmd == "recruit" then
         ns.UI:Show()
         ns.UI:SelectTab(ns.UI.TAB_RECRUIT)
+    elseif cmd == "sync" and rest ~= "" then
+        -- /ngm sync <name>: what arrived from that guildmate this session
+        local S, want, shown = ns.Sync, rest:lower(), false
+        for who, f in pairs(S.from) do
+            if who:lower():find(want, 1, true) then
+                shown = true
+                local kinds = {}
+                for k, n in pairs(f.kinds) do kinds[#kinds + 1] = k .. " " .. n end
+                table.sort(kinds)
+                ns:Print(("From %s this session: %d messages (%s), last %ds ago; %d records applied, %d already had, %d refused."):format(
+                    who, f.messages, table.concat(kinds, ", "), math.floor(GetTime() - (f.last or GetTime())), f.applied, f.older, f.refused))
+            end
+        end
+        if not shown then ns:Print(("Nothing has arrived from anyone matching \"%s\" this session."):format(rest)) end
     elseif cmd == "sync" then
         ns.Comm:Report()
         local started = ns.Sync:Exchange(true)
         local st = ns.Sync.stats
         ns:Print(started and "Comparing data with guildmates now." or "A sync just ran; it repeats automatically every few minutes.")
-        ns:Print(("Sync this session: %d sent, %d received, %d applied, %d refused, %d queued, %d dropped."):format(
-            st.sent, st.received, st.applied, st.refused or 0, ns.Sync:QueueSize(), st.dropped))
+        ns:Print(("Sync this session: %d sent, %d received, %d applied, %d refused, %d queued (%d own/live, %d passed on), %d dropped, %d held back by the game."):format(
+            st.sent, st.received, st.applied, st.refused or 0, ns.Sync:QueueSize(), #ns.Sync.queues.high, #ns.Sync.queues.bulk, st.dropped, st.retries or 0))
         local lr = ns.Sync.lastRefused
         if lr then
             ns:Print(("  Last refused: %s from %s (written as %s): %s."):format(
