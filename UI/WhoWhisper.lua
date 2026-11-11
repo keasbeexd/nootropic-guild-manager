@@ -98,7 +98,10 @@ local function Texts(obj, out)
     for _, region in ipairs({ obj:GetRegions() }) do
         if region:GetObjectType() == "FontString" and region:IsShown() then
             local text = region:GetText()
-            if text and text ~= "" then out[#out + 1] = ns.Trim(StripColors(text)):lower() end
+            -- some text on Forever is protected ("secret"): comparing it is
+            -- blocked and logged as taint, so it's skipped unread
+            if issecretvalue and issecretvalue(text) then text = nil end
+            if type(text) == "string" and text ~= "" then out[#out + 1] = ns.Trim(StripColors(text)):lower() end
         end
     end
     return out

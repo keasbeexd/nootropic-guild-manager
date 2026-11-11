@@ -2,6 +2,13 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.9.2
+
+- Fix: changing someone's rank in the game's guild window could be blocked ("NootropicGuildManager has been blocked from an action only available to the Blizzard UI"). The addon's alt labels on that roster were added in a way that left Blizzard's row data marked as touched by an addon, and the rank dropdown reads that data. They're now added the way Blizzard intends (after their code, without touching it).
+- The "alt" label on the game's guild roster sits at the right edge of the name column on every row, with a dark backing, instead of sometimes landing in the Rank column.
+- The /who whisper buttons no longer read protected text on screen (it filled the game's error log on every search).
+- Opening Options during combat says to wait, instead of being blocked by the game.
+
 ## 2.9.1
 
 - Fix: some guildmates showed version **"old"** even on the latest version. At login the game first gives only your first name, and the addon announced your version under it ("Deja" instead of "Deja Rollupz"), which guildmates rightly refuse. It now waits until the roster gives your full name, and re-sends your version once every session, so one lost at a quick /reload is fixed at the next login.
