@@ -2,6 +2,13 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.1 and newer sync with each other; 2.0 and 1.x use older sync protocols and don't exchange data with them.
 
+## 2.10.0
+
+- Leaner sync. When two copies find their data differs, they now swap a compact list of what each has in the differing parts, and send each other only the records that are actually missing or out of date, instead of re-sending everything in those parts. Catching up after time offline is much faster and uses far less of the game's addon-message allowance.
+- Recruitment statuses (the hundreds of "whispered / invited / declined" entries) now sync in their own lane, only between members whose rank may recruit. Everyone else no longer stores or exchanges them, so their own data isn't held up behind them.
+- Big records (recipe lists, for example) are sent compressed with the game's own compression, once everyone online with the addon is on 2.10 or later.
+- Works with older copies: while anyone online still runs 2.9 or earlier, the old way is used with them.
+
 ## 2.9.3
 
 - Fix: a new member's data (version, professions, Hall of Fame…) could take ages to reach anyone, or never seem to. When copies compare data, every copy also passed on every recruitment status and Do Not Whisper entry it knew (600+ in our guild), queuing hundreds of messages, and the member's own records waited behind them. Now a member passes on only their own records, first; officers still pass on everything. The same record is also never queued twice while it's waiting to go out.

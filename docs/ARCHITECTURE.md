@@ -38,11 +38,25 @@ All messages start with the protocol number (`PROTO`, currently 5); other versio
 | Kind | Fields | Meaning |
 | --- | --- | --- |
 | `R` | key, time, author, batch, value | one record |
-| `D` | scope, 16 checksums | "here's what I have": a digest over 16 buckets of records |
-| `B` | scope, bucket | "I'm re-sending this bucket" (others skip it) |
+| `Z` | same as `R`, value compressed | one big record, Deflate + Base64 (`C_EncodingUtil`) (2.10+) |
+| `D` | lane, 16 checksums | "here's what I have": a digest over 16 buckets of one lane's records |
+| `L` | q or a, lane, target, lists | "here's exactly what I have in these buckets" (2.10+) |
+| `B` | scope, bucket | "I'm re-sending this bucket" (others skip it; older copies only) |
 | `C` | id, part, parts, data | a piece of a message longer than 250 bytes (at most 16 parts) |
 
-Local changes are sent together 15 seconds after the first one (a **batch**, which the audit groups). Every 10 minutes, and when the window opens, each copy sends its digest; anyone whose buckets differ re-sends those buckets. This repairs lost messages and catches up people who were offline.
+Local changes are sent together 15 seconds after the first one (a **batch**, which the audit groups). Every 10 minutes, and when the window opens, each copy sends a digest per **lane**:
+
+| Lane | Digest scope | Channel | Records | Who |
+| --- | --- | --- | --- | --- |
+| guild | `g` | GUILD | guild records except recruitment statuses | everyone |
+| officer | `officer` | OFFICER | officer records | officers |
+| recruit | `recruit` | GUILD | recruitment statuses (`RS`) | members whose rank may recruit (others don't keep them) |
+
+When a digest differs, the copy that noticed waits 1-5 seconds and sends the sender an `L q`: for each differing bucket, one `<key hash>.<time>.<value hash>` entry per record (base 36). The sender sends exactly the records the asker lacks or has older, and answers with an `L a` for the buckets where it's the one behind; the asker sends those. An `L a` is never answered with a list, so it can't loop. One `L q` per lane and peer per minute.
+
+Who passes on what: everyone sends their own records (fast lane); officers also pass on everyone's guild and officer records, and recruiters everyone's recruitment statuses (slow lane).
+
+Records over 150 bytes are sent as `Z` only while every guildmate online with the addon runs 2.10 or later. While anyone online runs an older copy, copies also send the old whole-store digest (scope `guild`), and an older copy's digest is repaired the old way: re-sending whole buckets (`B` markers, then the records).
 
 ### Record types
 
