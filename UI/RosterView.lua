@@ -977,7 +977,8 @@ end
 ------------------------------------------------------------------------
 -- The member lines every tooltip shows (here, Play Together, and the
 -- game's own guild roster): main or alt, spec, role, the two main
--- professions, Discord, and your private note. Everything else is on the
+-- professions, Discord, their addon version (or whether they've been
+-- reminded to install it), and your private note. Everything else is on the
 -- profile and in the list's columns.
 function RV:AddMemberLines(e)
     local GOLD = { 1, 0.82, 0 }
@@ -997,6 +998,12 @@ function RV:AddMemberLines(e)
         end
     end
     if e.discord then Pair("Discord", e.discord) end
+    -- the addon: their version, or whether they've been reminded to install it
+    if e.hasAddon then
+        Pair("Addon version", e.version or "?")
+    else
+        GameTooltip:AddLine(ns.InstallReminder:StatusLine(e) or "Not reminded to install the addon yet", 0.6, 0.6, 0.6)
+    end
     if e.note and e.note ~= "" then GameTooltip:AddLine(e.note, 0.85, 0.85, 0.85, true) end
 end
 

@@ -97,7 +97,7 @@ The first time you log in with the addon (and once after updating to 2.5.0), a s
 **On the game's Guild & Communities roster** — Nootropic Guild Manager works on top of Blizzard's own guild roster rather than replacing it:
 
 - **After each name**: "alt" for alts.
-- **Hover a member**: Blizzard's tooltip gets this addon's details underneath, the same as everywhere in the addon: main (or alt of whom), spec, role, their two main professions with skill levels, Discord, and your private note. Everything else is on their profile.
+- **Hover a member**: Blizzard's tooltip gets this addon's details underneath, the same as everywhere in the addon: main (or alt of whom), spec, role, their two main professions with skill levels, Discord, their addon version (or whether they've been reminded to install it), and your private note. Everything else is on their profile.
 - **Right-click a member**: **Profile** and **Main / Alt** (mark as alt, change main, make main, unlink, add an alt; if your rank may) are added to Blizzard's menu.
 - **Alt+click a member** (or **Profile** in the menu) opens their profile docked beside the window, next to Blizzard's own member details when those are open.
 - Only shown on your guild, not other communities. **Options > Show alts and profiles on the Guild roster** turns all of it off. Nothing Blizzard does is changed or replaced, so inviting, promoting and removing keep working normally.
