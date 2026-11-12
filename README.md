@@ -1,7 +1,5 @@
 # Nootropic Guild Manager
 
-[![Support on Ko-fi](https://img.shields.io/badge/Support_on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/keasbeexd) [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor_on-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/keasbeexd)
-
 Your whole guild in one window, for **World of Warcraft: Forever**. Profiles,
 crafters, raid readiness, who to play with tonight, a guild census, a Hall
 of Fame and friendly recruiting, shared between everyone in the guild who runs it.
@@ -9,6 +7,8 @@ of Fame and friendly recruiting, shared between everyone in the guild who runs i
 <img src="docs/logo.svg" width="96" alt="Nootropic Guild Manager's gold-ringed medallion with a foaming ale tankard">
 
 ![The Find tab: every guildmate with level, class, spec, main or alt, location, professions, rank and addon version](docs/screenshots/1-find.png)
+
+[![Support on Ko-fi](https://img.shields.io/badge/Support_on-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/keasbeexd) [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor_on-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/keasbeexd)
 
 Nootropic Guild Manager works on top of the game's own Guild & Communities
 window rather than replacing it, and adds a window of its own for what the
