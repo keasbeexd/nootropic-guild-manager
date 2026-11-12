@@ -154,6 +154,8 @@ D.MAX_LOG_LENGTH = 140 -- fits one addon message
 
 -- Options > About. Links are shown to copy (the game can't open web pages).
 D.LINKS = {
+    { label = "NGM Peon", url = "https://ngmpeon.app", icon = "Interface\\Icons\\Achievement_GuildPerk_EverybodysFriend",
+      hint = "NGM's Discord bot (coming soon), with links to everything else." },
     { label = "Keasbeexd's site", url = "https://keasbeexd.github.io/", icon = "Interface\\Icons\\INV_Misc_Book_09",
       hint = "Other projects by the maintainer." },
     { label = "Nootropic on Discord", url = "https://discord.gg/BCnPbyBSyb", icon = D.LOGO,
