@@ -17,6 +17,11 @@ game can't do. Every copy of the addon shares what its player knows
 the more of your guild runs it, the more it knows. It was made for the
 **<Nootropic>** guild and is free for any guild to use.
 
+**Coming next: NGM Peon**, a Discord bot that syncs your guild between the
+game and your Discord server: rank roles, join/leave/promotion posts,
+activity across guild chat, Discord and voice, and the Hall of Fame. See
+[ngmpeon.app](https://ngmpeon.app).
+
 ## Features
 
 - **Find** — search the whole guild by name, class, spec, profession,
