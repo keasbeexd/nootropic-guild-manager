@@ -37,6 +37,7 @@ Services\HofCheck.lua
 Services\Sharing.lua
 
 # Interface
+Services\DiscordCode.lua
 UI\Widgets.lua
 UI\Columns.lua
 UI\ScheduleGrid.lua
@@ -52,6 +53,7 @@ UI\RecruitView.lua
 UI\DNWView.lua
 UI\RecipesView.lua
 UI\InvitePrompt.lua
+UI\DiscordCodeView.lua
 UI\MessagesView.lua
 UI\AuditView.lua
 UI\MainFrame.lua

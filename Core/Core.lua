@@ -354,6 +354,7 @@ local function PrintHelp()
     ns:Print("  |cffffffff/ngm minimap|r  - show or hide the minimap button")
     ns:Print(("  |cffffffff/ngm recruit|r  - open the %s tab"):format(ns.TabName("recruit")))
     ns:Print("  |cffffffff/ngm options|r  - open the options")
+    ns:Print("  |cffffffff/ngm discord|r  - Guild Master: the setup code for NGM Peon, the Discord bot")
     ns:Print("  |cffffffff/ngm diag|r  - troubleshooting: version, sync, and the addon's hooks into game windows")
     ns:Print("  |cffffffff/ngm reset|r  - reset the window size and position")
 end
@@ -404,6 +405,8 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns.UI:OpenTab(ns.UI.TAB_OVERVIEW)
     elseif cmd == "hof" or cmd == "fame" or cmd == "halloffame" then
         ns.UI:OpenTab(ns.UI.TAB_HOF)
+    elseif cmd == "discord" or cmd == "peon" then
+        ns.DiscordCodeView:Open()
     elseif cmd == "dnw" then
         ns.DNWView:Toggle()
     elseif cmd == "minimap" then
