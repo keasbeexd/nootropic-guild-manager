@@ -36,7 +36,7 @@ The code is in two layers:
 - **`Core/Records.lua`** is the data and its rules: record types, who may write what, limits, newest-wins, and turning records into the addon's working data. It knows nothing about how records travel.
 - **`Core/Sync.lua`** carries records between guildmates in game. It calls `S:Apply(key, rec, ctx)` for whatever arrives, and Records calls `S:Broadcast(key, rec)` for each change to send.
 
-Any other way of carrying records (the NGM Hub in 3.0) plugs in at the same two points, with the same rules: see [The NGM Hub (3.0)](#the-ngm-hub-30).
+Any other way of carrying records (NGM Peon in 3.0) plugs in at the same two points, with the same rules: see [NGM Peon (3.0)](#ngm-peon-30).
 
 Records go with `C_ChatInfo.SendAddonMessage` under the prefix `NootropicGM` on the **GUILD** channel, or **OFFICER** for officer-only data. Only those two channels are read, plus whispers to an officer from a guildmate whose guild channel doesn't deliver (below). Party, raid and other whispers are ignored.
 
@@ -158,9 +158,9 @@ Your private notes never leave your computer. Officer data goes only over the of
 
 `tests/sim.lua` simulates a guild for sync: every member runs their own copy of `Records.lua` and `Sync.lua` against one clock, one roster and a stand-in for the game that delivers addon messages with a delay (and can leave a player's guild channel delivering nothing). `test_sync.lua` covers the protocol and its security in a small guild; `test_sync_scale.lua` measures a 300-member guild at the real send budget (compression is a stand-in at 35%). They don't replace trying it in the game: anything about frames, layout or Blizzard's restrictions needs an in-game check.
 
-## The NGM Hub (3.0)
+## NGM Peon (3.0)
 
-The Hub (Discord and the web, in 3.0) will hold the same records under the same rules. To keep that simple:
+NGM Peon is NGM's Discord bot and website (ngmpeon.app), coming in 3.0. Its server, called "the Hub" below, will hold the same records under the same rules. To keep that simple:
 
 - **Records are the contract.** Keys, values, `t`/`a`/`b`, newest-wins and who may write what are defined once, in `Core/Records.lua`, and documented above. The Hub implements the same rules rather than its own.
 - **Two seams.** In game, Sync calls `S:Apply` for what arrives and Records calls `S:Broadcast` for what changes. Anything that carries records between the addon and the Hub uses the same two calls, with `ctx.origin` naming where a record came from.
