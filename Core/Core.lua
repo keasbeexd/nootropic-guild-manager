@@ -358,7 +358,7 @@ local function PrintHelp()
     ns:Print("  |cffebdbb2/ngm discord|r  - Guild Master: the update code for NGM Peon (ngmpeon.app, Sync tab, step 2)")
     ns:Print("  |cffebdbb2/ngm discord all|r  - the same, with everything (not just what changed)")
     ns:Print("  |cffebdbb2/ngm discord setup|r  - the short code for /ngm-guild setup in Discord")
-    ns:Print("  |cffebdbb2/ngm peon|r  - bring in the code from NGM Peon's dashboard (Sync tab, step 1)")
+    ns:Print("  |cffebdbb2/ngm peon|r  - bring in the code from NGM Peon's dashboard (ngmpeon.app, Sync tab, step 3)")
     ns:Print("  |cffebdbb2/ngm diag|r  - troubleshooting: version, sync, and the addon's hooks into game windows")
     ns:Print("  |cffebdbb2/ngm reset|r  - reset the window size and position")
 end

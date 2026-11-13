@@ -238,7 +238,7 @@ end
 -- code -> { region, guild, has, hoursHash, records = { {key, t, a, v} } }, or nil and why
 function DC:ParsePeon(code)
     code = (code or ""):gsub("%s+", "")
-    if code == "" then return nil, "Paste the code from NGM Peon's dashboard (Sync tab, step 1)." end
+    if code == "" then return nil, "Paste the code from NGM Peon's dashboard (ngmpeon.app, Sync tab, step 3)." end
     local body, sum = code:match("^NGMP1%.([A-Za-z0-9_%-]+)%.(%x%x%x%x%x%x%x%x)$")
     if not body then return nil, "That isn't a code from NGM Peon. It starts with NGMP1." end
     local payload = DC.Base64UrlDecode(body)
