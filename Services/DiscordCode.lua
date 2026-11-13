@@ -197,6 +197,7 @@ end
 ------------------------------------------------------------------------
 -- The code from NGM Peon (/ngm peon): NGMP1.<base64url>.<adler-32>
 --   region, guild, has<TAB>t, [hours<TAB>hash], R<TAB>key<TAB>t<TAB>author<TAB>value
+--   (records: M main/alt, RL Tank/Healer/DPS, CN a linked member's @Discord name)
 -- (ngm-hub's src/records/addoncode.ts makes it). Its records are taken as
 -- if the player pasting it had passed them on in guild sync: under the same
 -- rules (an officer may pass on anyone's; anyone else only their own), then
@@ -258,7 +259,7 @@ function DC:ApplyPeon(code)
     local out = { taken = 0, had = 0, refused = 0 }
     for _, r in ipairs(c.records) do
         local typ = r.key:match("^(%u+):")
-        if typ ~= "M" and typ ~= "RL" then
+        if typ ~= "M" and typ ~= "RL" and typ ~= "CN" then -- mains, roles, Discord names
             out.refused = out.refused + 1
         else
             local cur = ns.Sync:Get(r.key)

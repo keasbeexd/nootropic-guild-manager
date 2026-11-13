@@ -122,6 +122,15 @@ ns.DB.Guild = function() return guildData end
 local got = assert(DC:ApplyPeon("NGMP1.dXMKTm9vdHJvcGljCmhhcwl0b2Y3eGMKaG91cnMJMW8xbnQxMwpSCU06Wm_DqyBBc2gJdG9naTgwCU1hcmMgUHJpZXN0CU1hcmMgUHJpZXN0ClIJUkw6TWFyYyBQcmllc3QJdG9naTgxCU1hcmMgUHJpZXN0CWhlYWxlcg.2a542997"))
 assert(got.taken == 1 and got.had == 1 and got.refused == 0, ("%d %d %d"):format(got.taken, got.had, got.refused))
 assert(sent[1] == "M:Zo\195\171 Ash" and guildData.peon.has == 1794540000)
+-- a Discord name (CN) is taken too; other kinds aren't
+do
+    local payload = "us\nNootropic\nhas\t" .. DC.B36(1794540000) .. "\nhours\t" .. DC.B36(pc.hoursHash) .. "\nR\tCN:Marc Priest\t" .. DC.B36(1794600005) .. "\tMarc Priest\tkeasbeexd;\nR\tGS:perm_links\t" .. DC.B36(1794600005) .. "\tMarc Priest\t0"
+    local code = "NGMP1." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)
+    local got2 = assert(DC:ApplyPeon(code))
+    assert(got2.taken == 1 and got2.refused == 1, ("%d %d"):format(got2.taken, got2.refused))
+    assert(held["CN:Marc Priest"].v == "keasbeexd;")
+end
+
 -- the next update code: changes since NGM Peon's word (less a week), and no grid when NGM Peon has the same
 store = {}
 ns.Sync.Store = function() return store end
