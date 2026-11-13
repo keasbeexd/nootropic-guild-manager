@@ -122,7 +122,8 @@ function DC:Changes(since)
     local store = ns.Sync:Store("guild") or {}
     for key, rec in pairs(store) do
         local typ = key:match("^(%u+):")
-        if (typ == "M" or typ == "RL") and (rec.t or 0) > since and rec.a then
+        if (typ == "M" or typ == "RL") and (rec.t or 0) > since and rec.a and rec.a ~= ""
+            and ns.Sync.ValidValue(typ, rec.v) then
             out[#out + 1] = { key = key, v = rec.v or "", t = rec.t, a = rec.a }
         end
     end

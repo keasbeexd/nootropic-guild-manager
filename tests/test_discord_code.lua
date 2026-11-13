@@ -60,7 +60,12 @@ local store = {
     ["M:New"] = { v = "Main", t = now - 10, a = "Off" },
     ["RL:New"] = { v = "tank", t = now - 5, a = "New" },
     ["CN:New"] = { v = "x", t = now - 5, a = "New" }, -- not sent: only M and RL
+    ["RL:Odd"] = { v = "admin", t = now - 5, a = "Odd" }, -- not sent: not a role
 }
+ns.Sync.ValidValue = function(typ, v)
+    if typ == "RL" then return v == "" or not (v .. ","):gsub("tank,", ""):gsub("healer,", ""):gsub("damage,", ""):find("%S") end
+    return true
+end
 local guildData = {}
 gm, region, flags[2] = true, 1, { officer = false, invite = false }
 ns.DB.Guild = function() return guildData end

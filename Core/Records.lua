@@ -568,8 +568,26 @@ S.NEW_KEYS_PER_WINDOW = 500   -- new records one non-officer may add...
 S.NEW_KEYS_WINDOW = 600       -- ...per 10 minutes
 local newKeys = {}            -- sender -> { count, since }
 
+-- Roles are only the addon's role keys; a main is "" or a plain name. A
+-- hand-made client could otherwise spread junk that rides into NGM Peon's
+-- update code (which refuses it, but it's never wanted anywhere).
+function S.ValidValue(typ, v)
+    v = v or ""
+    if typ == "RL" then
+        if v == "" then return true end
+        for part in (v .. ","):gmatch("([^,]*),") do
+            if part ~= "tank" and part ~= "healer" and part ~= "damage" then return false end
+        end
+        return true
+    elseif typ == "M" then
+        return v == "" or (#v <= 40 and not v:find("[,:\t]"))
+    end
+    return true
+end
+
 function S:WithinLimits(typ, member, rest, rec, ctx, store)
     if #(rec.v or "") > self.MAX_VALUE then return false end
+    if not S.ValidValue(typ, rec.v) then return false end
     if (typ == "HW" or typ == "HA") and not rest:match("^%d%d%d%d%d%d$") then return false end
     -- reminders only about guildmates, holding the time they were sent
     if typ == "IR" then
