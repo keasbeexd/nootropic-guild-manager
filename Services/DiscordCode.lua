@@ -326,17 +326,17 @@ function DC:ReminderText(now)
     local peon = g.peon or {}
     if not (peon.made or ns.Sync:Value("GS:peon") == "1") then return nil end -- not using NGM Peon
     local what = "It carries rank names and permissions, mains and alts, Tank / Healer / DPS and When we play. "
-        .. "Type |cffffffff/ngm discord|r, then paste it on |cffffffffngmpeon.app|r (Sync tab, step 2)."
+        .. "Type |cffebdbb2/ngm discord|r, then paste it on |cffebdbb2ngmpeon.app|r (Sync tab, step 2)."
     local ranks = self:MyRanks()
     if ranks and peon.ranks and self.RankSignature(ranks) ~= peon.ranks then
-        return "|cffffd100NGM Peon:|r your guild's ranks changed since you last updated Discord. " .. what, "ranks", self.RankSignature(ranks)
+        return "|cfffabd2fNGM Peon:|r your guild's ranks changed since you last updated Discord. " .. what, "ranks", self.RankSignature(ranks)
     end
     if not peon.made then
-        return "|cffffd100NGM Peon:|r Discord hasn't had an update from your game yet. " .. what, "never"
+        return "|cfffabd2fNGM Peon:|r Discord hasn't had an update from your game yet. " .. what, "never"
     end
     local days = math.floor((now - peon.made) / 86400)
     if days >= self.REMIND_AFTER / 86400 then
-        return ("|cffffd100NGM Peon:|r it's been %d days since you last updated Discord. "):format(days) .. what, "days"
+        return ("|cfffabd2fNGM Peon:|r it's been %d days since you last updated Discord. "):format(days) .. what, "days"
     end
     return nil
 end

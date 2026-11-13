@@ -437,8 +437,8 @@ function HF:RecordChampions(now)
     local ok = ns.Sync:Set(key, HF.EncodeChampions(champs))
     if ok then
         -- your copy crowned them: tell you they're ready to announce
-        ns:Print(("|cffffd100%s's Hall of Fame champions have been crowned!|r You can now announce the winners: "
-            .. "|cffffffff/ngm hof|r, then |cffffd100Announce Champions|r."):format(HF.MonthName(last)))
+        ns:Print(("|cfffabd2f%s's Hall of Fame champions have been crowned!|r You can now announce the winners: "
+            .. "|cffebdbb2/ngm hof|r, then |cfffabd2fAnnounce Champions|r."):format(HF.MonthName(last)))
     end
     return ok
 end
@@ -509,7 +509,7 @@ function HF:Recount(now)
     if not changed then return false end
     local ok = ns.Sync:Set(key, HF.EncodeChampions(final))
     if ok then
-        ns:Print(("|cffffd100Recount:|r late numbers changed %s's Hall of Fame champions. %s. You may want to announce the correction (|cffffffff/ngm hof|r, |cffffd100Announce Champions|r)."):format(
+        ns:Print(("|cfffabd2fRecount:|r late numbers changed %s's Hall of Fame champions. %s. You may want to announce the correction (|cffebdbb2/ngm hof|r, |cfffabd2fAnnounce Champions|r)."):format(
             HF.MonthName(last), table.concat(notes, "; ")))
     end
     return ok
@@ -692,7 +692,7 @@ end
 function HF:TitleText(full)
     local titles, won = self:TitlesFor(full)
     if #titles == 0 then return nil end
-    return ("|cffffd100%s's Champion:|r %s"):format(HF.MonthName(won), table.concat(titles, ", "))
+    return ("|cfffabd2f%s's Champion:|r %s"):format(HF.MonthName(won), table.concat(titles, ", "))
 end
 
 ------------------------------------------------------------------------

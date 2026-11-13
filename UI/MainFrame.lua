@@ -25,6 +25,8 @@ function UI:Create()
 
     local f = CreateFrame("Frame", "NootropicGMFrame", UIParent, "ButtonFrameTemplate")
 
+    ns.Theme:Skin(f)
+
     W.CombatSafeClose(f)
     self.frame = f
     local size = ns.DB:Settings().frameSize or {}
@@ -48,10 +50,10 @@ function UI:Create()
     self:RestorePosition()
 
     -- Status line along the bottom edge
-    self.status = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    self.status = f:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     self.status:SetPoint("BOTTOMLEFT", 14, 8)
     self:BuildAddonCount(f)
-    self.version = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    self.version = f:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     self.version:SetPoint("BOTTOMRIGHT", -14, 8)
     self.version:SetText("v" .. ns.version)
     self:BuildSyncDot(f)
@@ -307,7 +309,7 @@ local function CreateSideTab(f, i)
     tab:SetScript("OnEnter", function(self)
         local id = self:GetID()
         GameTooltip:SetOwner(self, self.side == "left" and "ANCHOR_LEFT" or self.side == "bottom" and "ANCHOR_BOTTOM" or "ANCHOR_RIGHT")
-        GameTooltip:AddLine(UI:TabTitle(id) .. (OFFICER_TABS[id] and " |cff9d9d9d(officers only)|r" or ""))
+        GameTooltip:AddLine(UI:TabTitle(id) .. (OFFICER_TABS[id] and " |cffa89984(officers only)|r" or ""))
         GameTooltip:Show()
     end)
     tab:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -417,7 +419,7 @@ function UI:Title() return "Nootropic Guild Manager" end
 function UI:UpdateTitle()
     if not self.frame then return end
     local title = self:Title()
-    if self.tab and self.frame.Tabs then title = title .. "  |cffffffff-  " .. self:TabTitle(self.tab) .. "|r" end
+    if self.tab and self.frame.Tabs then title = title .. "  |cffebdbb2-  " .. self:TabTitle(self.tab) .. "|r" end
     W.SetTitle(self.frame, title)
 end
 
@@ -426,11 +428,11 @@ function UI:BuildAddonCount(f)
     local b = CreateFrame("Button", nil, f)
     b:SetHeight(16)
     b:SetPoint("LEFT", self.status, "RIGHT", 0, 0)
-    b.Text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.Text = b:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     b.Text:SetPoint("LEFT", 0, 0)
     b.Underline = b:CreateTexture(nil, "OVERLAY")
     b.Underline:SetHeight(1)
-    b.Underline:SetColorTexture(1, 0.82, 0, 0.8)
+    b.Underline:SetColorTexture(0.98, 0.74, 0.18, 0.8)
     b.Underline:Hide()
     b:SetScript("OnEnter", function(self)
         self.Underline:ClearAllPoints()
@@ -502,7 +504,7 @@ function UI:RefreshStatus()
     end
     local guild = GetGuildInfo("player") or "Guild"
     local total, online, withAddon = ns.Roster:Stats()
-    self.status:SetText(("|cffffd100%s|r   %d members  -  |cff40ff40%d online|r"):format(guild, total, online))
+    self.status:SetText(("|cfffabd2f%s|r   %d members  -  |cffb8bb26%d online|r"):format(guild, total, online))
     if ns.DB:Settings().showAddonCount == false then
         count:Hide()
         return

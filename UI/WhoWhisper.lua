@@ -183,7 +183,7 @@ local function CreateButton(row)
     b.Check:Hide()
     if b.SetMotionScriptsWhileDisabled then b:SetMotionScriptsWhileDisabled(true) end -- tooltip says why it's off
 
-    b.Wait = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+    b.Wait = b:CreateFontString(nil, "OVERLAY", "NGMFontNumber")
     b.Wait:SetPoint("CENTER", 0, 0)
     b.Wait:SetText("...")
     b.Wait:Hide()
@@ -195,10 +195,10 @@ local function CreateButton(row)
         if ok then
             ns.PlaySound("U_CHAT_SCROLL_BUTTON")
             if ns.Recruit:ClickOnly() then
-                ns:Print(("Whisper queued. Timed whispers were blocked this session: use |cffffffffSend Next|r on the %s tab."):format(ns.TabName("recruit")))
+                ns:Print(("Whisper queued. Timed whispers were blocked this session: use |cffebdbb2Send Next|r on the %s tab."):format(ns.TabName("recruit")))
             end
         elseif err then
-            ns:Print("|cffff5555" .. err .. "|r")
+            ns:Print("|cfffb4934" .. err .. "|r")
         end
         WI:UpdateButton(row)
     end)
@@ -210,7 +210,7 @@ local function CreateButton(row)
         GameTooltip:AddLine("Send recruitment whisper")
         GameTooltip:AddLine(ns.ShortName(info.name), ns.ClassColor(info.classFile))
         if self.state == "queued" then
-            GameTooltip:AddLine("Waiting in the whisper queue (whispers are spaced out).", 1, 0.82, 0, true)
+            GameTooltip:AddLine("Waiting in the whisper queue (whispers are spaced out).", 0.98, 0.74, 0.18, true)
         elseif self.state == "sent" then
             GameTooltip:AddLine("Whispered.", 0.4, 1, 0.4, true)
         elseif self.reason then
@@ -223,9 +223,9 @@ local function CreateButton(row)
                 guild = info.guild ~= "" and info.guild or nil }
             local text, rule = RC:TemplateFor(p)
             local msg = RC:Format(text, p)
-            GameTooltip:AddLine("Message: " .. (rule and rule.name or "Default"), 1, 0.82, 0)
+            GameTooltip:AddLine("Message: " .. (rule and rule.name or "Default"), 0.98, 0.74, 0.18)
             local tab = ns.TabName("recruit")
-            GameTooltip:AddLine(msg ~= "" and ("|cffff80ff" .. msg .. "|r") or ("|cff9d9d9d(empty - write a message on the %s tab)|r"):format(tab), 1, 1, 1, true)
+            GameTooltip:AddLine(msg ~= "" and ("|cffd3869b" .. msg .. "|r") or ("|cffa89984(empty - write a message on the %s tab)|r"):format(tab), 1, 1, 1, true)
             GameTooltip:AddLine(("Click to whisper. Whispers are spaced out like on the %s tab."):format(tab), 0.7, 0.7, 0.7, true)
         end
         GameTooltip:AddLine("Nootropic Guild Manager - turn off in Options.", 0.5, 0.5, 0.5, true)

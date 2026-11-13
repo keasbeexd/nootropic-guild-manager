@@ -295,7 +295,7 @@ function PF.Summary(bits)
         end
     end
     if #parts == 0 then return nil end
-    return table.concat(parts, "  |cff6d6d6d-|r  ")
+    return table.concat(parts, "  |cff7c6f64-|r  ")
 end
 
 -- "(local time)" / "(server time)"

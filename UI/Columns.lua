@@ -209,7 +209,7 @@ function CS:BuildHeaders(headerFrame)
             grip:SetPoint("BOTTOMRIGHT", 4, 0)
             grip:SetFrameLevel(h:GetFrameLevel() + 5)
             grip.Line = grip:CreateTexture(nil, "OVERLAY")
-            grip.Line:SetColorTexture(1, 0.82, 0, 0.9)
+            grip.Line:SetColorTexture(0.98, 0.74, 0.18, 0.9)
             grip.Line:SetWidth(2)
             grip.Line:SetPoint("TOP", 0, -2)
             grip.Line:SetPoint("BOTTOM", 0, 2)
@@ -300,7 +300,7 @@ function CS:StartMove(c)
     self.headers[c.key]:SetAlpha(0.5)
     if not self.dropMarker then
         local m = self.header:CreateTexture(nil, "OVERLAY")
-        m:SetColorTexture(1, 0.82, 0, 1)
+        m:SetColorTexture(0.98, 0.74, 0.18, 1)
         m:SetWidth(3)
         self.dropMarker = m
     end
@@ -346,7 +346,7 @@ function CS:Menu(owner)
     for _, c in ipairs(self:Ordered()) do
         if not c.locked then
             items[#items + 1] = {
-                text = c.label .. (c.autoHidden and "  |cff9d9d9d(window too narrow)|r" or ""),
+                text = c.label .. (c.autoHidden and "  |cffa89984(window too narrow)|r" or ""),
                 checked = function() return self:IsShown(c.key) end,
                 func = function() self:SetShown(c.key, not self:IsShown(c.key)) end,
             }
@@ -368,7 +368,7 @@ function CS:Menu(owner)
     end }
     items[#items + 1] = { text = "Reset all columns", func = function() self:Reset() end }
     items[#items + 1] = { divider = true }
-    items[#items + 1] = { text = "|cff9d9d9dDrag a header to move it, or its edge to resize.|r", disabled = true }
+    items[#items + 1] = { text = "|cffa89984Drag a header to move it, or its edge to resize.|r", disabled = true }
     W.ShowMenu(owner, items)
 end
 

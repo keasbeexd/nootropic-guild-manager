@@ -63,14 +63,14 @@ function Layout:Check(text, hint, onClick)
     cb:SetPoint("TOPLEFT", 14, self.y)
     local label = cb.Text or cb.text
     if not label then
-        label = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        label = cb:CreateFontString(nil, "OVERLAY", "NGMFontText")
         label:SetPoint("LEFT", cb, "RIGHT", 4, 1)
     end
-    label:SetFontObject("GameFontHighlight")
+    label:SetFontObject("NGMFontText")
     label:SetText(text)
     local hintH = 0
     if hint then
-        local h = self.panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        local h = self.panel:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
         h:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
         h:SetWidth(TEXT_W - HINT_INDENT)
         h:SetJustifyH("LEFT")
@@ -78,7 +78,7 @@ function Layout:Check(text, hint, onClick)
         h:SetSpacing(3)
         h:SetText(hint)
         cb.Hint = h
-        hintH = TextHeight(hint, "GameFontDisableSmall", TEXT_W - HINT_INDENT)
+        hintH = TextHeight(hint, "NGMFontDimSmall", TEXT_W - HINT_INDENT)
     end
     cb:SetScript("OnClick", function(b) onClick(b:GetChecked() and true or false) end)
     self.y = self.y - (hint and (30 + hintH) or 30)
@@ -88,7 +88,7 @@ end
 -- A block of text (wraps at TEXT_W). Text set later with SetText should be
 -- no longer than the text it was built with, or it would run into what's below.
 function Layout:Text(text, font, gap)
-    font = font or "GameFontHighlightSmall"
+    font = font or "NGMFontTextSmall"
     local fs = self.panel:CreateFontString(nil, "OVERLAY", font)
     fs:SetPoint("TOPLEFT", 18, self.y)
     fs:SetWidth(TEXT_W)
@@ -128,10 +128,10 @@ local function NewPage(key, name, subtitle)
 
     -- the addon's own logo, whatever the icon choice (this is about the addon)
     local logo = ns.Brand:Attach(panel, 36, { "TOPLEFT", panel, "TOPLEFT", 16, -14 }, { style = "nootropic" })
-    local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    local title = panel:CreateFontString(nil, "OVERLAY", "NGMFontTitle")
     title:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 10, -2)
-    title:SetText(key == "main" and PANEL_NAME or (PANEL_NAME .. "  |cffffffff-  " .. name .. "|r"))
-    local sub = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    title:SetText(key == "main" and PANEL_NAME or (PANEL_NAME .. "  |cffebdbb2-  " .. name .. "|r"))
+    local sub = panel:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
     sub:SetText(subtitle)
     outer.Sub = sub
@@ -143,7 +143,7 @@ end
 -- Small dropdown-style button that picks one of D.MINIMAP_ACTIONS.
 local function ActionPicker(L, label, key)
     local y = L:Row(28)
-    local text = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local text = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
     text:SetPoint("TOPLEFT", 42, y - 4)
     text:SetText(label)
     local b = W.Button(L.panel, "", 200, 22)
@@ -174,7 +174,7 @@ local function WordBoxes(L, maxLetters, onChange)
         local eb = CreateFrame("EditBox", nil, L.panel, "InputBoxTemplate")
         eb:SetSize(120, 20)
         eb:SetAutoFocus(false)
-        eb:SetFontObject("GameFontHighlightSmall")
+        eb:SetFontObject("NGMFontTextSmall")
         eb:SetMaxLetters(maxLetters)
         local col, row = (i - 1) % 3, math.floor((i - 1) / 3)
         eb:SetPoint("TOPLEFT", 26 + col * 132, top - row * 26)
@@ -197,13 +197,13 @@ function O:BuildMain()
     self.panel = outer
 
     L:Header("How It Works")
-    L:Text("Open the window with |cffffffff/ngm|r or the minimap button. Its tabs: |cffffd100Find|r (search the guild), |cffffd100Play Together|r (who's around near your level), |cffffd100Recruitment|r and, for officers, |cffffd100Audit|r. Click anyone for their profile: spec, professions and recipes, raid readiness, contact info and your private notes.")
-    L:Text("Everyone running the addon shares what their own copy knows: spec, professions, recipes (when they open a profession window), raid attunements and when they usually play. The more of the guild uses it, the more it knows. Private notes never leave your computer. The |cffffd100About|r page below has links and credits.", "GameFontDisableSmall")
+    L:Text("Open the window with |cffebdbb2/ngm|r or the minimap button. Its tabs: |cfffabd2fFind|r (search the guild), |cfffabd2fPlay Together|r (who's around near your level), |cfffabd2fRecruitment|r and, for officers, |cfffabd2fAudit|r. Click anyone for their profile: spec, professions and recipes, raid readiness, contact info and your private notes.")
+    L:Text("Everyone running the addon shares what their own copy knows: spec, professions, recipes (when they open a profession window), raid attunements and when they usually play. The more of the guild uses it, the more it knows. Private notes never leave your computer. The |cfffabd2fAbout|r page below has links and credits.", "NGMFontDimSmall")
     L:Space(4)
 
     L:Header("Appearance")
     local y = L:Row(34)
-    local iconLabel = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local iconLabel = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
     iconLabel:SetPoint("TOPLEFT", 18, y - 8)
     iconLabel:SetText("Addon icon")
     self.iconPreview = ns.Brand:Attach(L.panel, 28, { "TOPLEFT", L.panel, "TOPLEFT", 110, y - 2 })
@@ -242,7 +242,7 @@ function O:BuildMain()
 
     L:Space(4)
 
-    L:Header("Sharing  |cff9d9d9d(what your copy shares with the guild)|r")
+    L:Header("Sharing  |cffa89984(what your copy shares with the guild)|r")
     self.shareReportCheck = L:Check("Share my spec and professions",
         "What the game reports about your talents and professions, for your profile and searches. Off: it's cleared, and guildmates only see what's set by hand.",
         function(on) ns.Sharing:Set("report", on) end)
@@ -267,16 +267,16 @@ function O:BuildMain()
 
     -- Install reminder: the whisper "Remind to install the addon" sends
     L:Header("Install Reminder")
-    L:Text("What guildmates without the addon get when you click |cffffd100Remind to install the addon|r on their profile or right-click menu. "
-        .. "|cffffd100$first|r, |cffffd100$name|r and |cffffd100$guild|r are filled in. Add your Discord invite if you'd like it to cover that too. Saved as you type.")
+    L:Text("What guildmates without the addon get when you click |cfffabd2fRemind to install the addon|r on their profile or right-click menu. "
+        .. "|cfffabd2f$first|r, |cfffabd2f$name|r and |cfffabd2f$guild|r are filled in. Add your Discord invite if you'd like it to cover that too. Saved as you type.")
     local ry = L:Row(84)
     local ef, box = W.ScrollEditor(L.panel, 255)
     ef:SetPoint("TOPLEFT", 22, ry)
     ef:SetSize(TEXT_W - 8, 70)
-    box:SetFontObject("GameFontHighlightSmall")
+    box:SetFontObject("NGMFontTextSmall")
     box:SetWidth(TEXT_W - 26)
     self.reminderBox = box
-    local count = L.panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local count = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     count:SetJustifyH("LEFT")
     self.reminderCount = count
     local function update()
@@ -328,7 +328,7 @@ function O:BuildMain()
     L:Space(6)
 
     L:Header("Sync and Commands")
-    self.syncStatus = L:Text("", "GameFontHighlightSmall", 6)
+    self.syncStatus = L:Text("", "NGMFontTextSmall", 6)
     y = L:Row(32)
     local syncNow = W.Button(L.panel, "Sync Now", 110, 24)
     syncNow:SetPoint("TOPLEFT", 18, y)
@@ -344,9 +344,9 @@ function O:BuildMain()
     local open = W.Button(L.panel, "Open Guild Manager", 170, 24)
     open:SetPoint("LEFT", syncNow, "RIGHT", 8, 0)
     open:SetScript("OnClick", function() ns.UI:OpenTab(ns.UI.TAB_ROSTER) end)
-    L:Text("|cffffd100Commands|r\n"
-        .. "|cffffffff/ngm|r open or close     |cffffffff/ngm find <text>|r search the roster     |cffffffff/ngm recruit|r recruiting\n"
-        .. "|cffffffff/ngm sync|r sync now     |cffffffff/ngm diag|r troubleshooting     |cffffffff/ngm help|r every command", "GameFontHighlightSmall")
+    L:Text("|cfffabd2fCommands|r\n"
+        .. "|cffebdbb2/ngm|r open or close     |cffebdbb2/ngm find <text>|r search the roster     |cffebdbb2/ngm recruit|r recruiting\n"
+        .. "|cffebdbb2/ngm sync|r sync now     |cffebdbb2/ngm diag|r troubleshooting     |cffebdbb2/ngm help|r every command", "NGMFontTextSmall")
     L:Finish()
 end
 
@@ -355,7 +355,7 @@ end
 ------------------------------------------------------------------------
 function O:BuildRecruiting()
     local outer, L = NewPage("recruiting", "Recruiting", "Saved for the guild you're in. Messages and searching are on the Recruitment tab.")
-    self.recruitNoGuild = L:Text("|cffff8080Join a guild to change these settings.|r")
+    self.recruitNoGuild = L:Text("|cfffb4934Join a guild to change these settings.|r")
 
     L:Header("/who Window")
     self.whoWhisperCheck = L:Check("Recruitment whisper button on /who results",
@@ -366,7 +366,7 @@ function O:BuildRecruiting()
     L:Header("Sending Whispers")
     L:Text("The Recruitment tab sends whispers one at a time, at least 12 seconds apart. Blizzard doesn't publish a whisper limit: silences come from players reporting spam, so a friendly message matters more than the pace.")
     local hy = L:Row(30)
-    local hourLabel = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local hourLabel = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
     hourLabel:SetPoint("TOPLEFT", 20, hy - 4)
     hourLabel:SetText("Whispers per hour")
     local hourBtn = W.Button(L.panel, "", 160, 22)
@@ -375,7 +375,7 @@ function O:BuildRecruiting()
     hourBtn:SetScript("OnClick", function(btn)
         local items = { { text = "Whispers per hour", isTitle = true } }
         for _, n in ipairs(ns.Recruit.HOURLY_CHOICES) do
-            items[#items + 1] = { text = HourText(n) .. (n == 40 and "  |cff9d9d9d(default)|r" or ""), radio = true,
+            items[#items + 1] = { text = HourText(n) .. (n == 40 and "  |cffa89984(default)|r" or ""), radio = true,
                 checked = function() return (ns.DB:Settings().whisperPerHour or 40) == n end,
                 func = function() ns.DB:Settings().whisperPerHour = n; O:Refresh(); RecruitChanged() end }
         end
@@ -393,7 +393,7 @@ function O:BuildRecruiting()
             if r then r.autoInvite = on end
             RecruitChanged()
         end)
-    L:Text("|cffffd100Keywords|r  |cff9d9d9d(whole words, any case)|r", "GameFontHighlightSmall", 4)
+    L:Text("|cfffabd2fKeywords|r  |cffa89984(whole words, any case)|r", "NGMFontTextSmall", 4)
     self.keywordBoxes = WordBoxes(L, 24, function(i, text)
         local r = ns.Recruit:Settings()
         if r then r.keywords[i] = text end
@@ -409,14 +409,14 @@ function O:BuildRecruiting()
             if r then r.dnwEnabled = on end
             RecruitChanged()
         end)
-    L:Text("|cffffd100Words|r  |cff9d9d9d(whole words, any case)|r", "GameFontHighlightSmall", 4)
+    L:Text("|cfffabd2fWords|r  |cffa89984(whole words, any case)|r", "NGMFontTextSmall", 4)
     self.dnwBoxes = WordBoxes(L, 32, function(i, text)
         local r = ns.Recruit:Settings()
         if r then r.dnwWords[i] = text end
         RecruitChanged()
     end)
     local y = L:Row(30)
-    self.dnwCount = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    self.dnwCount = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     self.dnwCount:SetPoint("TOPLEFT", 26, y - 5)
     local view = W.Button(L.panel, "View List", 100, 22)
     view:SetPoint("TOPLEFT", 290, y)
@@ -441,14 +441,14 @@ function O:PermMenu(owner, key)
         checked = function() return DB:PermRanks(key) == nil end,
         func = function()
             local ok, err = DB:SetPermRanks(key, nil)
-            if not ok and err then ns:Print("|cffff5555" .. err .. "|r") end
+            if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
             O:Refresh()
         end }
     items[#items + 1] = { divider = true }
     for _, r in ipairs(DB:GuildRanks()) do
         local gm = r.index == 0
         items[#items + 1] = {
-            text = r.name .. (gm and "  |cff9d9d9d(always)|r" or ""),
+            text = r.name .. (gm and "  |cffa89984(always)|r" or ""),
             checked = function()
                 if gm then return true end
                 local set = DB:PermRanks(key)
@@ -459,7 +459,7 @@ function O:PermMenu(owner, key)
                 local set = DB:PermRanks(key) or {}
                 set[r.index] = not set[r.index] or nil
                 local ok, err = DB:SetPermRanks(key, set)
-                if not ok and err then ns:Print("|cffff5555" .. err .. "|r") end
+                if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
                 O:Refresh()
             end,
         }
@@ -468,13 +468,13 @@ function O:PermMenu(owner, key)
 end
 
 function O:BuildPermControls(L)
-    L:Header("Permissions  |cff9d9d9d(Guild Master, whole guild)|r")
+    L:Header("Permissions  |cffa89984(Guild Master, whole guild)|r")
     L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers. Pick ranks to hand it to them instead; the Guild Master always can.")
-    L:Text("Who's an officer and who may recruit follow the game's own rank settings (Guild Control: Officer, and Invite Member). The Officer Log and the Audit always stay with officers.", "GameFontDisableSmall")
+    L:Text("Who's an officer and who may recruit follow the game's own rank settings (Guild Control: Officer, and Invite Member). The Officer Log and the Audit always stay with officers.", "NGMFontDimSmall")
     self.permRows = {}
     for _, perm in ipairs(ns.DB.PERMS) do
         local y = L:Row(28)
-        local label = L.panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        local label = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
         label:SetPoint("TOPLEFT", 20, y - 4)
         label:SetWidth(240)
         label:SetJustifyH("LEFT")
@@ -497,17 +497,17 @@ function O:RefreshPermControls()
         row.btn:SetAlpha(gm and 1 or 0.6)
     end
     if self.permNote then
-        self.permNote:SetText(gm and "" or "|cffff8080Only the Guild Master can change permissions.|r")
+        self.permNote:SetText(gm and "" or "|cfffb4934Only the Guild Master can change permissions.|r")
     end
 end
 
 function O:BuildOfficers()
     local outer, L = NewPage("officers", "Officers", "For the ranks the game marks Officer.")
-    self.officerNote = L:Text("|cffff8080Only officers can change these.|r")
+    self.officerNote = L:Text("|cfffb4934Only officers can change these.|r")
 
     self:BuildPermControls(L)
 
-    L:Header("Audit History  |cff9d9d9d(your copy)|r")
+    L:Header("Audit History  |cffa89984(your copy)|r")
     L:Text("How long to keep the record of who changed what. Older entries are deleted.")
     local y = L:Row(30)
     self.auditRadios = {}
@@ -518,10 +518,10 @@ function O:BuildOfficers()
         local label = rb.text or rb.Text
         if type(label) ~= "table" then label = nil end
         if not label then
-            label = rb:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            label = rb:CreateFontString(nil, "OVERLAY", "NGMFontText")
             label:SetPoint("LEFT", rb, "RIGHT", 4, 0)
         end
-        label:SetFontObject("GameFontHighlight")
+        label:SetFontObject("NGMFontText")
         label:SetText(days .. " days")
         rb.days = days
         rb:SetScript("OnClick", function()
@@ -547,10 +547,10 @@ local function LinkRow(L, link)
     icon:SetPoint("TOPLEFT", 18, y - 4)
     icon:SetTexture(link.icon)
     icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    local label = L.panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local label = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
     label:SetPoint("TOPLEFT", icon, "TOPRIGHT", 10, -1)
     label:SetText(link.label)
-    local hint = L.panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local hint = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     hint:SetPoint("LEFT", label, "RIGHT", 8, 0)
     hint:SetText(link.hint or "")
     local box = CreateFrame("EditBox", nil, L.panel, "InputBoxTemplate")
@@ -586,35 +586,35 @@ function O:BuildAbout()
     banner:SetBackdropBorderColor(0.85, 0.65, 0.25, 1)
     local logo = ns.Brand:Attach(banner, 64, { "LEFT", banner, "LEFT", 12, 0 }, { style = "nootropic" })
     O.logos[#O.logos + 1] = logo
-    local name = banner:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    local name = banner:CreateFontString(nil, "OVERLAY", "NGMFontHuge")
     name:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 14, -6)
-    name:SetText("|cffffd100Nootropic|r Guild Manager")
-    local tag = banner:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    name:SetText("|cfffabd2fNootropic|r Guild Manager")
+    local tag = banner:CreateFontString(nil, "OVERLAY", "NGMFontText")
     tag:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -6)
     tag:SetText("Your whole guild, in one window. Built for WoW: Forever.")
-    local ver = banner:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    local ver = banner:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     ver:SetPoint("TOPLEFT", tag, "BOTTOMLEFT", 0, -5)
     ver:SetText(("Version %s  -  free and open source (MIT)"):format(ns.version))
 
     L:Space(6)
     L:Header("What's Inside")
-    L:Text("|cffffd100Find|r  search the whole guild by name, class, spec, profession or Discord, with mains and alts grouped together.\n"
-        .. "|cffffd100Play Together|r  who's online near your level right now, and who usually plays at this hour.\n"
-        .. "|cffffd100Overview|r  how many of each class, level and profession, and a heatmap of when the guild plays.\n"
-        .. "|cffffd100Hall of Fame|r  guild leaderboards from everyone's statistics: quests, kills, bosses, deaths and more.\n"
-        .. "|cffffd100Who Can Craft?|r  every recipe your guildmates know, searchable, with online crafters first.\n"
-        .. "|cffffd100Profiles|r  specs, roles, professions, Discord, usual play hours, raid readiness and your private notes.\n"
-        .. "|cffffd100Recruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n"
-        .. "|cffffd100For officers|r  an audit of every change (joins, leaves, promotions, level-ups), an officer log, and Guild Master permissions.")
-    L:Text("Everything is shared with guildmates running the addon, so the more of the guild uses it, the more it knows.", "GameFontDisableSmall")
+    L:Text("|cfffabd2fFind|r  search the whole guild by name, class, spec, profession or Discord, with mains and alts grouped together.\n"
+        .. "|cfffabd2fPlay Together|r  who's online near your level right now, and who usually plays at this hour.\n"
+        .. "|cfffabd2fOverview|r  how many of each class, level and profession, and a heatmap of when the guild plays.\n"
+        .. "|cfffabd2fHall of Fame|r  guild leaderboards from everyone's statistics: quests, kills, bosses, deaths and more.\n"
+        .. "|cfffabd2fWho Can Craft?|r  every recipe your guildmates know, searchable, with online crafters first.\n"
+        .. "|cfffabd2fProfiles|r  specs, roles, professions, Discord, usual play hours, raid readiness and your private notes.\n"
+        .. "|cfffabd2fRecruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n"
+        .. "|cfffabd2fFor officers|r  an audit of every change (joins, leaves, promotions, level-ups), an officer log, and Guild Master permissions.")
+    L:Text("Everything is shared with guildmates running the addon, so the more of the guild uses it, the more it knows.", "NGMFontDimSmall")
 
     L:Header("Links")
-    L:Text("Click a link, press |cffffffffCtrl+C|r, and paste it into your browser.", "GameFontDisableSmall", 4)
+    L:Text("Click a link, press |cffebdbb2Ctrl+C|r, and paste it into your browser.", "NGMFontDimSmall", 4)
     for _, link in ipairs(D.LINKS) do LinkRow(L, link) end
 
     L:Header("Credits")
-    L:Text("Maintained by |cffffd100Keasbeexd|r for |cffffd100<Nootropic>|r.\n"
-        .. "Built on the original Nootropic Guild Manager by |cffffd100aigoodandy|r, with permission.\n"
+    L:Text("Maintained by |cfffabd2fKeasbeexd|r for |cfffabd2f<Nootropic>|r.\n"
+        .. "Built on the original Nootropic Guild Manager by |cfffabd2faigoodandy|r, with permission.\n"
         .. "Bug reports and ideas are welcome on the GitHub page or in the guild Discord.")
     L:Finish()
     return outer
@@ -667,7 +667,7 @@ function O:Refresh()
     if not self.reminderBox:HasFocus() then self.reminderBox:SetText(ns.InstallReminder:Text()) end
     self.minimapCheck:SetChecked(not s.minimap.hide)
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end
-    self.syncStatus:SetText("|cffffd100Sync:|r " .. select(2, ns.Sync:Health()))
+    self.syncStatus:SetText("|cfffabd2fSync:|r " .. select(2, ns.Sync:Health()))
 
     self:RefreshRecruiting()
 

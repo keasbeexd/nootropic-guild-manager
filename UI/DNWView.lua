@@ -18,13 +18,14 @@ local DV = {}
 ns.DNWView = DV
 
 local ROW_H = 22
-local RED, GOLD, GRAY = "|cffff6060", "|cffffd100", "|cff9d9d9d"
+local RED, GOLD, GRAY = "|cfffb4934", "|cfffabd2f", "|cffa89984"
 
 ------------------------------------------------------------------------
 -- Window
 ------------------------------------------------------------------------
 function DV:Build()
     local f = CreateFrame("Frame", "NootropicGMDNWWindow", UIParent, "BasicFrameTemplateWithInset")
+    ns.Theme:Skin(f)
     W.CombatSafeClose(f)
     f:SetSize(460, 480)
     f:SetFrameStrata("DIALOG")
@@ -75,10 +76,10 @@ function DV:Build()
     ScrollUtil.InitScrollBoxListWithScrollBar(scrollBox, scrollBar, view)
     self.scrollBox = scrollBox
 
-    self.empty = f:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+    self.empty = f:CreateFontString(nil, "OVERLAY", "NGMFontDim")
     self.empty:SetPoint("CENTER", scrollBox, "CENTER")
 
-    self.summary = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    self.summary = f:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     self.summary:SetPoint("BOTTOMLEFT", 16, 12)
     self.summary:SetPoint("BOTTOMRIGHT", -16, 12)
     self.summary:SetJustifyH("LEFT")
@@ -103,16 +104,16 @@ function DV:InitRow(row, e)
         row:SetHeight(ROW_H)
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
         row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-        row.Name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        row.Name = row:CreateFontString(nil, "OVERLAY", "NGMFontText")
         row.Name:SetPoint("LEFT", 6, 0)
         row.Name:SetWidth(170)
         row.Name:SetJustifyH("LEFT")
         row.Name:SetWordWrap(false)
-        row.State = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        row.State = row:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
         row.State:SetPoint("LEFT", row.Name, "RIGHT", 6, 0)
         row.State:SetWidth(130)
         row.State:SetJustifyH("LEFT")
-        row.By = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        row.By = row:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
         row.By:SetPoint("RIGHT", -6, 0)
         row.By:SetPoint("LEFT", row.State, "RIGHT", 4, 0)
         row.By:SetJustifyH("RIGHT")
@@ -138,16 +139,16 @@ function DV:ShowRowTooltip(row, e)
     GameTooltip:AddLine(ns.ShortName(e.full))
     if e.kind == "dnw" then
         GameTooltip:AddLine("On the Do Not Whisper list for good.", 1, 0.4, 0.4, true)
-        GameTooltip:AddDoubleLine("Added", date("%b %d, %Y", e.at or 0), 1, 0.82, 0, 1, 1, 1)
-        GameTooltip:AddDoubleLine("By", ns.ShortName(e.by or "?"), 1, 0.82, 0, 1, 1, 1)
+        GameTooltip:AddDoubleLine("Added", date("%b %d, %Y", e.at or 0), 0.98, 0.74, 0.18, 1, 1, 1)
+        GameTooltip:AddDoubleLine("By", ns.ShortName(e.by or "?"), 0.98, 0.74, 0.18, 1, 1, 1)
         if e.reply and e.reply ~= "" then GameTooltip:AddLine("\"" .. e.reply .. "\"", 0.8, 0.8, 0.8, true) end
     else
         GameTooltip:AddLine(("Whispered recently: nobody in the guild can whisper them again for %s."):format(
-            ns.FormatWait(e.untilT - ns.DB:Now())), 1, 0.82, 0, true)
-        GameTooltip:AddDoubleLine("Whispered", date("%b %d, %Y", e.whispered), 1, 0.82, 0, 1, 1, 1)
-        if e.by then GameTooltip:AddDoubleLine("Last update by", ns.ShortName(e.by), 1, 0.82, 0, 1, 1, 1) end
-        if e.replied then GameTooltip:AddDoubleLine("Replied", date("%b %d", e.replied), 1, 0.82, 0, 1, 1, 1) end
-        if e.invited then GameTooltip:AddDoubleLine("Invited", date("%b %d", e.invited), 1, 0.82, 0, 1, 1, 1) end
+            ns.FormatWait(e.untilT - ns.DB:Now())), 0.98, 0.74, 0.18, true)
+        GameTooltip:AddDoubleLine("Whispered", date("%b %d, %Y", e.whispered), 0.98, 0.74, 0.18, 1, 1, 1)
+        if e.by then GameTooltip:AddDoubleLine("Last update by", ns.ShortName(e.by), 0.98, 0.74, 0.18, 1, 1, 1) end
+        if e.replied then GameTooltip:AddDoubleLine("Replied", date("%b %d", e.replied), 0.98, 0.74, 0.18, 1, 1, 1) end
+        if e.invited then GameTooltip:AddDoubleLine("Invited", date("%b %d", e.invited), 0.98, 0.74, 0.18, 1, 1, 1) end
         if e.reply then GameTooltip:AddLine("\"" .. e.reply .. "\"", 0.8, 0.8, 0.8, true) end
     end
     GameTooltip:AddLine("Click for options.", 0.5, 0.5, 0.5)

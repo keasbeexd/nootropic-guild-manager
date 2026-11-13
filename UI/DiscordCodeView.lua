@@ -14,6 +14,7 @@ ns.DiscordCodeView = V
 
 function V:Build()
     local f = CreateFrame("Frame", "NootropicGMDiscordCode", UIParent, "BasicFrameTemplateWithInset")
+    ns.Theme:Skin(f)
     W.CombatSafeClose(f)
     f:SetSize(460, 262)
     f:SetPoint("TOP", 0, -140)
@@ -29,7 +30,7 @@ function V:Build()
     tinsert(UISpecialFrames, "NootropicGMDiscordCode") -- Escape closes it
     self.frame = f
 
-    local steps = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    local steps = f:CreateFontString(nil, "OVERLAY", "NGMFontText")
     steps:SetPoint("TOPLEFT", 20, -36)
     steps:SetPoint("TOPRIGHT", -20, -36)
     steps:SetJustifyH("LEFT")
@@ -37,7 +38,7 @@ function V:Build()
     -- the steps depend on the code: set in Open
     self.steps = steps
 
-    self.what = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    self.what = f:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     self.what:SetPoint("TOPLEFT", steps, "BOTTOMLEFT", 0, -12)
     self.what:SetPoint("RIGHT", f, "RIGHT", -20, 0)
     self.what:SetJustifyH("LEFT")
@@ -55,13 +56,13 @@ function V:Build()
     box:SetScript("OnKeyDown", function(eb, key)
         if key == "C" and IsControlKeyDown() then
             C_Timer.After(0.05, function() eb:ClearFocus() end)
-            V.hint:SetText(V.mode == "setup" and "|cff33dd33Copied.|r Paste it into /ngm-guild setup in Discord."
-                or "|cff33dd33Copied.|r Paste it on ngmpeon.app, Sync tab, step 2.")
+            V.hint:SetText(V.mode == "setup" and "|cffb8bb26Copied.|r Paste it into /ngm-guild setup in Discord."
+                or "|cffb8bb26Copied.|r Paste it on ngmpeon.app, Sync tab, step 2.")
         end
     end)
     self.box = box
 
-    self.hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    self.hint = f:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
     self.hint:SetPoint("BOTTOM", 0, 48)
     self.hint:SetWidth(420)
 
@@ -77,13 +78,13 @@ function V:Select()
     self.box:SetText(self.code)
     self.box:SetFocus()
     self.box:HighlightText()
-    self.hint:SetText("Press |cffffffffCtrl+C|r to copy.")
+    self.hint:SetText("Press |cffebdbb2Ctrl+C|r to copy.")
 end
 
 function V:Open(mode)
     local code, why, everything, count, since = ns.DiscordCode:ForMyGuild(mode)
     if not code then
-        ns:Print("|cffff5555" .. why .. "|r")
+        ns:Print("|cfffb4934" .. why .. "|r")
         return
     end
     if not self.frame then self:Build() end
@@ -91,21 +92,21 @@ function V:Open(mode)
     local n = #ns.DB:GuildRanks()
     if mode == "setup" then
         W.SetTitle(self.frame, "NGM Peon Setup")
-        self.steps:SetText("|cffffd1001.|r Invite NGM Peon to your guild's Discord (|cffffffffngmpeon.app|r).\n"
-            .. "|cffffd1002.|r In Discord, run |cffffffff/ngm-guild setup|r and paste this code.\n"
-            .. "|cffffd1003.|r Sign in with Battle.net when NGM Peon asks.")
+        self.steps:SetText("|cfffabd2f1.|r Invite NGM Peon to your guild's Discord (|cffebdbb2ngmpeon.app|r).\n"
+            .. "|cfffabd2f2.|r In Discord, run |cffebdbb2/ngm-guild setup|r and paste this code.\n"
+            .. "|cfffabd2f3.|r Sign in with Battle.net when NGM Peon asks.")
         self.what:SetText(("The code holds your guild's name, region, %d rank names and which ranks are Officer and Invite Member."):format(n))
     else
         W.SetTitle(self.frame, "Update NGM Peon")
-        self.steps:SetText("|cffffd1001.|r Copy this code.\n"
-            .. "|cffffd1002.|r On |cffffffffngmpeon.app|r, open the |cffffffffSync|r tab: step 2.\n"
-            .. "|cffffd1003.|r Paste it, then sign in with Battle.net.")
+        self.steps:SetText("|cfffabd2f1.|r Copy this code.\n"
+            .. "|cfffabd2f2.|r On |cffebdbb2ngmpeon.app|r, open the |cffebdbb2Sync|r tab: step 2.\n"
+            .. "|cfffabd2f3.|r Paste it, then sign in with Battle.net.")
         local changes = ("%d main / alt and Tank / Healer / DPS record%s"):format(count or 0, count == 1 and "" or "s")
         if everything then
             self.what:SetText("Everything: your ranks, When we play, and " .. changes .. ".")
         else
             self.what:SetText(("Changes since %s: %s, plus your ranks and When we play (always sent). "
-                .. "Type |cffffffff/ngm discord all|r for everything."):format(date("%b %d", since or 0), changes))
+                .. "Type |cffebdbb2/ngm discord all|r for everything."):format(date("%b %d", since or 0), changes))
         end
     end
     self.box:SetText(code)

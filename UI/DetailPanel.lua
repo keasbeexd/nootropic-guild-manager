@@ -31,11 +31,11 @@ DP.schedOpen = false     -- the week grid starts folded (summary line only)
 local function TextLink(parent, onClick)
     local b = CreateFrame("Button", nil, parent)
     b:SetHeight(16)
-    b.Text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    b.Text = b:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
     b.Text:SetPoint("LEFT", 0, 0)
     b:SetScript("OnClick", onClick)
     b:SetScript("OnEnter", function(self) self.Text:SetTextColor(1, 1, 1) end)
-    b:SetScript("OnLeave", function(self) self.Text:SetTextColor(1, 0.82, 0) end)
+    b:SetScript("OnLeave", function(self) self.Text:SetTextColor(0.98, 0.74, 0.18) end)
     function b:SetLabel(text)
         self.Text:SetText(text)
         self:SetWidth(math.ceil(self.Text:GetStringWidth()) + 4)
@@ -57,7 +57,7 @@ local function NewSection(parent, title)
 end
 
 local function Para(parent, font, width)
-    local fs = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
+    local fs = parent:CreateFontString(nil, "OVERLAY", font or "NGMFontTextSmall")
     fs:SetJustifyH("LEFT")
     fs:SetJustifyV("TOP")
     fs:SetWidth(width or INNER)
@@ -77,7 +77,7 @@ local function NameLink(parent)
     b.Icon = b:CreateTexture(nil, "ARTWORK")
     b.Icon:SetSize(14, 14)
     b.Icon:SetPoint("LEFT", 0, 0)
-    b.Text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    b.Text = b:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
     b.Text:SetPoint("LEFT", b.Icon, "RIGHT", 4, 0)
     b.Underline = b:CreateTexture(nil, "OVERLAY")
     b.Underline:SetHeight(1)
@@ -99,7 +99,7 @@ local function NameLink(parent)
         self.full = full
         local e = ns.Roster.byName[full]
         self.inRoster = e ~= nil
-        self.Text:SetText(ns.ShortName(full) .. (e and "" or " |cff6d6d6d(not in guild)|r"))
+        self.Text:SetText(ns.ShortName(full) .. (e and "" or " |cff7c6f64(not in guild)|r"))
         if e then
             W.SetClassIcon(self.Icon, e.classFile)
             self.Text:SetTextColor(ns.ClassColor(e.classFile))
@@ -134,6 +134,7 @@ end
 function DP:Build()
     if self.frame then return end
     local f = CreateFrame("Frame", "NootropicGMDetailFrame", UIParent, "BasicFrameTemplateWithInset")
+    ns.Theme:Skin(f)
     W.CombatSafeClose(f)
     f:SetWidth(WIDTH)
     f:SetFrameStrata("HIGH")
@@ -203,7 +204,7 @@ function DP:Build()
         self.alt, self.spec, self.role,
     }
 
-    self.footer = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    self.footer = f:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     self.footer:SetPoint("BOTTOMLEFT", 14, 10)
     self.footer:SetPoint("BOTTOMRIGHT", -14, 10)
     self.footer:SetJustifyH("LEFT")
@@ -255,25 +256,25 @@ function DP:BuildHeader(parent)
     h.Icon:SetPoint("TOPLEFT", 4, -4)
     h.Icon:SetPoint("BOTTOMRIGHT", -4, 4)
 
-    h.Name = h:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    h.Name = h:CreateFontString(nil, "OVERLAY", "NGMFontTitle")
     h.Name:SetPoint("TOPLEFT", iconBorder, "TOPRIGHT", 8, -1)
     h.Name:SetPoint("RIGHT", 0, 0)
     h.Name:SetJustifyH("LEFT")
     h.Name:SetWordWrap(false)
 
-    h.Sub = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    h.Sub = h:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     h.Sub:SetPoint("TOPLEFT", h.Name, "BOTTOMLEFT", 0, -3)
     h.Sub:SetPoint("RIGHT", 0, 0)
     h.Sub:SetJustifyH("LEFT")
     h.Sub:SetWordWrap(false)
 
-    h.Status = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    h.Status = h:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     h.Status:SetPoint("TOPLEFT", h.Sub, "BOTTOMLEFT", 0, -2)
     h.Status:SetJustifyH("LEFT")
     h.Status:SetWordWrap(false)
 
     -- champion titles held this month (Hall of Fame), when there are any
-    h.Champion = h:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    h.Champion = h:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     h.Champion:SetPoint("TOPLEFT", 0, -49)
     h.Champion:SetPoint("RIGHT", 0, 0)
     h.Champion:SetJustifyH("LEFT")
@@ -289,13 +290,13 @@ function DP:RefreshHeader(e)
     h.Name:SetTextColor(ns.ClassColor(e.classFile))
     local specIcon = e.spec and D:SpecIcon(e.classFile, e.spec)
     local spec = e.spec and ((specIcon and ("|T" .. specIcon .. ":12:12:0:0:64:64:5:59:5:59|t ") or "") .. e.spec .. " ") or ""
-    local roles = (e.roleList and #e.roleList > 0) and ("  |cff9d9d9d-|r  " .. table.concat(e.roleList, ", ")) or ""
-    h.Sub:SetText(("Level %d %s%s  |cff9d9d9d-|r  %s%s"):format(e.level, spec, e.className, e.rank, roles))
+    local roles = (e.roleList and #e.roleList > 0) and ("  |cffa89984-|r  " .. table.concat(e.roleList, ", ")) or ""
+    h.Sub:SetText(("Level %d %s%s  |cffa89984-|r  %s%s"):format(e.level, spec, e.className, e.rank, roles))
     local status
     if e.online then
-        status = "|cff40ff40Online|r  " .. (e.zone ~= "" and e.zone or "")
+        status = "|cffb8bb26Online|r  " .. (e.zone ~= "" and e.zone or "")
     else
-        status = "|cff9d9d9dOffline - last seen " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r"
+        status = "|cffa89984Offline - last seen " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r"
     end
     -- On Discord: a Discord name on their profile (or their main's)
     if e.discord then status = status .. "  " .. ns.Profile.DISCORD_BADGE end
@@ -311,7 +312,7 @@ end
 ------------------------------------------------------------------------
 function DP:BuildLinkLine(parent)
     local s = NewSection(parent)
-    s.Label = s:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    s.Label = s:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     s.Label:SetPoint("TOPLEFT", 0, -2)
     s.links = {}
     return s
@@ -322,11 +323,11 @@ function DP:RefreshLinkLine(e)
     for _, l in ipairs(s.links) do l:Hide() end
     local names = e.isAlt and { e.main } or e.alts
     if e.isAlt then
-        s.Label:SetText("|cff9d9d9dAlt of|r")
+        s.Label:SetText("|cffa89984Alt of|r")
     elseif #names == 0 then
-        s.Label:SetText("|cff9d9d9dMain character  -  no alts linked|r")
+        s.Label:SetText("|cffa89984Main character  -  no alts linked|r")
     else
-        s.Label:SetText(("|cff9d9d9dMain  -  %s:|r"):format(#names == 1 and "1 alt" or (#names .. " alts")))
+        s.Label:SetText(("|cffa89984Main  -  %s:|r"):format(#names == 1 and "1 alt" or (#names .. " alts")))
     end
     local x, y = math.ceil(s.Label:GetStringWidth()) + 6, 0
     for i, full in ipairs(names) do
@@ -375,7 +376,7 @@ StaticPopupDialogs.NOOTROPICGM_COPY = {
 -- Discord name (click to copy).
 function DP:BuildContactBox(parent)
     local s = NewSection(parent)
-    s.Label = s:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    s.Label = s:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
     s.Label:SetPoint("TOPLEFT", 0, -2)
     s.Label:SetText("Discord:")
     s.Discord = TextLink(s, function()
@@ -385,7 +386,7 @@ function DP:BuildContactBox(parent)
     end)
     s.Discord:SetPoint("LEFT", s.Label, "RIGHT", 6, 0)
     W.Tooltip(s.Discord, "Discord", "Click to copy.")
-    s.From = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.From = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     return s
 end
 
@@ -409,7 +410,7 @@ end
 ------------------------------------------------------------------------
 function DP:BuildScheduleSection(parent)
     local s = NewSection(parent, "Usually Online")
-    s.Summary = Para(s, "GameFontHighlightSmall", INNER)
+    s.Summary = Para(s, "NGMFontTextSmall", INNER)
     s.Summary:SetPoint("TOPLEFT", 0, -22)
     -- the week grid folds away; the summary line is enough most of the time
     s.Toggle = TextLink(s, function()
@@ -432,7 +433,7 @@ function DP:ScheduleTooltip(cell, day, block)
     local h = block * 2
     local on = self.schedule.Grid:Block(day, block)
     GameTooltip:SetOwner(cell, "ANCHOR_RIGHT")
-    GameTooltip:AddLine(("%s %s-%s  |cff9d9d9d(%s)|r"):format(PF.DAYS[day + 1], PF.HourText(h), PF.HourText(h + 2), PF.ClockLabel(mode)))
+    GameTooltip:AddLine(("%s %s-%s  |cffa89984(%s)|r"):format(PF.DAYS[day + 1], PF.HourText(h), PF.HourText(h + 2), PF.ClockLabel(mode)))
     -- the same hours on the other clock
     local off = PF.LocalMinusServer()
     if off and off ~= 0 then
@@ -453,7 +454,7 @@ function DP:RefreshSchedule(e)
     local bits = PF:Hours(e.full, mode)
     if not bits or not next(bits) then return false end
     local open = self.schedOpen
-    s.Summary:SetText((PF.Summary(bits) or "") .. ("  |cff9d9d9d(%s)|r"):format(PF.ClockLabel(mode)))
+    s.Summary:SetText((PF.Summary(bits) or "") .. ("  |cffa89984(%s)|r"):format(PF.ClockLabel(mode)))
     local sh = math.ceil(s.Summary:GetStringHeight())
     s.Toggle:SetLabel(open and "Hide week" or "Show week")
     s.Toggle:ClearAllPoints()
@@ -487,7 +488,7 @@ function DP:BuildTabs(parent)
         local b = CreateFrame("Button", nil, s, "BackdropTemplate")
         b:SetHeight(20)
         b:SetBackdrop({ bgFile = W.WHITE, edgeFile = W.WHITE, edgeSize = 1 })
-        b.Text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        b.Text = b:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
         b.Text:SetPoint("CENTER", 0, 0)
         b.Text:SetText(t[2])
         b:SetWidth(math.ceil(b.Text:GetStringWidth()) + 22)
@@ -509,7 +510,7 @@ function DP:RefreshTabs()
         if key == self.tab then
             b:SetBackdropColor(0.18, 0.14, 0.08, 1)
             b:SetBackdropBorderColor(0.8, 0.65, 0.3, 1)
-            b.Text:SetTextColor(1, 0.82, 0)
+            b.Text:SetTextColor(0.98, 0.74, 0.18)
         else
             b:SetBackdropColor(0.05, 0.04, 0.03, 1)
             b:SetBackdropBorderColor(0.35, 0.3, 0.22, 1)
@@ -532,7 +533,7 @@ local function BuildProfRow(parent)
     r.Icon:SetSize(18, 18)
     r.Icon:SetPoint("LEFT", 0, 0)
 
-    r.Name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.Name = r:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     r.Name:SetPoint("LEFT", r.Icon, "RIGHT", 6, 0)
     r.Name:SetWidth(104)
     r.Name:SetJustifyH("LEFT")
@@ -554,7 +555,7 @@ local function BuildProfRow(parent)
     bar:SetMinMaxValues(0, 1)
     r.Bar = bar
 
-    r.BarText = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.BarText = bar:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     r.BarText:SetPoint("CENTER", 0, 0)
 
     r.Remove = SmallX(r, "Remove profession")
@@ -596,7 +597,7 @@ function DP:BuildProfSection(parent)
     s.Divider:SetHeight(1)
     s.Divider:SetColorTexture(0.4, 0.35, 0.25, 0.5)
 
-    s.Empty = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Empty = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Empty:SetPoint("TOPLEFT", 0, -22)
     s.Empty:SetWidth(INNER)
     s.Empty:SetJustifyH("LEFT")
@@ -615,7 +616,7 @@ end
 function DP:BuildRaidSection(parent)
     local s = NewSection(parent, "Raid Readiness")
     s.rows = {}
-    s.Note = Para(s, "GameFontDisableSmall", INNER)
+    s.Note = Para(s, "NGMFontDimSmall", INNER)
     self.raids = s
 end
 
@@ -633,9 +634,9 @@ function DP:RefreshRaids(e)
         if not r then
             r = CreateFrame("Frame", nil, s)
             r:SetSize(INNER, 30)
-            r.Raid = r:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            r.Raid = r:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
             r.Raid:SetPoint("TOPLEFT", 0, 0)
-            r.Text = r:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            r.Text = r:CreateFontString(nil, "OVERLAY", "NGMFontText")
             r.Text:SetPoint("TOPLEFT", 0, -14)
             r.Text:SetWidth(INNER)
             r.Text:SetJustifyH("LEFT")
@@ -735,7 +736,7 @@ function DP:RefreshProfs(e)
             if p.rank and p.rank > 0 then
                 r.BarText:SetText(p.max and p.max > 0 and (p.rank .. " / " .. p.max) or tostring(p.rank))
             else
-                r.BarText:SetText(edit and "|cff9d9d9dset level|r" or "|cff9d9d9d-|r")
+                r.BarText:SetText(edit and "|cffa89984set level|r" or "|cffa89984-|r")
             end
             r.Remove:SetShown(edit and p.source == "manual")
             r:ClearAllPoints()
@@ -768,7 +769,7 @@ local NOTE_MIN_H = 60
 
 function DP:BuildNoteSection(parent)
     local s = NewSection(parent, "Private Notes")
-    s.Hint = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Hint = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Hint:SetPoint("LEFT", s.Title, "RIGHT", 6, 0)
     s.Hint:SetText("only you")
     s.Line:SetPoint("LEFT", s.Hint, "RIGHT", 6, 0)
@@ -786,13 +787,13 @@ function DP:BuildNoteSection(parent)
     box:SetPoint("TOPLEFT", 8, -7)
     box:SetWidth(INNER - 16)
     box:SetMultiLine(true)
-    box:SetFontObject("GameFontHighlightSmall")
+    box:SetFontObject("NGMFontTextSmall")
     box:SetAutoFocus(false)
     box:SetMaxLetters(500)
     box:SetTextInsets(0, 0, 0, 0)
     bg:SetScript("OnClick", function() box:SetFocus() end)
 
-    s.Placeholder = bg:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Placeholder = bg:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Placeholder:SetPoint("TOPLEFT", 8, -7)
     s.Placeholder:SetText("Click to write notes about this character.")
 
@@ -844,7 +845,7 @@ function DP:BuildLogSection(parent)
     input:SetPoint("TOPLEFT", 6, -22)
     input:SetAutoFocus(false)
     input:SetMaxLetters(D.MAX_LOG_LENGTH)
-    input:SetFontObject("GameFontHighlightSmall")
+    input:SetFontObject("NGMFontTextSmall")
     s.Input = input
 
     s.Add = SmallButton(s, "Add", 54)
@@ -864,7 +865,7 @@ function DP:BuildLogSection(parent)
         "Short dated notes, e.g. \"Promoted to Raider\" or \"Missed raid without notice\".",
         "Shared with every officer running Nootropic Guild Manager. Members below officer rank never receive them.")
 
-    s.Empty = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Empty = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Empty:SetText("No entries yet.")
     s.entries = {}
     self.log = s
@@ -879,12 +880,12 @@ local function LogEntryFrame(s, i)
     f.Bar:SetWidth(2)
     f.Bar:SetPoint("TOPLEFT", 0, 0)
     f.Bar:SetPoint("BOTTOMLEFT", 0, 0)
-    f.Bar:SetColorTexture(1, 0.82, 0, 0.5)
-    f.Meta = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    f.Bar:SetColorTexture(0.98, 0.74, 0.18, 0.5)
+    f.Meta = f:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
     f.Meta:SetPoint("TOPLEFT", 8, 0)
     f.Meta:SetPoint("RIGHT", -20, 0)
     f.Meta:SetJustifyH("LEFT")
-    f.Text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.Text = f:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     f.Text:SetPoint("TOPLEFT", f.Meta, "BOTTOMLEFT", 0, -3)
     f.Text:SetWidth(INNER - 12)
     f.Text:SetJustifyH("LEFT")
@@ -909,7 +910,7 @@ function DP:RefreshLog(e)
     for i, entry in ipairs(list) do
         local f = LogEntryFrame(s, i)
         f.entry = entry
-        f.Meta:SetText(ns.FormatDate(entry.ts) .. "  |cff9d9d9d-  " .. (entry.author or "?") .. "|r")
+        f.Meta:SetText(ns.FormatDate(entry.ts) .. "  |cffa89984-  " .. (entry.author or "?") .. "|r")
         f.Text:SetText(entry.text)
         local h = 12 + 3 + math.max(12, math.ceil(f.Text:GetStringHeight()))
         f:SetHeight(h)
@@ -931,9 +932,9 @@ local HISTORY_MAX = 15
 function DP:BuildHistorySection(parent)
     local s = NewSection(parent, "Change History")
     s.rows = {}
-    s.Empty = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Empty = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Empty:SetText("No recorded changes yet.")
-    s.Member = s:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    s.Member = s:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     s.Member:SetPoint("TOPLEFT", 0, -22)
     s.Member:SetWidth(INNER)
     s.Member:SetJustifyH("LEFT")
@@ -952,11 +953,11 @@ local function HistoryRow(s, i)
     if r then return r end
     r = CreateFrame("Frame", nil, s)
     r:SetWidth(INNER)
-    r.Meta = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    r.Meta = r:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     r.Meta:SetPoint("TOPLEFT", 0, 0)
     r.Meta:SetPoint("RIGHT", 0, 0)
     r.Meta:SetJustifyH("LEFT")
-    r.Text = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.Text = r:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     r.Text:SetPoint("TOPLEFT", r.Meta, "BOTTOMLEFT", 0, -2)
     r.Text:SetWidth(INNER - 4)
     r.Text:SetJustifyH("LEFT")
@@ -1018,12 +1019,12 @@ local function EditText(s, maxLetters, height, multi, onSave)
     box:SetPoint("TOPLEFT", 8, -6)
     box:SetPoint("RIGHT", -8, 0)
     box:SetMultiLine(multi)
-    box:SetFontObject("GameFontHighlightSmall")
+    box:SetFontObject("NGMFontTextSmall")
     box:SetAutoFocus(false)
     box:SetMaxLetters(maxLetters)
     if not multi then box:SetHeight(height - 10) end
     bg:SetScript("OnClick", function() box:SetFocus() end)
-    s.Count = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Count = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Count:SetPoint("TOPRIGHT", 0, -2)
     box:HookScript("OnTextChanged", function(self, user)
         s.Count:SetText(("%d / %d"):format(#self:GetText(), maxLetters))
@@ -1045,7 +1046,7 @@ function DP:FlushText()
     self.pendingText = nil
     for save, text in pairs(p) do
         local ok, err = save(text)
-        if not ok and err then ns:Print("|cffff5555" .. err .. "|r") end
+        if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
     end
 end
 
@@ -1061,7 +1062,7 @@ function DP:BuildEditContact(parent)
     end)
     s.Line:SetPoint("RIGHT", s.Count, "LEFT", -6, 0)
     s.DiscordBox = s.Box
-    s.Hint = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Hint = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Hint:SetPoint("TOPLEFT", s.Bg, "BOTTOMLEFT", 0, -3)
     s.Hint:SetText("Discord name, the same for all of this player's characters. Seen by the guild.")
     s:SetHeight(22 + 26 + 18)
@@ -1073,17 +1074,17 @@ end
 ------------------------------------------------------------------------
 function DP:BuildAltSection(parent)
     local s = NewSection(parent, "Main & Alts")
-    s.AltLabel = s:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    s.AltLabel = s:CreateFontString(nil, "OVERLAY", "NGMFontText")
     s.AltLabel:SetPoint("TOPLEFT", 0, -22)
     s.AltLabel:SetText("Alt of")
     s.MainLink = NameLink(s)
     s.MainLink:SetPoint("LEFT", s.AltLabel, "RIGHT", 6, 0)
-    s.MainLabel = s:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    s.MainLabel = s:CreateFontString(nil, "OVERLAY", "NGMFontText")
     s.MainLabel:SetPoint("TOPLEFT", 0, -22)
     s.MainLabel:SetText("Main character")
-    s.AltsTitle = s:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    s.AltsTitle = s:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
     s.altRows = {}
-    s.NoAlts = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.NoAlts = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.NoAlts:SetText("No alts linked yet.")
     s.Primary = W.Button(s, "Mark as Alt", 140, 22)
     s.Secondary = W.Button(s, "Add Alt", 140, 22)
@@ -1097,7 +1098,7 @@ function DP:PickMainFor(full)
         exclude = { [full] = true },
         onPick = function(main)
             local ok, err = ns.DB:SetMain(full, main)
-            if not ok and err then ns:Print("|cffff5555" .. err .. "|r") end
+            if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
         end,
     })
 end
@@ -1110,7 +1111,7 @@ function DP:PickAltFor(main)
         exclude = exclude,
         onPick = function(alt)
             local ok, err = ns.DB:SetMain(alt, main)
-            if not ok and err then ns:Print("|cffff5555" .. err .. "|r") end
+            if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
         end,
     })
 end
@@ -1122,7 +1123,7 @@ local function AltRow(s, i)
     r:SetSize(INNER, 20)
     r.Link = NameLink(r)
     r.Link:SetPoint("LEFT", 8, 0)
-    r.Info = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    r.Info = r:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     r.Info:SetPoint("LEFT", r.Link, "RIGHT", 6, 0)
     r.Remove = SmallX(r, "Unlink this alt")
     r.Remove:SetPoint("RIGHT", 0, 0)
@@ -1202,11 +1203,11 @@ function DP:BuildSpecSection(parent)
     s.Icon = s:CreateTexture(nil, "ARTWORK")
     s.Icon:SetSize(28, 28)
     s.Icon:SetPoint("TOPLEFT", 0, -20)
-    s.Value = s:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    s.Value = s:CreateFontString(nil, "OVERLAY", "NGMFontText")
     s.Value:SetPoint("TOPLEFT", s.Icon, "TOPRIGHT", 8, -1)
     s.Value:SetPoint("RIGHT", -86, 0)
     s.Value:SetJustifyH("LEFT")
-    s.Source = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Source = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Source:SetPoint("TOPLEFT", s.Value, "BOTTOMLEFT", 0, -3)
     s.Change = W.Button(s, "Change", 78, 22)
     s.Change:SetPoint("TOPRIGHT", 0, -18)
@@ -1227,7 +1228,7 @@ function DP:BuildRoleSection(parent)
         icon:SetSize(16, 16)
         icon:SetPoint("LEFT", cb, "RIGHT", 2, 0)
         W.SetIcon(icon, r.icon)
-        local label = s:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        local label = s:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
         label:SetPoint("LEFT", icon, "RIGHT", 4, 0)
         label:SetText(r.label)
         cb:SetScript("OnClick", function(self)
@@ -1237,7 +1238,7 @@ function DP:BuildRoleSection(parent)
             for key in pairs(e.roles or {}) do set[key] = true end
             set[r.key] = self:GetChecked() and true or nil
             local ok, err = ns.DB:SetRoles(e.full, set)
-            if not ok and err then ns:Print("|cffff5555" .. err .. "|r") end
+            if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
         end)
         s.checks[r.key] = cb
     end
@@ -1291,7 +1292,7 @@ function DP:RefreshSpec(e)
         W.SetClassIcon(sp.Icon, e.classFile)
         sp.Icon:SetDesaturated(not e.spec)
     end
-    sp.Value:SetText(e.spec and (e.spec .. (e.dist and ("  |cff9d9d9d(" .. e.dist .. ")|r") or "")) or "|cff9d9d9dUnknown|r")
+    sp.Value:SetText(e.spec and (e.spec .. (e.dist and ("  |cffa89984(" .. e.dist .. ")|r") or "")) or "|cffa89984Unknown|r")
     if e.specSource == "manual" then
         sp.Source:SetText("Set by hand")
     elseif e.specSource == "addon" then

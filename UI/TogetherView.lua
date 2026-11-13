@@ -19,7 +19,7 @@ ns.TogetherView = TV
 local ROW_H = 22
 local HEADER_H = 26
 local RANGES = { 3, 5, 10, 0 }
-local GRAY = "|cff9d9d9d"
+local GRAY = "|cffa89984"
 
 function TV:Range()
     local r = ns.DB:Settings().playRange
@@ -81,7 +81,7 @@ function TV:Build(frame)
     page:Hide()
     self.page, self.frame = page, frame
 
-    self.title = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    self.title = page:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
     self.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 80, -37)
 
     local range = W.Button(page, "", 140, 22)
@@ -128,7 +128,7 @@ function TV:Build(frame)
 end
 
 local function Text(row, font)
-    local fs = row:CreateFontString(nil, "OVERLAY", font or "GameFontHighlight")
+    local fs = row:CreateFontString(nil, "OVERLAY", font or "NGMFontText")
     fs:SetJustifyH("LEFT")
     fs:SetWordWrap(false)
     return fs
@@ -138,11 +138,11 @@ function TV:InitRow(row, e)
     if not row.built then
         row.built = true
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
-        row.Header = Text(row, "GameFontNormal")
+        row.Header = Text(row, "NGMFontLabel")
         row.Header:SetPoint("LEFT", 6, -2)
         row.Line = row:CreateTexture(nil, "ARTWORK")
         row.Line:SetHeight(1)
-        row.Line:SetColorTexture(1, 0.82, 0, 0.25)
+        row.Line:SetColorTexture(0.98, 0.74, 0.18, 0.25)
         row.Line:SetPoint("LEFT", row.Header, "RIGHT", 8, 0)
         row.Line:SetPoint("RIGHT", -6, 0)
         row.Icon = row:CreateTexture(nil, "ARTWORK")
@@ -151,13 +151,13 @@ function TV:InitRow(row, e)
         row.Name = Text(row)
         row.Name:SetPoint("LEFT", row.Icon, "RIGHT", 6, 0)
         row.Name:SetWidth(170)
-        row.Level = Text(row, "GameFontHighlightSmall")
+        row.Level = Text(row, "NGMFontTextSmall")
         row.Level:SetPoint("LEFT", row.Name, "RIGHT", 6, 0)
         row.Level:SetWidth(96)
-        row.Where = Text(row, "GameFontHighlightSmall")
+        row.Where = Text(row, "NGMFontTextSmall")
         row.Where:SetPoint("LEFT", row.Level, "RIGHT", 6, 0)
         row.Where:SetWidth(220)
-        row.Spec = Text(row, "GameFontDisableSmall")
+        row.Spec = Text(row, "NGMFontDimSmall")
         row.Spec:SetPoint("LEFT", row.Where, "RIGHT", 6, 0)
         row.Spec:SetPoint("RIGHT", -8, 0)
         row:SetScript("OnClick", function(self)
@@ -189,7 +189,7 @@ function TV:InitRow(row, e)
     row.Level:SetText(("Level %d%s"):format(e.level or 0, diffText))
     if e.online then
         local same = e.zone ~= "" and e.zone == self.myZone
-        row.Where:SetText(same and ("|cff40ff40" .. e.zone .. "|r  " .. GRAY .. "(your zone)|r") or (e.zone ~= "" and e.zone or "-"))
+        row.Where:SetText(same and ("|cffb8bb26" .. e.zone .. "|r  " .. GRAY .. "(your zone)|r") or (e.zone ~= "" and e.zone or "-"))
     else
         row.Where:SetText(GRAY .. "Last online " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r")
     end

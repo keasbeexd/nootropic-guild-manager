@@ -20,7 +20,7 @@ local D = ns.Data
 local OV = {}
 ns.OverviewView = OV
 
-local GRAY = "|cff9d9d9d"
+local GRAY = "|cffa89984"
 local WINDOWS = { 7, 30, 90, 0 }
 local BAR_H, BAR_GAP = 18, 3
 local COUNT_W = 62 -- room right of the bar for "11  44%"
@@ -135,10 +135,10 @@ end
 -- A section: a title and a frame below it, placed by Layout().
 local function Section(parent, title)
     local s = CreateFrame("Frame", nil, parent)
-    s.Title = s:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    s.Title = s:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
     s.Title:SetPoint("TOPLEFT", 0, 0)
     s.Title:SetText(title)
-    s.Sub = s:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    s.Sub = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Sub:SetPoint("LEFT", s.Title, "RIGHT", 8, 0)
     s.bars = {}
     return s
@@ -152,7 +152,7 @@ local function Bar(section)
     b.Icon = b:CreateTexture(nil, "ARTWORK")
     b.Icon:SetSize(16, 16)
     b.Icon:SetPoint("LEFT", 2, 0)
-    b.Label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.Label = b:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     b.Label:SetPoint("LEFT", b.Icon, "RIGHT", 6, 0)
     b.Label:SetWidth(96)
     b.Label:SetJustifyH("LEFT")
@@ -165,7 +165,7 @@ local function Bar(section)
     b.Fill = b:CreateTexture(nil, "ARTWORK")
     b.Fill:SetPoint("LEFT", b.Track, "LEFT", 0, 0)
     b.Fill:SetHeight(BAR_H - 6)
-    b.Count = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    b.Count = b:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     b.Count:SetPoint("RIGHT", -4, 0)
     b.Count:SetJustifyH("RIGHT")
     b:SetScript("OnClick", function(self)
@@ -214,7 +214,7 @@ function OV:Build(frame)
     page:Hide()
     self.page, self.frame = page, frame
 
-    self.title = page:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    self.title = page:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
     self.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 80, -37)
 
     local window = W.Button(page, "", 140, 22)
@@ -234,10 +234,10 @@ function OV:Build(frame)
     local alts = CreateFrame("CheckButton", nil, page, "UICheckButtonTemplate")
     alts:SetSize(22, 22)
     alts:SetPoint("RIGHT", window, "LEFT", -110, 0)
-    local label = alts.Text or alts.text or alts:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    local label = alts.Text or alts.text or alts:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     label:ClearAllPoints()
     label:SetPoint("LEFT", alts, "RIGHT", 2, 1)
-    label:SetFontObject("GameFontHighlightSmall")
+    label:SetFontObject("NGMFontTextSmall")
     label:SetText("Count alts")
     alts:SetScript("OnClick", function(cb)
         ns.DB:Settings().overviewAlts = cb:GetChecked() and true or nil
@@ -263,7 +263,7 @@ function OV:Build(frame)
     self.when = Section(content, "When we play")
     self.grid = ns.ScheduleGrid.New(self.when, { cell = 30, cellH = 20, onHover = function(cell, d, b) OV:ShowHeatTip(cell, d, b) end })
     self.grid.frame:SetPoint("TOPLEFT", 0, -20)
-    self.whenNote = self.when:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    self.whenNote = self.when:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     self.whenNote:SetPoint("TOPLEFT", self.grid.frame, "BOTTOMLEFT", 0, -6)
     self.whenNote:SetJustifyH("LEFT")
 
@@ -291,7 +291,7 @@ function OV:ShowHeatTip(cell, d, b)
     for i, e in ipairs(names) do
         if i > 15 then GameTooltip:AddLine(("...and %d more"):format(#names - 15), 0.6, 0.6, 0.6) break end
         local r, g, bl = ns.ClassColor(e.classFile)
-        GameTooltip:AddLine(e.short .. (e.online and "  |cff40ff40online|r" or ""), r, g, bl)
+        GameTooltip:AddLine(e.short .. (e.online and "  |cffb8bb26online|r" or ""), r, g, bl)
     end
     GameTooltip:Show()
 end

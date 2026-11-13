@@ -33,7 +33,7 @@ function SG.New(parent, opts)
     self.frame = f
 
     for b, text in pairs(LABELS) do
-        local l = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        local l = f:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
         l:SetPoint("TOPLEFT", LABEL_W + b * (cw + gap), 0)
         l:SetText(text)
     end
@@ -43,13 +43,13 @@ function SG.New(parent, opts)
         local day = CreateFrame("Button", nil, f)
         day:SetSize(LABEL_W - 2, ch)
         day:SetPoint("TOPLEFT", 0, y)
-        day.Text = day:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        day.Text = day:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
         day.Text:SetPoint("LEFT", 0, 0)
         day.Text:SetText(DAYS[d + 1])
         if opts.editable then
             day:SetScript("OnClick", function() self:CopyDay(d) end)
             day:SetScript("OnEnter", function(b)
-                b.Text:SetTextColor(1, 0.82, 0)
+                b.Text:SetTextColor(0.98, 0.74, 0.18)
                 GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(("Copy %s"):format(DAYS[d + 1]))
                 GameTooltip:AddLine(d < 5 and "Copies this day to every weekday." or "Copies this day to the other weekend day.", 1, 1, 1, true)
@@ -83,7 +83,7 @@ function SG.New(parent, opts)
             end)
             cell:SetScript("OnMouseUp", function() self:StopPaint() end)
             cell:SetScript("OnEnter", function(c)
-                c:SetBackdropBorderColor(1, 0.82, 0, 1)
+                c:SetBackdropBorderColor(0.98, 0.74, 0.18, 1)
                 if opts.onHover then opts.onHover(c, c.day, c.block) end
             end)
             cell:SetScript("OnLeave", function(c)
