@@ -16,7 +16,7 @@ ns.PeonPasteView = V
 function V:Build()
     local f = CreateFrame("Frame", "NootropicGMPeonPaste", UIParent, "BasicFrameTemplateWithInset")
     W.CombatSafeClose(f)
-    f:SetSize(460, 236)
+    f:SetSize(460, 290)
     f:SetPoint("TOP", 0, -140)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
@@ -66,10 +66,17 @@ function V:BringIn()
         self.result:SetText("|cffff5555" .. why .. "|r")
         return
     end
-    local lines = { ("|cff33dd33Done.|r %d new, %d already here."):format(got.taken, got.had) }
+    -- counts, not names: a first code can carry the whole guild
+    local function n(k, one, many) return ("%d %s"):format(k, k == 1 and one or many) end
+    local lines = { "|cff33dd33Done.|r" }
+    lines[#lines + 1] = got.players > 0 and ("Mains and alts: " .. n(got.players, "player", "players") .. " changed") or "Mains and alts: nothing new"
+    lines[#lines + 1] = got.characters > 0 and ("Tank / Healer / DPS: " .. n(got.characters, "character", "characters") .. " changed") or "Tank / Healer / DPS: nothing new"
+    lines[#lines + 1] = got.names > 0 and ("Discord names: " .. n(got.names, "member", "members") .. " added or changed") or "Discord names: nothing new"
+    if got.had > 0 then lines[#lines + 1] = "|cffaaaaaa" .. got.had .. " already up to date|r" end
     if got.refused > 0 then
         lines[#lines + 1] = ("|cffffaa33%d not taken|r: your rank can only bring in your own. An officer can bring in the rest."):format(got.refused)
     end
+    lines[#lines + 1] = "Shared with the guild."
     self.result:SetText(table.concat(lines, "\n"))
     self.box:SetText("")
     self.box:ClearFocus()

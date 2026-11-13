@@ -247,7 +247,9 @@ function DC:ParsePeon(code)
     return out
 end
 
--- Brings a code from NGM Peon in. -> { taken, had, refused }, or nil and why
+-- Brings a code from NGM Peon in. -> { taken, had, refused, players,
+-- characters, names }, or nil and why. players: whose main/alts changed;
+-- characters: whose Tank/Healer/DPS changed; names: Discord names taken.
 function DC:ApplyPeon(code)
     local c, why = self:ParsePeon(code)
     if not c then return nil, why end
@@ -256,7 +258,8 @@ function DC:ApplyPeon(code)
     if c.guild:lower() ~= guild:lower() or (self:Region() and c.region ~= self:Region()) then
         return nil, ("That code is for <%s>, not <%s>."):format(c.guild, guild)
     end
-    local out = { taken = 0, had = 0, refused = 0 }
+    local out = { taken = 0, had = 0, refused = 0, players = 0, characters = 0, names = 0 }
+    local mains = {}
     for _, r in ipairs(c.records) do
         local typ = r.key:match("^(%u+):")
         if typ ~= "M" and typ ~= "RL" and typ ~= "CN" then -- mains, roles, Discord names
@@ -270,6 +273,12 @@ function DC:ApplyPeon(code)
                 if ok then
                     out.taken = out.taken + 1
                     ns.Sync:Broadcast(key, ns.Sync:Get(key))
+                    local who = key:match("^%u+:(.*)$")
+                    if typ == "M" then
+                        local main = (r.v ~= "" and r.v) or who
+                        if not mains[main] then mains[main] = true; out.players = out.players + 1 end
+                    elseif typ == "RL" then out.characters = out.characters + 1
+                    else out.names = out.names + 1 end
                 else
                     out.refused = out.refused + 1
                 end

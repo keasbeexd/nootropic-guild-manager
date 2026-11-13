@@ -121,6 +121,7 @@ guildData = {}
 ns.DB.Guild = function() return guildData end
 local got = assert(DC:ApplyPeon("NGMP1.dXMKTm9vdHJvcGljCmhhcwl0b2Y3eGMKaG91cnMJMW8xbnQxMwpSCU06Wm_DqyBBc2gJdG9naTgwCU1hcmMgUHJpZXN0CU1hcmMgUHJpZXN0ClIJUkw6TWFyYyBQcmllc3QJdG9naTgxCU1hcmMgUHJpZXN0CWhlYWxlcg.2a542997"))
 assert(got.taken == 1 and got.had == 1 and got.refused == 0, ("%d %d %d"):format(got.taken, got.had, got.refused))
+assert(got.players == 1 and got.characters == 0 and got.names == 0, "counted by kind")
 assert(sent[1] == "M:Zo\195\171 Ash" and guildData.peon.has == 1794540000)
 -- a Discord name (CN) is taken too; other kinds aren't
 do
@@ -128,6 +129,7 @@ do
     local code = "NGMP1." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)
     local got2 = assert(DC:ApplyPeon(code))
     assert(got2.taken == 1 and got2.refused == 1, ("%d %d"):format(got2.taken, got2.refused))
+    assert(got2.names == 1, "a Discord name counted")
     assert(held["CN:Marc Priest"].v == "keasbeexd;")
 end
 
