@@ -14,7 +14,7 @@
     The code proves nothing by itself: NGM Peon still has the Guild Master
     sign in with Battle.net.
 
-    NGM2, the update code (pasted on the dashboard's Ranks tab), is NGM1's
+    NGM2, the update code (pasted on the dashboard's Sync tab, step 2), is NGM1's
     lines, an empty line, then what changed in game:
         since<TAB>t                 changes after this time (0 = everything)
         upto<TAB>t                  when the code was made
@@ -222,7 +222,7 @@ end
 -- code -> { region, guild, has, hoursHash, records = { {key, t, a, v} } }, or nil and why
 function DC:ParsePeon(code)
     code = (code or ""):gsub("%s+", "")
-    if code == "" then return nil, "Paste the code from NGM Peon's dashboard (Ranks tab, Code for the addon)." end
+    if code == "" then return nil, "Paste the code from NGM Peon's dashboard (Sync tab, step 1)." end
     local body, sum = code:match("^NGMP1%.([A-Za-z0-9_%-]+)%.(%x%x%x%x%x%x%x%x)$")
     if not body then return nil, "That isn't a code from NGM Peon. It starts with NGMP1." end
     local payload = DC.Base64UrlDecode(body)

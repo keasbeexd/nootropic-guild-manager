@@ -1,6 +1,6 @@
 --[[
     Nootropic Guild Manager - /ngm peon: bring in a code from NGM Peon
-    The dashboard's Ranks tab gives a code (Code for the addon) with what was
+    The dashboard's Sync tab (step 1) gives a code with what was
     set there: mains and alts, Tank / Healer / DPS, fixes for wrong links. It
     also says what NGM Peon already has, so the next /ngm discord only carries
     new changes. Pasted here, its records are taken under the addon's usual
@@ -35,7 +35,7 @@ function V:Build()
     steps:SetPoint("TOPRIGHT", -20, -36)
     steps:SetJustifyH("LEFT")
     steps:SetSpacing(4)
-    steps:SetText("|cffffd1001.|r On |cffffffffngmpeon.app|r, open the Ranks tab: Code for the addon.\n"
+    steps:SetText("|cffffd1001.|r On |cffffffffngmpeon.app|r, open the Sync tab: step 1.\n"
         .. "|cffffd1002.|r Copy it and paste it below (Ctrl+V).\n"
         .. "|cffffd1003.|r Press Bring In.")
 
