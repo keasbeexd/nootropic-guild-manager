@@ -757,7 +757,8 @@ function S:Apply(key, rec, ctx)
     store[key] = rec
     self.storeVersion = self.storeVersion + 1
     self:Materialize(typ, key, member, rec)
-    if not def.noAudit and not ctx.migration and ns.IsOfficer() then
+    -- (GS:peonat is only when NGM Peon's code was last brought in: not an audit entry)
+    if not def.noAudit and key ~= "GS:peonat" and not ctx.migration and ns.IsOfficer() then
         self:Audit(typ, key, member, cur, rec)
     end
     self.stats.applied = self.stats.applied + 1

@@ -307,15 +307,19 @@ function DC:ApplyPeon(code)
     g.peon = g.peon or {}
     if not g.peon.has or c.has > g.peon.has then g.peon.has = c.has end
     g.peon.hoursHash = c.hoursHash
+    -- when the guild last brought NGM Peon's code in (for the reminder); officers share it
+    if ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peonat") then ns.Sync:Set("GS:peonat", tostring(ns.DB:Now())) end
     return out
 end
 
 ------------------------------------------------------------------------
--- The reminder: the Guild Master of a guild using NGM Peon is told when
--- Discord may be out of date: it's been a week since the last update code,
--- or the ranks changed in game since. At most once a day, never in combat.
+-- The reminder: the Guild Master of a guild using NGM Peon is told when the
+-- two are out of step: 3 days or more since the last update code (game to
+-- Discord) or since anyone in the guild brought in NGM Peon's code (Discord
+-- to the game; GS:peonat, written by the officer who did), or the ranks
+-- changed in game since. Once a day (ranks: once per change), never in combat.
 ------------------------------------------------------------------------
-DC.REMIND_AFTER = 7 * 86400
+DC.REMIND_AFTER = 3 * 86400
 
 -- The reminder's text now and why ("ranks", "never" or "days"), or nil.
 function DC:ReminderText(now)
@@ -325,20 +329,27 @@ function DC:ReminderText(now)
     if not g then return nil end
     local peon = g.peon or {}
     if not (peon.made or ns.Sync:Value("GS:peon") == "1") then return nil end -- not using NGM Peon
-    local what = "It carries rank names and permissions, mains and alts, Tank / Healer / DPS and When we play. "
-        .. "Type |cffebdbb2/ngm discord|r, then paste it on |cffebdbb2ngmpeon.app|r (Sync tab, step 2)."
+    local toDiscord = "Type |cffebdbb2/ngm discord|r and paste it on |cffebdbb2ngmpeon.app|r (Sync tab, step 2)."
     local ranks = self:MyRanks()
     if ranks and peon.ranks and self.RankSignature(ranks) ~= peon.ranks then
-        return "|cfffabd2fNGM Peon:|r your guild's ranks changed since you last updated Discord. " .. what, "ranks", self.RankSignature(ranks)
+        return "|cfffabd2fNGM Peon:|r your guild's ranks changed since you last updated Discord. " .. toDiscord, "ranks", self.RankSignature(ranks)
     end
-    if not peon.made then
-        return "|cfffabd2fNGM Peon:|r Discord hasn't had an update from your game yet. " .. what, "never"
+    -- what's overdue, each way (best done daily; told after REMIND_AFTER)
+    local function ago(t) return t and math.floor((now - t) / 86400) or nil end
+    local sent = ago(peon.made)
+    local rec = ns.Sync:Get("GS:peonat") -- when anyone in the guild last brought in NGM Peon's code
+    local got = ago(rec and tonumber(rec.v))
+    local late = self.REMIND_AFTER / 86400
+    local lines = {}
+    if not sent or sent >= late then
+        lines[#lines + 1] = (sent and ("- Game to Discord: last done %d days ago. "):format(sent) or "- Game to Discord: not done yet. ") .. toDiscord
     end
-    local days = math.floor((now - peon.made) / 86400)
-    if days >= self.REMIND_AFTER / 86400 then
-        return ("|cfffabd2fNGM Peon:|r it's been %d days since you last updated Discord. "):format(days) .. what, "days"
+    if not got or got >= late then
+        lines[#lines + 1] = (got and ("- Discord to the game: last done %d days ago. "):format(got) or "- Discord to the game: not done yet. ")
+            .. "Copy the Sync tab's step 3 code, type |cffebdbb2/ngm peon|r and press Bring In."
     end
-    return nil
+    if #lines == 0 then return nil end
+    return "|cfffabd2fNGM Peon:|r time to sync (best done daily).\n" .. table.concat(lines, "\n"), "days"
 end
 
 function DC:Remind(now)
