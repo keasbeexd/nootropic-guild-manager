@@ -83,4 +83,56 @@ local _, _, all3 = DC:ForMyGuild("all")
 assert(all3 == true, "/ngm discord all: everything")
 assert(DC:ForMyGuild("setup"):find("^NGM1%."), "/ngm discord setup: the short code")
 
+
+-- NGMP1, the code from NGM Peon: the same example as ngm-hub's test/gameupdate.test.ts
+local function hash(str) -- Core/Records.lua's Hash
+    local h = 5381
+    for i = 1, #str do h = (h * 33 + str:byte(i)) % 4294967291 end
+    return h
+end
+ns.Sync.Hash = hash
+assert(DC.Base64UrlDecode(DC.Base64Url("Zo\195\171 Ash, foo")) == "Zo\195\171 Ash, foo")
+assert(DC.Base64UrlDecode("Zg") == "f" and DC.Base64UrlDecode("Zm8") == "fo" and DC.Base64UrlDecode("Zm9v") == "foo")
+ns.Split = function(s, sep)
+    local out, start = {}, 1
+    while true do
+        local i = s:find(sep, start, true)
+        if not i then out[#out + 1] = s:sub(start) break end
+        out[#out + 1] = s:sub(start, i - 1)
+        start = i + #sep
+    end
+    return out
+end
+local pc = assert(DC:ParsePeon("NGMP1.dXMKTm9vdHJvcGljCmhhcwl0b2Y3eGMKaG91cnMJMW8xbnQxMwpSCU06Wm_DqyBBc2gJdG9naTgwCU1hcmMgUHJpZXN0CU1hcmMgUHJpZXN0ClIJUkw6TWFyYyBQcmllc3QJdG9naTgxCU1hcmMgUHJpZXN0CWhlYWxlcg.2a542997"))
+assert(pc.region == "us" and pc.guild == "Nootropic" and pc.has == 1794540000, "header")
+assert(pc.hoursHash == hash(DC.HoursValue({ sharing = 12, counts = counts })), "the grid's hash matches NGM Peon's")
+assert(#pc.records == 2 and pc.records[1].key == "M:Zo\195\171 Ash" and pc.records[1].v == "Marc Priest" and pc.records[2].v == "healer")
+assert(DC:ParsePeon("NGMP1.abc.00000000") == nil)
+
+-- bringing it in: records through the usual rules, NGM Peon's word remembered
+GetGuildInfo = function() return "Nootropic" end
+region = 1
+local held, sent = { ["RL:Marc Priest"] = { v = "healer", t = 1794600001, a = "Marc Priest" } }, {}
+ns.PlayerFullName = function() return "Marc Priest" end
+ns.Sync.Get = function(_, k) return held[k] end
+ns.Sync.Intake = function(_, key, t, a, b, v, ctx) held[key] = { v = v, t = t, a = a }; return true, key end
+ns.Sync.Broadcast = function(_, key) sent[#sent + 1] = key end
+guildData = {}
+ns.DB.Guild = function() return guildData end
+local got = assert(DC:ApplyPeon("NGMP1.dXMKTm9vdHJvcGljCmhhcwl0b2Y3eGMKaG91cnMJMW8xbnQxMwpSCU06Wm_DqyBBc2gJdG9naTgwCU1hcmMgUHJpZXN0CU1hcmMgUHJpZXN0ClIJUkw6TWFyYyBQcmllc3QJdG9naTgxCU1hcmMgUHJpZXN0CWhlYWxlcg.2a542997"))
+assert(got.taken == 1 and got.had == 1 and got.refused == 0, ("%d %d %d"):format(got.taken, got.had, got.refused))
+assert(sent[1] == "M:Zo\195\171 Ash" and guildData.peon.has == 1794540000)
+-- the next update code: changes since NGM Peon's word (less a week), and no grid when NGM Peon has the same
+store = {}
+ns.Sync.Store = function() return store end
+now = 1794540000 + 86400
+ns.DB.Now = function() return now end
+ns.OverviewView = { Census = function() local h = {} for i = 0, 83 do h[i] = counts[i + 1] end return { heat = h, sharing = 12 } end }
+local upd = DC:ForMyGuild()
+local text = DC.Base64UrlDecode(upd:match("^NGM2%.([^.]+)%."))
+assert(text:find("\nsince\t" .. DC.B36(1794540000 - DC.ARRIVAL) .. "\n", 1, true), "since NGM Peon's word, less a week")
+assert(not text:find("\nhours\t", 1, true), "same grid as NGM Peon: not sent")
+local all = DC.Base64UrlDecode(DC:ForMyGuild("all"):match("^NGM2%.([^.]+)%."))
+assert(all:find("\nhours\t", 1, true), "everything: the grid too")
+
 print(a); print("OK")

@@ -357,6 +357,7 @@ local function PrintHelp()
     ns:Print("  |cffffffff/ngm discord|r  - Guild Master: the update code for NGM Peon (ngmpeon.app, Ranks tab)")
     ns:Print("  |cffffffff/ngm discord all|r  - the same, with everything (not just what changed)")
     ns:Print("  |cffffffff/ngm discord setup|r  - the short code for /ngm-guild setup in Discord")
+    ns:Print("  |cffffffff/ngm peon|r  - bring in the code from NGM Peon's dashboard (Ranks tab)")
     ns:Print("  |cffffffff/ngm diag|r  - troubleshooting: version, sync, and the addon's hooks into game windows")
     ns:Print("  |cffffffff/ngm reset|r  - reset the window size and position")
 end
@@ -407,7 +408,9 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns.UI:OpenTab(ns.UI.TAB_OVERVIEW)
     elseif cmd == "hof" or cmd == "fame" or cmd == "halloffame" then
         ns.UI:OpenTab(ns.UI.TAB_HOF)
-    elseif cmd == "discord" or cmd == "peon" then
+    elseif cmd == "peon" then
+        ns.PeonPasteView:Open()
+    elseif cmd == "discord" then
         local mode = rest and rest:lower():match("^%s*(%a+)")
         ns.DiscordCodeView:Open((mode == "setup" or mode == "all") and mode or nil)
     elseif cmd == "dnw" then

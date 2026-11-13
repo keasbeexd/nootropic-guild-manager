@@ -97,6 +97,14 @@ function DC:Make(region, guild, ranks)
     return "NGM1." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)
 end
 
+-- The hours line's value ("<sharing>\t<count>,<count>,..."), as NGM Peon
+-- hashes it to say which grid it has.
+function DC.HoursValue(hours)
+    local c = {}
+    for i = 1, 84 do c[i] = B36(hours.counts[i] or 0) end
+    return B36(hours.sharing) .. "\t" .. table.concat(c, ",")
+end
+
 -- update: { since =, upto =, hours = { sharing =, counts = {84} } or nil,
 --           records = { { key =, v =, t =, a = }, ... } }
 function DC:MakeUpdate(region, guild, ranks, update)
@@ -104,11 +112,7 @@ function DC:MakeUpdate(region, guild, ranks, update)
     lines[#lines + 1] = ""
     lines[#lines + 1] = "since\t" .. B36(update.since)
     lines[#lines + 1] = "upto\t" .. B36(update.upto)
-    if update.hours then
-        local c = {}
-        for i = 1, 84 do c[i] = B36(update.hours.counts[i] or 0) end
-        lines[#lines + 1] = "hours\t" .. B36(update.hours.sharing) .. "\t" .. table.concat(c, ",")
-    end
+    if update.hours then lines[#lines + 1] = "hours\t" .. DC.HoursValue(update.hours) end
     for _, r in ipairs(update.records) do
         lines[#lines + 1] = "R\t" .. r.key .. "\t" .. B36(r.t) .. "\t" .. r.a .. "\t" .. r.v
     end
@@ -116,7 +120,8 @@ function DC:MakeUpdate(region, guild, ranks, update)
     return "NGM2." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)
 end
 
-DC.OVERLAP = 14 * 86400 -- a code made but never pasted: the next one covers it
+DC.OVERLAP = 14 * 86400 -- before NGM Peon's word: a code made but never pasted is covered
+DC.ARRIVAL = 7 * 86400  -- after it: a record written days before it reached the Guild Master's game is covered
 
 -- Main/alt and roles records changed after `since`, oldest first.
 function DC:Changes(since)
@@ -177,11 +182,102 @@ function DC:ForMyGuild(mode)
     local upto = ns.DB:Now()
     local since = 0
     if mode ~= "all" then
-        if g.peon.has then since = g.peon.has
+        if g.peon.has then since = math.max(0, g.peon.has - self.ARRIVAL)
         elseif g.peon.made then since = math.max(0, g.peon.made - self.OVERLAP) end
     end
     local records = self:Changes(since)
-    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = self:Hours(), records = records })
+    -- the When we play grid only when NGM Peon's differs (or everything was asked for)
+    local hours = self:Hours()
+    if hours and since > 0 and g.peon.hoursHash and ns.Sync.Hash(self.HoursValue(hours)) == g.peon.hoursHash then hours = nil end
+    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records })
     g.peon.made = upto
     return code, nil, since == 0, #records, since
+end
+
+------------------------------------------------------------------------
+-- The code from NGM Peon (/ngm peon): NGMP1.<base64url>.<adler-32>
+--   region, guild, has<TAB>t, [hours<TAB>hash], R<TAB>key<TAB>t<TAB>author<TAB>value
+-- (ngm-hub's src/records/addoncode.ts makes it). Its records are taken as
+-- if the player pasting it had passed them on in guild sync: under the same
+-- rules (an officer may pass on anyone's; anyone else only their own), then
+-- shared with the guild.
+------------------------------------------------------------------------
+local B64DEC = {}
+for i = 1, 64 do B64DEC[B64:byte(i)] = i - 1 end
+
+function DC.Base64UrlDecode(s)
+    local out, n = {}, #s
+    for i = 1, n, 4 do
+        local a, b, c, d = B64DEC[s:byte(i)], B64DEC[s:byte(i + 1) or 0], B64DEC[s:byte(i + 2) or 0], B64DEC[s:byte(i + 3) or 0]
+        if a == nil or b == nil then return nil end
+        if s:byte(i + 2) and c == nil or s:byte(i + 3) and d == nil then return nil end
+        local v = a * 262144 + b * 4096 + (c or 0) * 64 + (d or 0)
+        out[#out + 1] = string.char(math.floor(v / 65536) % 256)
+        if c then out[#out + 1] = string.char(math.floor(v / 256) % 256) end
+        if d then out[#out + 1] = string.char(v % 256) end
+    end
+    return table.concat(out)
+end
+
+-- code -> { region, guild, has, hoursHash, records = { {key, t, a, v} } }, or nil and why
+function DC:ParsePeon(code)
+    code = (code or ""):gsub("%s+", "")
+    if code == "" then return nil, "Paste the code from NGM Peon's dashboard (Ranks tab, Code for the addon)." end
+    local body, sum = code:match("^NGMP1%.([A-Za-z0-9_%-]+)%.(%x%x%x%x%x%x%x%x)$")
+    if not body then return nil, "That isn't a code from NGM Peon. It starts with NGMP1." end
+    local payload = DC.Base64UrlDecode(body)
+    if not payload or DC.Adler32(payload) ~= sum:lower() then return nil, "The code doesn't check out. Copy it again from the dashboard." end
+    local lines = {}
+    for line in (payload .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
+    local out = { region = lines[1], guild = lines[2], records = {} }
+    for i = 3, #lines do
+        local f = ns.Split(lines[i], "\t")
+        if f[1] == "has" then out.has = tonumber(f[2] or "", 36)
+        elseif f[1] == "hours" then out.hoursHash = tonumber(f[2] or "", 36)
+        elseif f[1] == "R" and #f >= 5 then
+            local t = tonumber(f[3], 36)
+            if not t then return nil, "The code looks damaged. Copy it again from the dashboard." end
+            out.records[#out.records + 1] = { key = f[2], t = t, a = f[4], v = table.concat(f, "\t", 5) }
+        elseif lines[i] ~= "" then
+            return nil, "The code looks damaged. Copy it again from the dashboard."
+        end
+    end
+    if not out.has then return nil, "The code looks damaged. Copy it again from the dashboard." end
+    return out
+end
+
+-- Brings a code from NGM Peon in. -> { taken, had, refused }, or nil and why
+function DC:ApplyPeon(code)
+    local c, why = self:ParsePeon(code)
+    if not c then return nil, why end
+    local guild = GetGuildInfo and GetGuildInfo("player")
+    if not guild then return nil, "You're not in a guild." end
+    if c.guild:lower() ~= guild:lower() or (self:Region() and c.region ~= self:Region()) then
+        return nil, ("That code is for <%s>, not <%s>."):format(c.guild, guild)
+    end
+    local out = { taken = 0, had = 0, refused = 0 }
+    for _, r in ipairs(c.records) do
+        local typ = r.key:match("^(%u+):")
+        if typ ~= "M" and typ ~= "RL" then
+            out.refused = out.refused + 1
+        else
+            local cur = ns.Sync:Get(r.key)
+            if cur and cur.t >= r.t then
+                out.had = out.had + 1
+            else
+                local ok, key = ns.Sync:Intake(r.key, r.t, r.a, nil, r.v, { origin = "remote", channel = "GUILD", sender = ns.PlayerFullName() })
+                if ok then
+                    out.taken = out.taken + 1
+                    ns.Sync:Broadcast(key, ns.Sync:Get(key))
+                else
+                    out.refused = out.refused + 1
+                end
+            end
+        end
+    end
+    local g = ns.DB:Guild() or {}
+    g.peon = g.peon or {}
+    if not g.peon.has or c.has > g.peon.has then g.peon.has = c.has end
+    g.peon.hoursHash = c.hoursHash
+    return out
 end

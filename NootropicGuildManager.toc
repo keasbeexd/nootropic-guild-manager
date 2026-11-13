@@ -54,6 +54,7 @@ UI\DNWView.lua
 UI\RecipesView.lua
 UI\InvitePrompt.lua
 UI\DiscordCodeView.lua
+UI\PeonPasteView.lua
 UI\MessagesView.lua
 UI\AuditView.lua
 UI\MainFrame.lua
