@@ -185,10 +185,13 @@ function HV.CrownText(c)
     local won, nextWon = HF.MonthName(c.won), HF.MonthName(c.nextWon)
     if c.state == "tallying" then
         return ("|cffffd100%s is over!|r Points are being tallied: champions will be crowned %s (%s)."):format(won, HV.When(c.at), HV.In(c.at))
+    elseif c.state == "due" and HF:PeonCrowns() then
+        return ("|cffffd100%s's champions are crowned by NGM Peon.|r They show here once an officer brings them in (|cffffffff/ngm peon|r)."):format(won)
     elseif c.state == "due" then
         return ("|cffffd100%s's points are tallied.|r Champions will be crowned as soon as an officer logs in."):format(won)
     elseif c.state == "crowned" then
-        local recount = HF:InRecount() and (" Late numbers can still change them until %s."):format(HV.When(c.at + HF.RECOUNT)) or ""
+        local recount = HF:PeonCrowns() and " Crowned by NGM Peon."
+            or HF:InRecount() and (" Late numbers can still change them until %s."):format(HV.When(c.at + HF.RECOUNT)) or ""
         return ("|cffffd100%s's champions have been crowned!|r%s Next: %s's, %s (%s)."):format(won, recount, nextWon, HV.When(c.nextAt), HV.In(c.nextAt))
     end
     return ("Next champions (%s's) crowned %s (%s)."):format(nextWon, HV.When(c.nextAt), HV.In(c.nextAt))

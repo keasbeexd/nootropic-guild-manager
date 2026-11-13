@@ -16,7 +16,7 @@ ns.PeonPasteView = V
 function V:Build()
     local f = CreateFrame("Frame", "NootropicGMPeonPaste", UIParent, "BasicFrameTemplateWithInset")
     W.CombatSafeClose(f)
-    f:SetSize(460, 290)
+    f:SetSize(460, 304)
     f:SetPoint("TOP", 0, -140)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
@@ -72,6 +72,7 @@ function V:BringIn()
     lines[#lines + 1] = got.players > 0 and ("Mains and alts: " .. n(got.players, "player", "players") .. " changed") or "Mains and alts: nothing new"
     lines[#lines + 1] = got.characters > 0 and ("Tank / Healer / DPS: " .. n(got.characters, "character", "characters") .. " changed") or "Tank / Healer / DPS: nothing new"
     lines[#lines + 1] = got.names > 0 and ("Discord names: " .. n(got.names, "member", "members") .. " added or changed") or "Discord names: nothing new"
+    if got.months > 0 then lines[#lines + 1] = "Hall of Fame champions: " .. n(got.months, "month", "months") .. " crowned by NGM Peon" end
     if got.had > 0 then lines[#lines + 1] = "|cffaaaaaa" .. got.had .. " already up to date|r" end
     if got.refused > 0 then
         lines[#lines + 1] = ("|cffffaa33%d not taken|r: your rank can only bring in your own. An officer can bring in the rest."):format(got.refused)

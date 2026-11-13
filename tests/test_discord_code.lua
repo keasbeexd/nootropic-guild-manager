@@ -130,6 +130,15 @@ do
     local got2 = assert(DC:ApplyPeon(code))
     assert(got2.taken == 1 and got2.refused == 1, ("%d %d"):format(got2.taken, got2.refused))
     assert(got2.names == 1, "a Discord name counted")
+    -- champions and the setting that NGM Peon crowns them; nothing else under GS
+    local p3 = "us\nNootropic\nhas\t" .. DC.B36(1794540000) .. "\nhours\t" .. DC.B36(pc.hoursHash)
+        .. "\nR\tHW:202610\t" .. DC.B36(1794600009) .. "\tNGM Peon\tquests=Pip Moss;kills=Marc Priest"
+        .. "\nR\tGS:peon\t" .. DC.B36(1794600009) .. "\tNGM Peon\t1"
+        .. "\nR\tGS:officers\t" .. DC.B36(1794600009) .. "\tNGM Peon\t0"
+        .. "\nR\tHW:2026\t" .. DC.B36(1794600009) .. "\tNGM Peon\tx=y"
+    local got3 = assert(DC:ApplyPeon("NGMP1." .. DC.Base64Url(p3) .. "." .. DC.Adler32(p3)))
+    assert(got3.months == 1 and got3.taken == 2 and got3.refused == 2, ("%d %d %d"):format(got3.months, got3.taken, got3.refused))
+    assert(held["GS:peon"].v == "1" and held["HW:202610"].v == "quests=Pip Moss;kills=Marc Priest")
     assert(held["CN:Marc Priest"].v == "keasbeexd;")
 end
 

@@ -392,6 +392,14 @@ end
 ------------------------------------------------------------------------
 HF.RECORD_ON_DAY = 2 -- UTC day of the month: a day's lag so last month's numbers are all in
 
+-- A guild using NGM Peon (GS:peon = "1", brought in with /ngm peon): NGM
+-- Peon crowns the champions from Blizzard's numbers for everyone, and the
+-- addon shows those (HW records in its code) instead of crowning its own,
+-- so the game and Discord never name different winners.
+function HF:PeonCrowns()
+    return ns.Sync:Value("GS:peon") == "1"
+end
+
 function HF.EncodeChampions(champs)
     local parts = {}
     for _, s in ipairs(HF.STATS) do
@@ -419,7 +427,7 @@ end
 
 function HF:RecordChampions(now)
     now = now or ns.DB:Now()
-    if not (ns.IsOfficer() and ns.Sync.readyFor) then return false end
+    if not (ns.IsOfficer() and ns.Sync.readyFor) or self:PeonCrowns() then return false end
     if tonumber(date("!%d", now)) < self.RECORD_ON_DAY then return false end
     local last = HF.PrevMonth(HF.Month(now))
     local key = "HW:" .. last
@@ -451,7 +459,7 @@ end
 
 function HF:Recount(now)
     now = now or ns.DB:Now()
-    if not (ns.IsOfficer() and ns.Sync.readyFor and self:InRecount(now)) then return false end
+    if not (ns.IsOfficer() and ns.Sync.readyFor and self:InRecount(now)) or self:PeonCrowns() then return false end
     local month = HF.Month(now)
     local last = HF.PrevMonth(month)
     local key = "HW:" .. last
