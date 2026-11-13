@@ -47,8 +47,11 @@ end
 
 -- People (or characters, with alts counted) active in the window:
 -- { { e = entry shown, chars = { entries } } ... }
-function OV:People()
-    local days, alts = self:Days(), ns.DB:Settings().overviewAlts
+-- days/alts: the view's own filter unless given (the NGM Peon code always
+-- counts the default view: active in 30 days, a player's characters once)
+function OV:People(days, alts)
+    if days == nil then days = self:Days() end
+    if alts == nil then alts = ns.DB:Settings().overviewAlts end
     local out = {}
     if alts then
         for _, e in ipairs(ns.Roster.members) do
@@ -78,8 +81,8 @@ function OV:People()
     return out
 end
 
-function OV:Census()
-    local people = self:People()
+function OV:Census(days, alts)
+    local people = self:People(days, alts)
     local classes, levels, profs = {}, {}, {}
     local heat, heatNames, sharing = {}, {}, 0
     for _, p in ipairs(people) do

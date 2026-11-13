@@ -166,6 +166,7 @@ NGM Peon is NGM's Discord bot and website (ngmpeon.app), coming in 3.0. Its serv
 - **Two seams.** In game, Sync calls `S:Apply` for what arrives and Records calls `S:Broadcast` for what changes. Anything that carries records between the addon and the Hub uses the same two calls, with `ctx.origin` naming where a record came from.
 - **Fingerprints are portable.** Per-author fingerprints (newest time and a sum of record hashes, `S:AuthorSums`) let any two holders of records, a copy of the addon and the Hub included, find what the other lacks without sending everything.
 - **Identity** is the character's plain name (Forever has no realms), checked against the guild roster, the same thing the Hub will see.
+- **Codes carry records for now.** Addons can't reach the internet, so in 3.0 records travel by copy and paste. `/ngm discord` makes the Guild Master's update code (NGM2, `Services/DiscordCode.lua`): rank names and permissions, the M and RL records changed since NGM Peon last had them, and the When we play counts. It's pasted on the dashboard's Ranks tab. NGM Peon applies the same newest-wins rule, plus one of its own: a member's characters proven theirs by Battle.net can't be linked to someone else's. `/ngm discord setup` makes the short NGM1 code for `/ngm-guild setup` in Discord. A desktop connector can carry the same records automatically later.
 
 ## Releasing
 

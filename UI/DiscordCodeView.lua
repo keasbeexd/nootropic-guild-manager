@@ -1,10 +1,11 @@
 --[[
-    Nootropic Guild Manager - /ngm discord: the NGM Peon setup code
-    Shows the Guild Master the code to paste into NGM Peon's /ngm setup in
-    Discord. Copying works like the invite prompt: the code is selected for
+    Nootropic Guild Manager - /ngm discord: codes for NGM Peon
+    Shows the Guild Master the code to paste on NGM Peon's dashboard (the
+    update code: ranks and what changed in game) or into /ngm-guild setup in
+    Discord (/ngm discord setup: the short setup code). Copying works like the invite prompt: the code is selected for
     you to press Ctrl+C; the addon never touches the clipboard or chat box.
 
-    ns.DiscordCodeView:Open()
+    ns.DiscordCodeView:Open(mode)   -- mode: nil (changes), "all" or "setup"
 ]]
 local _, ns = ...
 local W = ns.Widgets
@@ -33,9 +34,7 @@ function V:Build()
     steps:SetPoint("TOPRIGHT", -20, -36)
     steps:SetJustifyH("LEFT")
     steps:SetSpacing(4)
-    steps:SetText("|cffffd1001.|r Invite NGM Peon to your guild's Discord (|cffffffffngmpeon.app|r).\n"
-        .. "|cffffd1002.|r In Discord, run |cffffffff/ngm setup|r and paste this code.\n"
-        .. "|cffffd1003.|r Sign in with Battle.net when NGM Peon asks.")
+    -- the steps depend on the code: set in Open
     self.steps = steps
 
     self.what = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -47,6 +46,8 @@ function V:Build()
     box:SetSize(410, 22)
     box:SetPoint("BOTTOM", 0, 74)
     box:SetAutoFocus(false)
+    box:SetMaxLetters(0) -- an update code can run to thousands of characters
+    if box.SetMaxBytes then box:SetMaxBytes(0) end
     box:SetScript("OnTextChanged", function(eb, user) if user then eb:SetText(V.code or ""); eb:HighlightText() end end)
     box:SetScript("OnEditFocusGained", function(eb) eb:HighlightText() end)
     box:SetScript("OnEscapePressed", function(eb) eb:ClearFocus() end)
@@ -54,7 +55,8 @@ function V:Build()
     box:SetScript("OnKeyDown", function(eb, key)
         if key == "C" and IsControlKeyDown() then
             C_Timer.After(0.05, function() eb:ClearFocus() end)
-            V.hint:SetText("|cff33dd33Copied.|r Paste it into /ngm setup in Discord.")
+            V.hint:SetText(V.mode == "setup" and "|cff33dd33Copied.|r Paste it into /ngm-guild setup in Discord."
+                or "|cff33dd33Copied.|r Paste it on ngmpeon.app, Ranks tab, Update from the game.")
         end
     end)
     self.box = box
@@ -66,7 +68,7 @@ function V:Build()
     local copy = W.Button(f, "Select Code", 130, 24)
     copy:SetPoint("BOTTOM", 0, 14)
     copy:SetScript("OnClick", function() V:Select() end)
-    W.Tooltip(copy, "Copy the setup code", "Selects the code so you can copy it with Ctrl+C.")
+    W.Tooltip(copy, "Copy the code", "Selects the code so you can copy it with Ctrl+C.")
     self.copy = copy
 end
 
@@ -78,17 +80,29 @@ function V:Select()
     self.hint:SetText("Press |cffffffffCtrl+C|r to copy.")
 end
 
-function V:Open()
-    local code, why = ns.DiscordCode:ForMyGuild()
+function V:Open(mode)
+    local code, why, everything = ns.DiscordCode:ForMyGuild(mode)
     if not code then
         ns:Print("|cffff5555" .. why .. "|r")
         return
     end
     if not self.frame then self:Build() end
-    self.code = code
+    self.code, self.mode = code, mode
     local n = #ns.DB:GuildRanks()
-    self.what:SetText(("The code holds your guild's name, region, %d rank names and which ranks are Officer and Invite Member. "
-        .. "It changes when your ranks do; make a new one after renaming ranks."):format(n))
+    if mode == "setup" then
+        W.SetTitle(self.frame, "NGM Peon Setup")
+        self.steps:SetText("|cffffd1001.|r Invite NGM Peon to your guild's Discord (|cffffffffngmpeon.app|r).\n"
+            .. "|cffffd1002.|r In Discord, run |cffffffff/ngm-guild setup|r and paste this code.\n"
+            .. "|cffffd1003.|r Sign in with Battle.net when NGM Peon asks.")
+        self.what:SetText(("The code holds your guild's name, region, %d rank names and which ranks are Officer and Invite Member."):format(n))
+    else
+        W.SetTitle(self.frame, "Update NGM Peon")
+        self.steps:SetText("|cffffd1001.|r Copy this code.\n"
+            .. "|cffffd1002.|r On |cffffffffngmpeon.app|r, open the Ranks tab: |cffffffffUpdate from the game|r.\n"
+            .. "|cffffd1003.|r Paste it, then sign in with Battle.net.")
+        self.what:SetText(everything and "Everything: rank names and permissions, mains and alts, Tank / Healer / DPS, and When we play."
+            or "What changed: rank names and permissions, mains and alts, Tank / Healer / DPS, and When we play. Type |cffffffff/ngm discord all|r for everything.")
+    end
     self.box:SetText(code)
     self.box:SetCursorPosition(0)
     self.hint:SetText("")
