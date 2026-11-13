@@ -155,4 +155,29 @@ assert(not text:find("\nhours\t", 1, true), "same grid as NGM Peon: not sent")
 local all = DC.Base64UrlDecode(DC:ForMyGuild("all"):match("^NGM2%.([^.]+)%."))
 assert(all:find("\nhours\t", 1, true), "everything: the grid too")
 
+
+-- the reminder: the Guild Master of a guild using NGM Peon, once a day; ranks changed: once per change
+date = date or os.date
+ns.Sync.Value = ns.Sync.Value or function() return nil end
+local told = {}
+ns.Print = function(_, m) told[#told + 1] = m end
+InCombatLockdown = function() return false end
+gm = true
+guildData = { peon = { made = 1000000, ranks = DC.RankSignature(assert(DC:MyRanks())) } }
+ns.DB.Guild = function() return guildData end
+assert(DC:ReminderText(1000000 + 3 * 86400) == nil, "3 days: nothing yet")
+assert(DC:Remind(1000000 + 8 * 86400) and told[#told]:find("8 days", 1, true), "a week on: told")
+assert(not DC:Remind(1000000 + 8 * 86400 + 3600), "once a day")
+assert(DC:Remind(1000000 + 9 * 86400 + 60), "the next day again")
+flags[2] = { officer = true, invite = false } -- a rank's permissions changed in game
+assert(DC:Remind(1000000 + 9 * 86400 + 120) and told[#told]:find("ranks changed", 1, true), "ranks changed: told at once")
+assert(not DC:Remind(1000000 + 9 * 86400 + 180), "the same change: once")
+gm = false
+assert(DC:ReminderText(1000000 + 30 * 86400) == nil, "only the Guild Master")
+gm = true
+guildData = {}
+store["GS:peon"] = nil
+ns.Sync.Value = function(_, k) return k == "GS:peon" and nil or nil end
+assert(DC:ReminderText(1000000 + 30 * 86400) == nil, "a guild not using NGM Peon: nothing")
+
 print(a); print("OK")

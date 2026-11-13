@@ -157,14 +157,8 @@ end
 
 -- The code for the player's own guild. Only the Guild Master's game is
 -- sure to see every rank's settings, so only the Guild Master makes it.
-function DC:ForMyGuild(mode)
-    local guild = GetGuildInfo and GetGuildInfo("player")
-    if not guild then return nil, "You're not in a guild." end
-    if not (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then
-        return nil, "Only the Guild Master can make the setup code: only their game sees every rank's settings."
-    end
-    local region = self:Region()
-    if not region then return nil, "NGM Peon serves the US and EU regions only, for now." end
+-- The guild's ranks as the game has them: { { name, officer, invite } }, or nil and why.
+function DC:MyRanks()
     local ranks = {}
     for _, r in ipairs(ns.DB:GuildRanks()) do
         local f = r.index == 0 and { officer = true, invite = true } or ns.Sync:RankFlags(r.index)
@@ -175,6 +169,25 @@ function DC:ForMyGuild(mode)
         ranks[#ranks + 1] = { name = r.name, officer = f.officer, invite = f.invite }
     end
     if #ranks < 2 then return nil, "The game hasn't loaded your guild's ranks yet. Try again in a moment." end
+    return ranks
+end
+
+function DC.RankSignature(ranks)
+    local parts = {}
+    for i, r in ipairs(ranks) do parts[i] = (r.officer and "O" or "-") .. (r.invite and "I" or "-") .. r.name end
+    return table.concat(parts, "\n")
+end
+
+function DC:ForMyGuild(mode)
+    local guild = GetGuildInfo and GetGuildInfo("player")
+    if not guild then return nil, "You're not in a guild." end
+    if not (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then
+        return nil, "Only the Guild Master can make the setup code: only their game sees every rank's settings."
+    end
+    local region = self:Region()
+    if not region then return nil, "NGM Peon serves the US and EU regions only, for now." end
+    local ranks, why = self:MyRanks()
+    if not ranks then return nil, why end
     if mode == "setup" then return self:Make(region, guild, ranks) end
     -- the update code: only what changed since NGM Peon last had it all
     local g = ns.DB:Guild() or {}
@@ -191,6 +204,7 @@ function DC:ForMyGuild(mode)
     if hours and since > 0 and g.peon.hoursHash and ns.Sync.Hash(self.HoursValue(hours)) == g.peon.hoursHash then hours = nil end
     local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records })
     g.peon.made = upto
+    g.peon.ranks = self.RankSignature(ranks)
     return code, nil, since == 0, #records, since
 end
 
@@ -294,4 +308,62 @@ function DC:ApplyPeon(code)
     if not g.peon.has or c.has > g.peon.has then g.peon.has = c.has end
     g.peon.hoursHash = c.hoursHash
     return out
+end
+
+------------------------------------------------------------------------
+-- The reminder: the Guild Master of a guild using NGM Peon is told when
+-- Discord may be out of date: it's been a week since the last update code,
+-- or the ranks changed in game since. At most once a day, never in combat.
+------------------------------------------------------------------------
+DC.REMIND_AFTER = 7 * 86400
+
+-- The reminder's text now and why ("ranks", "never" or "days"), or nil.
+function DC:ReminderText(now)
+    now = now or ns.DB:Now()
+    if not (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then return nil end
+    local g = ns.DB:Guild()
+    if not g then return nil end
+    local peon = g.peon or {}
+    if not (peon.made or ns.Sync:Value("GS:peon") == "1") then return nil end -- not using NGM Peon
+    local what = "It carries rank names and permissions, mains and alts, Tank / Healer / DPS and When we play. "
+        .. "Type |cffffffff/ngm discord|r, then paste it on |cffffffffngmpeon.app|r (Sync tab, step 2)."
+    local ranks = self:MyRanks()
+    if ranks and peon.ranks and self.RankSignature(ranks) ~= peon.ranks then
+        return "|cffffd100NGM Peon:|r your guild's ranks changed since you last updated Discord. " .. what, "ranks", self.RankSignature(ranks)
+    end
+    if not peon.made then
+        return "|cffffd100NGM Peon:|r Discord hasn't had an update from your game yet. " .. what, "never"
+    end
+    local days = math.floor((now - peon.made) / 86400)
+    if days >= self.REMIND_AFTER / 86400 then
+        return ("|cffffd100NGM Peon:|r it's been %d days since you last updated Discord. "):format(days) .. what, "days"
+    end
+    return nil
+end
+
+function DC:Remind(now)
+    now = now or ns.DB:Now()
+    if InCombatLockdown and InCombatLockdown() then return false end
+    local text, why, ranks = self:ReminderText(now)
+    if not text then return false end
+    local g = ns.DB:Guild()
+    g.peon = g.peon or {}
+    if why == "ranks" then
+        -- once per change of ranks (a later change the same day is told too)
+        if g.peon.remindedRanks == ranks then return false end
+        g.peon.remindedRanks = ranks
+    else
+        local today = date("!%Y%m%d", now)
+        if g.peon.remindedOn == today then return false end
+        g.peon.remindedOn = today
+    end
+    ns:Print(text)
+    return true
+end
+
+function DC:Init()
+    local remind = ns.Safe and ns.Safe(function() DC:Remind() end, "DiscordCode") or function() DC:Remind() end
+    C_Timer.After(60, remind) -- after login, once the roster and ranks are in
+    -- ranks renamed or their permissions changed during the session
+    ns:RegisterEvent("GUILD_RANKS_UPDATE", function() ns.Debounce("peonranks", 5, remind) end)
 end
