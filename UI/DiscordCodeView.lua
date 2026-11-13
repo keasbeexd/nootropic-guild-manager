@@ -81,7 +81,7 @@ function V:Select()
 end
 
 function V:Open(mode)
-    local code, why, everything = ns.DiscordCode:ForMyGuild(mode)
+    local code, why, everything, count, since = ns.DiscordCode:ForMyGuild(mode)
     if not code then
         ns:Print("|cffff5555" .. why .. "|r")
         return
@@ -100,8 +100,13 @@ function V:Open(mode)
         self.steps:SetText("|cffffd1001.|r Copy this code.\n"
             .. "|cffffd1002.|r On |cffffffffngmpeon.app|r, open the Ranks tab: |cffffffffUpdate from the game|r.\n"
             .. "|cffffd1003.|r Paste it, then sign in with Battle.net.")
-        self.what:SetText(everything and "Everything: rank names and permissions, mains and alts, Tank / Healer / DPS, and When we play."
-            or "What changed: rank names and permissions, mains and alts, Tank / Healer / DPS, and When we play. Type |cffffffff/ngm discord all|r for everything.")
+        local changes = ("%d main / alt and Tank / Healer / DPS record%s"):format(count or 0, count == 1 and "" or "s")
+        if everything then
+            self.what:SetText("Everything: your ranks, When we play, and " .. changes .. ".")
+        else
+            self.what:SetText(("Changes since %s: %s, plus your ranks and When we play (always sent). "
+                .. "Type |cffffffff/ngm discord all|r for everything."):format(date("%b %d", since or 0), changes))
+        end
     end
     self.box:SetText(code)
     self.box:SetCursorPosition(0)

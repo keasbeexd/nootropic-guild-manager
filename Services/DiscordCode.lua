@@ -31,7 +31,9 @@
     ns.DiscordCode:Make(region, guild, ranks) -> code
     ns.DiscordCode:MakeUpdate(region, guild, ranks, update) -> code
     ns.DiscordCode:ForMyGuild(mode)           -> code, or nil and why
-                                                 (mode: nil, "all" or "setup")
+                                                 (mode: nil, "all" or "setup");
+                                                 update codes also: everything?,
+                                                 how many records, since when
 ]]
 local _, ns = ...
 local DC = {}
@@ -178,7 +180,8 @@ function DC:ForMyGuild(mode)
         if g.peon.has then since = g.peon.has
         elseif g.peon.made then since = math.max(0, g.peon.made - self.OVERLAP) end
     end
-    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = self:Hours(), records = self:Changes(since) })
+    local records = self:Changes(since)
+    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = self:Hours(), records = records })
     g.peon.made = upto
-    return code, nil, since == 0
+    return code, nil, since == 0, #records, since
 end
