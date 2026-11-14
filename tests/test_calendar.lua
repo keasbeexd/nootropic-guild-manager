@@ -41,7 +41,7 @@ local got = CAL.RealmTime(e.starts)
 assert(got.year == want.year and got.month == want.month and got.day == want.day and got.hour == want.hour and got.min == want.min)
 
 -- adding: in Blizzard's order (Blizzard_Calendar on Forever): the calendar
--- opened, then a guild announcement's date, title, text, time and type; added
+-- (opened when the window opens), then a guild announcement's date, title, text, time and type; added
 -- only once the game confirms it (CALENDAR_NEW_EVENT), never twice
 local calls = {}
 local function rec(name) return function(...) calls[#calls + 1] = { name, ... } end end
@@ -50,7 +50,7 @@ C_Calendar = { CanAddEvent = function() return true end, OpenCalendar = rec("ope
 assert(CAL:Add(e))
 local seq = {}
 for _, call in ipairs(calls) do seq[#seq + 1] = call[1] end
-assert(table.concat(seq, ",") == "open,close,create,date,title,text,time,type,add", table.concat(seq, ","))
+assert(table.concat(seq, ",") == "close,create,date,title,text,time,type,add", table.concat(seq, ","))
 local by = {}
 for _, call in ipairs(calls) do by[call[1]] = call end
 assert(by.title[2] == "Molten Core" and by.text[2] == "Raid, 3 h. Bring fire resist. On time! Sign up in Discord.", by.text[2])

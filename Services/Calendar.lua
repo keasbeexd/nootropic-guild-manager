@@ -105,15 +105,29 @@ function CAL:Add(e)
     if not ok then return nil, why end
     if e.starts <= ns.DB:Now() then return nil, "That event has started." end
     if self.pending then return nil, "Still adding the last one. Try again in a moment." end
-    self:Prepare()
     local when = self.RealmTime(e.starts)
     local length = e.minutes >= 60 and (e.minutes / 60 .. " h") or (e.minutes .. " min")
     local text = ("%s, %s. %s%sSign up in Discord."):format(KIND[e.kind] or "Event", length, e.description or "", (e.description or "") ~= "" and " " or "")
+    -- added once the game says so (Confirmed), not before; set first, as the
+    -- game can answer during AddEvent itself
+    self.pending = { key = Key(e), starts = e.starts, title = e.title }
+    -- what the game holds at each step, read back (shown if the add fails)
+    local seen = {}
+    local function Look(step)
+        local kind = C_Calendar.EventGetCalendarType and select(2, pcall(C_Calendar.EventGetCalendarType))
+        local info = C_Calendar.GetEventInfo and select(2, pcall(C_Calendar.GetEventInfo))
+        local t = type(info) == "table" and info or {}
+        local st = type(t.time) == "table" and t.time or {}
+        seen[#seen + 1] = ("%s: %s, title %q, %s-%s-%s %s:%s"):format(step, tostring(kind), tostring(t.title),
+            tostring(st.year), tostring(st.month), tostring(st.monthDay), tostring(st.hour), tostring(st.minute))
+    end
+    self.pending.seen = seen
     local done, err = pcall(function()
         -- in Blizzard's order (CalendarDayContextMenu_CreateGuildAnnouncement,
         -- CalendarCreateEventFrame_Update, the Create button)
         if C_Calendar.CloseEvent then C_Calendar.CloseEvent() end
         C_Calendar.CreateGuildAnnouncementEvent()
+        Look("made")
         C_Calendar.EventSetDate(when.month, when.day, when.year)
         C_Calendar.EventSetTitle(Cut(e.title or "Event", self.TITLE_MAX))
         if C_Calendar.EventSetDescription then C_Calendar.EventSetDescription(Cut(text, self.TEXT_MAX)) end
@@ -121,12 +135,14 @@ function CAL:Add(e)
         if C_Calendar.EventSetType and Enum and Enum.CalendarEventType and Enum.CalendarEventType.Other then
             C_Calendar.EventSetType(Enum.CalendarEventType.Other)
         end
+        Look("filled")
         C_Calendar.AddEvent()
     end)
-    if not done then return nil, "The game refused: " .. tostring(err) end
-    -- added once the game says so (Confirmed), not before
-    self.pending = { key = Key(e), starts = e.starts, title = e.title }
-    if C_Timer then
+    if not done then
+        self.pending = nil
+        return nil, "The game refused: " .. tostring(err)
+    end
+    if C_Timer and self.pending then
         local mine = self.pending
         C_Timer.After(15, function() if CAL.pending == mine then CAL.pending = nil; ns:Fire("CALENDAR_RESULT", false, "No answer from the game. Try again.") end end)
     end
@@ -144,11 +160,24 @@ function CAL:Confirmed()
 end
 
 -- The game: it wasn't (msg: the game's error key, e.g. CALENDAR_ERROR_NEEDS_TITLE).
+-- It can send several at once: they're gathered into one answer.
 function CAL:Failed(msg)
-    if not self.pending then return false end
-    self.pending = nil
+    local p = self.pending
+    if not p then return false end
     local text = (msg and _G[msg]) or tostring(msg)
-    ns:Fire("CALENDAR_RESULT", false, text)
+    if not p.errors then
+        p.errors = {}
+        local function Answer()
+            if self.pending ~= p then return end
+            self.pending = nil
+            -- what the game held, for troubleshooting (also in chat, to copy)
+            for _, line in ipairs(p.seen or {}) do ns:Print("Calendar " .. line) end
+            ns:Fire("CALENDAR_RESULT", false, table.concat(p.errors, " "))
+        end
+        if C_Timer then C_Timer.After(0, Answer) else p.answer = Answer end
+    end
+    p.errors[#p.errors + 1] = text
+    if not C_Timer and p.answer then p.answer() end
     return true
 end
 
