@@ -56,8 +56,8 @@ function V:Build()
     box:SetScript("OnKeyDown", function(eb, key)
         if key == "C" and IsControlKeyDown() then
             C_Timer.After(0.05, function() eb:ClearFocus() end)
-            V.hint:SetText(V.mode == "setup" and "|cffb8bb26Copied.|r Paste it into /ngm-guild setup in Discord."
-                or "|cffb8bb26Copied.|r Paste it on ngmpeon.app, Sync tab, step 2.")
+            V.hint:SetText(V.mode == "setup" and "|cff20ff20Copied.|r Paste it into /ngm-guild setup in Discord."
+                or "|cff20ff20Copied.|r Paste it on ngmpeon.app, Sync tab, step 2.")
         end
     end)
     self.box = box
@@ -78,13 +78,13 @@ function V:Select()
     self.box:SetText(self.code)
     self.box:SetFocus()
     self.box:HighlightText()
-    self.hint:SetText("Press |cffebdbb2Ctrl+C|r to copy.")
+    self.hint:SetText("Press |cffffffffCtrl+C|r to copy.")
 end
 
 function V:Open(mode)
     local code, why, everything, count, since = ns.DiscordCode:ForMyGuild(mode)
     if not code then
-        ns:Print("|cfffb4934" .. why .. "|r")
+        ns:Print("|cffff2020" .. why .. "|r")
         return
     end
     if not self.frame then self:Build() end
@@ -92,21 +92,21 @@ function V:Open(mode)
     local n = #ns.DB:GuildRanks()
     if mode == "setup" then
         W.SetTitle(self.frame, "NGM Peon Setup")
-        self.steps:SetText((ns.GOLD .. "1.|r Invite NGM Peon to your guild's Discord (|cffebdbb2ngmpeon.app|r).\n")
-            .. (ns.GOLD .. "2.|r In Discord, run |cffebdbb2/ngm-guild setup|r and paste this code.\n")
+        self.steps:SetText((ns.GOLD .. "1.|r Invite NGM Peon to your guild's Discord (|cffffffffngmpeon.app|r).\n")
+            .. (ns.GOLD .. "2.|r In Discord, run |cffffffff/ngm-guild setup|r and paste this code.\n")
             .. (ns.GOLD .. "3.|r Sign in with Battle.net when NGM Peon asks."))
         self.what:SetText(("The code holds your guild's name, region, %d rank names and which ranks are Officer and Invite Member."):format(n))
     else
         W.SetTitle(self.frame, "Update NGM Peon")
         self.steps:SetText((ns.GOLD .. "1.|r Copy this code.\n")
-            .. (ns.GOLD .. "2.|r On |cffebdbb2ngmpeon.app|r, open the |cffebdbb2Sync|r tab: step 2.\n")
+            .. (ns.GOLD .. "2.|r On |cffffffffngmpeon.app|r, open the |cffffffffSync|r tab: step 2.\n")
             .. (ns.GOLD .. "3.|r Paste it, then sign in with Battle.net."))
         local changes = ("%d main / alt and Tank / Healer / DPS record%s"):format(count or 0, count == 1 and "" or "s")
         if everything then
             self.what:SetText("Everything: your ranks, When we play, and " .. changes .. ".")
         else
             self.what:SetText(("Holds %s changed in game since %s (NGM Peon skips any it already has), plus your ranks and When we play. "
-                .. "|cffebdbb2/ngm discord all|r sends everything."):format(changes, date("%b %d", since or 0)))
+                .. "|cffffffff/ngm discord all|r sends everything."):format(changes, date("%b %d", since or 0)))
         end
     end
     self.box:SetText(code)

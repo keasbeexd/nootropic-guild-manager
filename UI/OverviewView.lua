@@ -20,8 +20,8 @@ local D = ns.Data
 local OV = {}
 ns.OverviewView = OV
 
-local GRAY = "|cffa89984"
-local FAINT = "|cff7c6f64"
+local GRAY = "|cff9d9d9d"
+local FAINT = "|cff6e6e6e"
 local WINDOWS = { 7, 30, 90, 0 }
 local BAR_H, BAR_GAP = 20, 3
 -- each section as the dashboard's: a heading with a dashed rule, then a box
@@ -313,7 +313,7 @@ function OV:ShowHeatTip(cell, d, b)
     for i, e in ipairs(names) do
         if i > 15 then GameTooltip:AddLine(("...and %d more"):format(#names - 15), 0.6, 0.6, 0.6) break end
         local r, g, bl = ns.ClassColor(e.classFile)
-        GameTooltip:AddLine(e.short .. (e.online and "  |cffb8bb26online|r" or ""), r, g, bl)
+        GameTooltip:AddLine(e.short .. (e.online and "  |cff20ff20online|r" or ""), r, g, bl)
     end
     GameTooltip:Show()
 end

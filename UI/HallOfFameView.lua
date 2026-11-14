@@ -11,7 +11,7 @@ local W = ns.Widgets
 local HV = {}
 ns.HallOfFameView = HV
 
-local GRAY = "|cffa89984"
+local GRAY = "|cff9d9d9d"
 local PERIODS = { { "all", "All time" }, { "month", "This month" }, { "last", "Last month" } }
 local TOP = 5
 local ROW_H = 16
@@ -106,7 +106,7 @@ local function Card(parent)
     return c
 end
 
-local AQUA = "|cff8ec07c"
+local AQUA = "|cff40c0ff"
 local function NameText(p, mine)
     return p.key == mine and (AQUA .. p.e.short .. "|r") or p.e.short
 end
@@ -182,7 +182,7 @@ function HV.CrownText(c)
     if c.state == "tallying" then
         return ((ns.GOLD .. "%s is over!|r Points are being tallied: champions will be crowned %s (%s).")):format(won, HV.When(c.at), HV.In(c.at))
     elseif c.state == "due" and HF:PeonCrowns() then
-        return ((ns.GOLD .. "%s's champions are crowned by NGM Peon.|r They show here once an officer brings them in (|cffebdbb2/ngm peon|r).")):format(won)
+        return ((ns.GOLD .. "%s's champions are crowned by NGM Peon.|r They show here once an officer brings them in (|cffffffff/ngm peon|r).")):format(won)
     elseif c.state == "due" then
         return ((ns.GOLD .. "%s's points are tallied.|r Champions will be crowned as soon as an officer logs in.")):format(won)
     elseif c.state == "crowned" then

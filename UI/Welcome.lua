@@ -21,7 +21,7 @@ ns.Welcome = WL
 
 local WIDTH, HEIGHT = 600, 440
 local BODY_W = WIDTH - 140
-local GRAY = "|cffa89984"
+local GRAY = "|cff9d9d9d"
 
 ------------------------------------------------------------------------
 -- Pages

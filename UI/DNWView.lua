@@ -18,7 +18,7 @@ local DV = {}
 ns.DNWView = DV
 
 local ROW_H = 22
-local RED, GRAY = "|cfffb4934", "|cffa89984"
+local RED, GRAY = "|cffff2020", "|cff9d9d9d"
 
 ------------------------------------------------------------------------
 -- Window

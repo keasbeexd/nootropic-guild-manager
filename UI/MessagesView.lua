@@ -478,15 +478,15 @@ function MV:RefreshEditorInfo()
         race = "Orc", zone = "Durotar" }
     local out = ns.Recruit:Format(text, sample)
     self.preview:SetText(((ns.GOLD .. "Preview%s:|r ")):format(example and (" for " .. example.short) or "")
-        .. (out ~= "" and ("|cffd3869b" .. out .. "|r") or "|cffa89984(write the message above)|r"))
+        .. (out ~= "" and ("|cffff80ff" .. out .. "|r") or "|cff9d9d9d(write the message above)|r"))
     local r = ns.Recruit:Settings()
     local note = ""
     if not (r and r.useRules) then
-        note = ("  |cfffb4934Custom messages are turned off on the %s tab.|r"):format(ns.TabName("recruit"))
+        note = ("  |cffff2020Custom messages are turned off on the %s tab.|r"):format(ns.TabName("recruit"))
     elseif not rule.enabled then
-        note = "  |cfffb4934This message is switched off.|r"
+        note = "  |cffff2020This message is switched off.|r"
     elseif matches > wins then
-        note = ("  |cffa89984%d go to a message higher in the list.|r"):format(matches - wins)
+        note = ("  |cff9d9d9d%d go to a message higher in the list.|r"):format(matches - wins)
     end
     self.matchInfo:SetText(("Matches %d player%s in your Recruitment list; %d will get this message.%s")
         :format(matches, matches == 1 and "" or "s", wins, note))
@@ -595,14 +595,14 @@ function MV:DoImport(mode)
     local n, problems = ns.Messages:Import(t.Box:GetText(), mode)
     local msg
     if n > 0 then
-        msg = ("|cffb8bb26Imported %d message%s.|r"):format(n, n == 1 and "" or "s")
+        msg = ("|cff20ff20Imported %d message%s.|r"):format(n, n == 1 and "" or "s")
         local r = ns.Recruit:Settings()
         if r and not r.useRules then msg = msg .. (" Tick Use custom messages on the %s tab to use them."):format(ns.TabName("recruit")) end
     else
-        msg = "|cfffb4934Nothing imported.|r"
+        msg = "|cffff2020Nothing imported.|r"
     end
     if problems and #problems > 0 then
-        msg = msg .. " |cfffb4934" .. problems[1] .. (#problems > 1 and (" (+%d more)"):format(#problems - 1) or "") .. "|r"
+        msg = msg .. " |cffff2020" .. problems[1] .. (#problems > 1 and (" (+%d more)"):format(#problems - 1) or "") .. "|r"
     end
     t.Result:SetText(msg)
     if n > 0 then

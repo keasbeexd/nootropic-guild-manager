@@ -168,7 +168,7 @@ function RCV:BuildSearchBar(page, frame)
             return
         end
         local ok, err = ns.Recruit:Search()
-        if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
+        if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
         RCV:Refresh()
     end)
     W.SecureOverlay(search, {
@@ -516,14 +516,14 @@ end
 
 local function StatusLabel(p)
     local st = ns.Recruit:Status(p)
-    if st == "joined" then return "|cffb8bb26Joined!|r" end
-    if st == "dnw" then return "|cfffb4934Do not whisper|r" end
+    if st == "joined" then return "|cff20ff20Joined!|r" end
+    if st == "dnw" then return "|cffff2020Do not whisper|r" end
     local c = ns.Recruit:Contact(p)
-    local by = c.by and ("|cffa89984 by|r |cffebdbb2" .. ns.ShortName(c.by) .. "|r") or ""
+    local by = c.by and ("|cff9d9d9d by|r |cffffffff" .. ns.ShortName(c.by) .. "|r") or ""
     if st == "invited" then return (ns.GOLD .. "Invited|r") .. by end
-    if st == "replied" then return "|cffb8bb26Replied|r |cffa89984" .. ns.FormatAgo(c.replied) .. "|r" .. by end
-    if st == "whispered" then return (ns.BLUE .. "Whispered|r |cffa89984") .. ns.FormatAgo(c.whispered) .. "|r" .. by end
-    return "|cffa89984New|r"
+    if st == "replied" then return "|cff20ff20Replied|r |cff9d9d9d" .. ns.FormatAgo(c.replied) .. "|r" .. by end
+    if st == "whispered" then return (ns.BLUE .. "Whispered|r |cff9d9d9d") .. ns.FormatAgo(c.whispered) .. "|r" .. by end
+    return "|cff9d9d9dNew|r"
 end
 RCV.StatusLabel = StatusLabel
 
@@ -541,7 +541,7 @@ function RCV:InitRow(row, p)
     row.Level:SetText(p.level or "")
     row.Class:SetText(p.className or "")
     row.Class:SetTextColor(ns.ClassColor(p.classFile))
-    row.Zone:SetText((p.zone or "") .. (p.guild and ("  |cffa89984<" .. p.guild .. ">|r") or ""))
+    row.Zone:SetText((p.zone or "") .. (p.guild and ("  |cff9d9d9d<" .. p.guild .. ">|r") or ""))
     row.Status:SetText(StatusLabel(p))
     local canPick = ns.Recruit:CanSelect(p)
     local queued = false
@@ -565,7 +565,7 @@ function RCV:ShowRowTooltip(row, p)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Message: " .. (rule and rule.name or "Default"), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
     local msg = ns.Recruit:Format(text, p)
-    GameTooltip:AddLine(msg ~= "" and ("|cffd3869b" .. msg .. "|r") or "|cffa89984(empty - write a message first)|r", 1, 1, 1, true)
+    GameTooltip:AddLine(msg ~= "" and ("|cffff80ff" .. msg .. "|r") or "|cff9d9d9d(empty - write a message first)|r", 1, 1, 1, true)
     GameTooltip:AddLine(" ")
     local c = ns.Recruit:Contact(p)
     GameTooltip:AddDoubleLine("Found", ns.FormatAgo(p.found), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1)
@@ -597,7 +597,7 @@ function RCV:ShowRowMenu(row, p)
           disabled = p.joined or dnw or not whispered or not ns.Recruit:CanInvite(),
           func = function()
               local ok, err = ns.Recruit:Invite(p.full)
-              if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
+              if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
           end },
         { divider = true },
         dnw and { text = "Take off Do Not Whisper list", func = function() ns.Recruit:RemoveDNW(p.full) end }
@@ -711,11 +711,11 @@ function RCV:RefreshReplyInfo()
     if not (r and self.replyInfo) then return end
     local words = {}
     for _, k in ipairs(r.keywords or {}) do if ns.Trim(k) ~= "" then words[#words + 1] = k end end
-    local ON, OFF = "|cffb8bb26on|r", "|cffa89984off|r"
+    local ON, OFF = "|cff20ff20on|r", "|cff9d9d9doff|r"
     local invite = r.autoInvite and (ON .. ", Invite popup") or OFF
     local n = #ns.Recruit:DNWList()
     self.replyInfo:SetText(((ns.GOLD .. "Auto-invite:|r %s%s\n" .. ns.GOLD .. "Do Not Whisper:|r %s, %s on the list")):format(
-        invite, (r.autoInvite and #words > 0) and ("  |cffa89984(" .. table.concat(words, ", ") .. ")|r") or "",
+        invite, (r.autoInvite and #words > 0) and ("  |cff9d9d9d(" .. table.concat(words, ", ") .. ")|r") or "",
         r.dnwEnabled and ON or OFF, n == 1 and "1 person" or (n .. " people")))
     self:FitPanel()
 end
@@ -733,8 +733,8 @@ function RCV:RefreshPreview()
     local sample = { short = "Thrall", full = "Thrall", classFile = "WARRIOR", className = "Warrior", level = 42,
         race = "Orc", zone = "Durotar" }
     local text = ns.Recruit:Format(r and r.default or "", sample)
-    self.preview:SetText((ns.GOLD .. "Preview:|r ") .. (text ~= "" and ("|cffd3869b" .. text .. "|r") or "|cffa89984(empty)|r")
-        .. "  |cff7c6f64" .. ns.Recruit:LengthText(r and r.default or "") .. "|r")
+    self.preview:SetText((ns.GOLD .. "Preview:|r ") .. (text ~= "" and ("|cffff80ff" .. text .. "|r") or "|cff9d9d9d(empty)|r")
+        .. "  |cff6e6e6e" .. ns.Recruit:LengthText(r and r.default or "") .. "|r")
     self:FitPanel()
 end
 
@@ -848,7 +848,7 @@ function RCV:SummaryText()
     if RC.searching then return (ns.GOLD .. "Searching:|r ") .. (RC.pendingQuery or "") end
     local last = RC.last
     if last and last.timedOut then
-        return "|cfffb4934No reply from /who. The server limits how often you can search - wait a few seconds.|r"
+        return "|cffff2020No reply from /who. The server limits how often you can search - wait a few seconds.|r"
     end
     local total, whispered, replied = 0, 0, 0
     for _, p in ipairs(RC:List()) do
@@ -856,19 +856,19 @@ function RCV:SummaryText()
         local st = RC:Status(p)
         if st == "whispered" then whispered = whispered + 1 elseif st == "replied" then replied = replied + 1 end
     end
-    local SEP = "  |cff7c6f64-|r  "
+    local SEP = "  |cff6e6e6e-|r  "
     local parts = { total == 1 and "1 player" or (total .. " players") }
     if last then
-        parts[#parts + 1] = ("|cffb8bb26%d new|r from last search"):format(last.new or 0)
+        parts[#parts + 1] = ("|cff20ff20%d new|r from last search"):format(last.new or 0)
     end
     parts[#parts + 1] = ((ns.BLUE .. "%d whispered|r")):format(whispered)
-    parts[#parts + 1] = ("|cffb8bb26%d replied|r"):format(replied)
+    parts[#parts + 1] = ("|cff20ff20%d replied|r"):format(replied)
     local text = table.concat(parts, SEP)
     if last and (last.skipped or 0) > 0 then
-        text = text .. SEP .. ("|cfffb4934%d do-not-whisper skipped|r"):format(last.skipped)
+        text = text .. SEP .. ("|cffff2020%d do-not-whisper skipped|r"):format(last.skipped)
     end
     if last and (last.total or 0) > (last.shown or 0) then
-        text = text .. SEP .. "|cfffb4934capped at 50 - narrow the range|r"
+        text = text .. SEP .. "|cffff2020capped at 50 - narrow the range|r"
     end
     return text
 end

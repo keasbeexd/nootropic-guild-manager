@@ -142,11 +142,11 @@ end
 -- /ngm diag: what the game says about the tabard, for troubleshooting.
 function A:Diagnose()
     local api = C_GuildInfo and C_GuildInfo.GetGuildTabardInfo
-    local line = ("Guild theme: tabard info %s"):format(api and "available" or "|cfffb4934not given by this client|r")
+    local line = ("Guild theme: tabard info %s"):format(api and "available" or "|cffff2020not given by this client|r")
     if api then
         local ok, info = pcall(api, "player")
         if not ok then
-            line = line .. ", |cfffb4934error|r: " .. tostring(info)
+            line = line .. ", |cffff2020error|r: " .. tostring(info)
         elseif type(info) ~= "table" then
             line = line .. ", returned " .. tostring(info)
         else

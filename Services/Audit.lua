@@ -24,7 +24,7 @@ AU.CATEGORIES = {
     { key = "DN", label = "Do Not Whisper" },
 }
 
-local GREEN, RED, GRAY = "|cffb8bb26", "|cfffb4934", "|cffa89984"
+local GREEN, RED, GRAY = "|cff20ff20", "|cffff2020", "|cff9d9d9d"
 
 -- Who made a change. Changes noticed in the guild roster (level-ups, note
 -- edits, renames) have no known author.
@@ -230,5 +230,5 @@ function AU:Summary(g)
     local first = g.entries[1]
     first.desc = first.desc or self:Describe(first)
     if #g.entries == 1 then return first.desc end
-    return ("%s  |cffa89984(+%d more)|r"):format(first.desc, #g.entries - 1)
+    return ("%s  |cff9d9d9d(+%d more)|r"):format(first.desc, #g.entries - 1)
 end

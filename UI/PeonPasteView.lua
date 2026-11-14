@@ -36,7 +36,7 @@ function V:Build()
     steps:SetPoint("TOPRIGHT", -20, -36)
     steps:SetJustifyH("LEFT")
     steps:SetSpacing(4)
-    steps:SetText((ns.GOLD .. "1.|r On |cffebdbb2ngmpeon.app|r, open the |cffebdbb2Sync|r tab: step 3.\n")
+    steps:SetText((ns.GOLD .. "1.|r On |cffffffffngmpeon.app|r, open the |cffffffffSync|r tab: step 3.\n")
         .. (ns.GOLD .. "2.|r Copy it and paste it below (Ctrl+V).\n")
         .. (ns.GOLD .. "3.|r Press Bring In."))
 

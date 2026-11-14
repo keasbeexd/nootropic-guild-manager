@@ -323,7 +323,7 @@ local function CreateSideTab(f, i)
     tab:SetScript("OnEnter", function(self)
         local id = self:GetID()
         GameTooltip:SetOwner(self, self.side == "left" and "ANCHOR_LEFT" or self.side == "bottom" and "ANCHOR_BOTTOM" or "ANCHOR_RIGHT")
-        GameTooltip:AddLine(UI:TabTitle(id) .. (OFFICER_TABS[id] and " |cffa89984(officers only)|r" or ""))
+        GameTooltip:AddLine(UI:TabTitle(id) .. (OFFICER_TABS[id] and " |cff9d9d9d(officers only)|r" or ""))
         GameTooltip:Show()
     end)
     tab:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -434,7 +434,7 @@ function UI:Title() return "Nootropic Guild Manager" end
 function UI:UpdateTitle()
     if not self.frame then return end
     local title = self:Title()
-    if self.tab and self.frame.Tabs then title = title .. "  |cffebdbb2-  " .. self:TabTitle(self.tab) .. "|r" end
+    if self.tab and self.frame.Tabs then title = title .. "  |cffffffff-  " .. self:TabTitle(self.tab) .. "|r" end
     W.SetTitle(self.frame, title)
 end
 
@@ -519,7 +519,7 @@ function UI:RefreshStatus()
     end
     local guild = GetGuildInfo("player") or "Guild"
     local total, online, withAddon = ns.Roster:Stats()
-    self.status:SetText(((ns.GOLD .. "%s|r   %d members  -  |cffb8bb26%d online|r")):format(guild, total, online))
+    self.status:SetText(((ns.GOLD .. "%s|r   %d members  -  |cff20ff20%d online|r")):format(guild, total, online))
     if ns.DB:Settings().showAddonCount == false then
         count:Hide()
         return

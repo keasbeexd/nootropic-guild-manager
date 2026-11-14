@@ -347,7 +347,7 @@ function DC:ReminderText(now)
     if not g then return nil end
     local peon = g.peon or {}
     if not (peon.made or ns.Sync:Value("GS:peon") == "1") then return nil end -- not using NGM Peon
-    local toDiscord = "Type |cffebdbb2/ngm discord|r and paste it on |cffebdbb2ngmpeon.app|r (Sync tab, step 2)."
+    local toDiscord = "Type |cffffffff/ngm discord|r and paste it on |cffffffffngmpeon.app|r (Sync tab, step 2)."
     local ranks = self:MyRanks()
     if ranks and peon.ranks and self.RankSignature(ranks) ~= peon.ranks then
         return "your guild's ranks changed since you last updated NGM Peon. " .. toDiscord, "ranks", self.RankSignature(ranks)
@@ -364,7 +364,7 @@ function DC:ReminderText(now)
     end
     if not got or got >= late then
         lines[#lines + 1] = ("  " .. ns.GOLD .. "Discord to the game|r: ") .. (got and ("last done %d days ago. "):format(got) or "not done yet. ")
-            .. "Copy the Sync tab's step 3 code, type |cffebdbb2/ngm peon|r and press Bring In."
+            .. "Copy the Sync tab's step 3 code, type |cffffffff/ngm peon|r and press Bring In."
     end
     if #lines == 0 then return nil end
     return "time to sync with NGM Peon (best done daily).\n" .. table.concat(lines, "\n"), "days"

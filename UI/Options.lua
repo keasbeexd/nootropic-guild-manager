@@ -132,7 +132,7 @@ local function NewPage(key, name, subtitle)
     local logo = ns.Brand:Attach(panel, 36, { "TOPLEFT", panel, "TOPLEFT", 16, -14 }, { style = "nootropic" })
     local title = panel:CreateFontString(nil, "OVERLAY", "NGMFontTitle")
     title:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 10, -2)
-    title:SetText(key == "main" and PANEL_NAME or (PANEL_NAME .. "  |cffebdbb2-  " .. name .. "|r"))
+    title:SetText(key == "main" and PANEL_NAME or (PANEL_NAME .. "  |cffffffff-  " .. name .. "|r"))
     local sub = panel:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
     sub:SetText(subtitle)
@@ -199,7 +199,7 @@ function O:BuildMain()
     self.panel = outer
 
     L:Header("How It Works")
-    L:Text(("Open the window with |cffebdbb2/ngm|r or the minimap button. Its tabs: " .. ns.GOLD .. "Find|r (search the guild), " .. ns.GOLD .. "Play Together|r (who's around near your level), " .. ns.GOLD .. "Recruitment|r and, for officers, " .. ns.GOLD .. "Audit|r. Click anyone for their profile: spec, professions and recipes, raid readiness, contact info and your private notes."))
+    L:Text(("Open the window with |cffffffff/ngm|r or the minimap button. Its tabs: " .. ns.GOLD .. "Find|r (search the guild), " .. ns.GOLD .. "Play Together|r (who's around near your level), " .. ns.GOLD .. "Recruitment|r and, for officers, " .. ns.GOLD .. "Audit|r. Click anyone for their profile: spec, professions and recipes, raid readiness, contact info and your private notes."))
     L:Text(("Everyone running the addon shares what their own copy knows: spec, professions, recipes (when they open a profession window), raid attunements and when they usually play. The more of the guild uses it, the more it knows. Private notes never leave your computer. The " .. ns.GOLD .. "About|r page below has links and credits."), "NGMFontDimSmall")
     L:Space(4)
 
@@ -217,7 +217,7 @@ function O:BuildMain()
 
     L:Space(4)
 
-    L:Header("Sharing  |cffa89984(what your copy shares with the guild)|r")
+    L:Header("Sharing  |cff9d9d9d(what your copy shares with the guild)|r")
     self.shareReportCheck = L:Check("Share my spec and professions",
         "What the game reports about your talents and professions, for your profile and searches. Off: it's cleared, and guildmates only see what's set by hand.",
         function(on) ns.Sharing:Set("report", on) end)
@@ -320,8 +320,8 @@ function O:BuildMain()
     open:SetPoint("LEFT", syncNow, "RIGHT", 8, 0)
     open:SetScript("OnClick", function() ns.UI:OpenTab(ns.UI.TAB_ROSTER) end)
     L:Text((ns.GOLD .. "Commands|r\n")
-        .. "|cffebdbb2/ngm|r open or close     |cffebdbb2/ngm find <text>|r search the roster     |cffebdbb2/ngm recruit|r recruiting\n"
-        .. "|cffebdbb2/ngm sync|r sync now     |cffebdbb2/ngm diag|r troubleshooting     |cffebdbb2/ngm help|r every command", "NGMFontTextSmall")
+        .. "|cffffffff/ngm|r open or close     |cffffffff/ngm find <text>|r search the roster     |cffffffff/ngm recruit|r recruiting\n"
+        .. "|cffffffff/ngm sync|r sync now     |cffffffff/ngm diag|r troubleshooting     |cffffffff/ngm help|r every command", "NGMFontTextSmall")
     L:Finish()
 end
 
@@ -330,7 +330,7 @@ end
 ------------------------------------------------------------------------
 function O:BuildRecruiting()
     local outer, L = NewPage("recruiting", "Recruiting", "Saved for the guild you're in. Messages and searching are on the Recruitment tab.")
-    self.recruitNoGuild = L:Text("|cfffb4934Join a guild to change these settings.|r")
+    self.recruitNoGuild = L:Text("|cffff2020Join a guild to change these settings.|r")
 
     L:Header("/who Window")
     self.whoWhisperCheck = L:Check("Recruitment whisper button on /who results",
@@ -350,7 +350,7 @@ function O:BuildRecruiting()
     hourBtn:SetScript("OnClick", function(btn)
         local items = { { text = "Whispers per hour", isTitle = true } }
         for _, n in ipairs(ns.Recruit.HOURLY_CHOICES) do
-            items[#items + 1] = { text = HourText(n) .. (n == 40 and "  |cffa89984(default)|r" or ""), radio = true,
+            items[#items + 1] = { text = HourText(n) .. (n == 40 and "  |cff9d9d9d(default)|r" or ""), radio = true,
                 checked = function() return (ns.DB:Settings().whisperPerHour or 40) == n end,
                 func = function() ns.DB:Settings().whisperPerHour = n; O:Refresh(); RecruitChanged() end }
         end
@@ -368,7 +368,7 @@ function O:BuildRecruiting()
             if r then r.autoInvite = on end
             RecruitChanged()
         end)
-    L:Text((ns.GOLD .. "Keywords|r  |cffa89984(whole words, any case)|r"), "NGMFontTextSmall", 4)
+    L:Text((ns.GOLD .. "Keywords|r  |cff9d9d9d(whole words, any case)|r"), "NGMFontTextSmall", 4)
     self.keywordBoxes = WordBoxes(L, 24, function(i, text)
         local r = ns.Recruit:Settings()
         if r then r.keywords[i] = text end
@@ -384,7 +384,7 @@ function O:BuildRecruiting()
             if r then r.dnwEnabled = on end
             RecruitChanged()
         end)
-    L:Text((ns.GOLD .. "Words|r  |cffa89984(whole words, any case)|r"), "NGMFontTextSmall", 4)
+    L:Text((ns.GOLD .. "Words|r  |cff9d9d9d(whole words, any case)|r"), "NGMFontTextSmall", 4)
     self.dnwBoxes = WordBoxes(L, 32, function(i, text)
         local r = ns.Recruit:Settings()
         if r then r.dnwWords[i] = text end
@@ -416,14 +416,14 @@ function O:PermMenu(owner, key)
         checked = function() return DB:PermRanks(key) == nil end,
         func = function()
             local ok, err = DB:SetPermRanks(key, nil)
-            if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
+            if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
             O:Refresh()
         end }
     items[#items + 1] = { divider = true }
     for _, r in ipairs(DB:GuildRanks()) do
         local gm = r.index == 0
         items[#items + 1] = {
-            text = r.name .. (gm and "  |cffa89984(always)|r" or ""),
+            text = r.name .. (gm and "  |cff9d9d9d(always)|r" or ""),
             checked = function()
                 if gm then return true end
                 local set = DB:PermRanks(key)
@@ -434,7 +434,7 @@ function O:PermMenu(owner, key)
                 local set = DB:PermRanks(key) or {}
                 set[r.index] = not set[r.index] or nil
                 local ok, err = DB:SetPermRanks(key, set)
-                if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
+                if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
                 O:Refresh()
             end,
         }
@@ -443,7 +443,7 @@ function O:PermMenu(owner, key)
 end
 
 function O:BuildPermControls(L)
-    L:Header("Permissions  |cffa89984(Guild Master, whole guild)|r")
+    L:Header("Permissions  |cff9d9d9d(Guild Master, whole guild)|r")
     L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers. Pick ranks to hand it to them instead; the Guild Master always can.")
     L:Text("Who's an officer and who may recruit follow the game's own rank settings (Guild Control: Officer, and Invite Member). The Officer Log and the Audit always stay with officers.", "NGMFontDimSmall")
     self.permRows = {}
@@ -472,17 +472,17 @@ function O:RefreshPermControls()
         row.btn:SetAlpha(gm and 1 or 0.6)
     end
     if self.permNote then
-        self.permNote:SetText(gm and "" or "|cfffb4934Only the Guild Master can change permissions.|r")
+        self.permNote:SetText(gm and "" or "|cffff2020Only the Guild Master can change permissions.|r")
     end
 end
 
 function O:BuildOfficers()
     local outer, L = NewPage("officers", "Officers", "For the ranks the game marks Officer.")
-    self.officerNote = L:Text("|cfffb4934Only officers can change these.|r")
+    self.officerNote = L:Text("|cffff2020Only officers can change these.|r")
 
     self:BuildPermControls(L)
 
-    L:Header("Audit History  |cffa89984(your copy)|r")
+    L:Header("Audit History  |cff9d9d9d(your copy)|r")
     L:Text("How long to keep the record of who changed what. Older entries are deleted.")
     local y = L:Row(30)
     self.auditRadios = {}
@@ -584,7 +584,7 @@ function O:BuildAbout()
     L:Text("Everything is shared with guildmates running the addon, so the more of the guild uses it, the more it knows.", "NGMFontDimSmall")
 
     L:Header("Links")
-    L:Text("Click a link, press |cffebdbb2Ctrl+C|r, and paste it into your browser.", "NGMFontDimSmall", 4)
+    L:Text("Click a link, press |cffffffffCtrl+C|r, and paste it into your browser.", "NGMFontDimSmall", 4)
     for _, link in ipairs(D.LINKS) do LinkRow(L, link) end
 
     L:Header("Credits")

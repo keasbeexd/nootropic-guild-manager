@@ -197,7 +197,7 @@ function AV:InitRow(row, e)
         row.Member:SetText(e.memberCount .. " characters")
         row.Member:SetTextColor(0.9, 0.9, 0.9)
     else
-        row.Member:SetText("|cff7c6f64-|r")
+        row.Member:SetText("|cff6e6e6e-|r")
     end
     row.Change:SetText(ns.Audit:Summary(e))
 end

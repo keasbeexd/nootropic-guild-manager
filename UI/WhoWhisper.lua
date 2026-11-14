@@ -195,10 +195,10 @@ local function CreateButton(row)
         if ok then
             ns.PlaySound("U_CHAT_SCROLL_BUTTON")
             if ns.Recruit:ClickOnly() then
-                ns:Print(("Whisper queued. Timed whispers were blocked this session: use |cffebdbb2Send Next|r on the %s tab."):format(ns.TabName("recruit")))
+                ns:Print(("Whisper queued. Timed whispers were blocked this session: use |cffffffffSend Next|r on the %s tab."):format(ns.TabName("recruit")))
             end
         elseif err then
-            ns:Print("|cfffb4934" .. err .. "|r")
+            ns:Print("|cffff2020" .. err .. "|r")
         end
         WI:UpdateButton(row)
     end)
@@ -225,7 +225,7 @@ local function CreateButton(row)
             local msg = RC:Format(text, p)
             GameTooltip:AddLine("Message: " .. (rule and rule.name or "Default"), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
             local tab = ns.TabName("recruit")
-            GameTooltip:AddLine(msg ~= "" and ("|cffd3869b" .. msg .. "|r") or ("|cffa89984(empty - write a message on the %s tab)|r"):format(tab), 1, 1, 1, true)
+            GameTooltip:AddLine(msg ~= "" and ("|cffff80ff" .. msg .. "|r") or ("|cff9d9d9d(empty - write a message on the %s tab)|r"):format(tab), 1, 1, 1, true)
             GameTooltip:AddLine(("Click to whisper. Whispers are spaced out like on the %s tab."):format(tab), 0.7, 0.7, 0.7, true)
         end
         GameTooltip:AddLine("Nootropic Guild Manager - turn off in Options.", 0.5, 0.5, 0.5, true)

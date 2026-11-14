@@ -318,7 +318,7 @@ function RV:ShowColumnsMenu(owner)
     for _, c in ipairs(COLUMNS) do
         if self:IsColumnAvailable(c.key) then
             items[#items + 1] = {
-                text = c.label .. (c.autoHidden and "  |cffa89984(window too narrow)|r" or ""),
+                text = c.label .. (c.autoHidden and "  |cff9d9d9d(window too narrow)|r" or ""),
                 checked = function() return RV:IsColumnShown(c.key) end,
                 func = function() RV:SetColumnShown(c.key, not RV:IsColumnShown(c.key)) end,
             }
@@ -629,7 +629,7 @@ function RV:RefreshFilterInfo()
     if f.classFile then add(("|c%s%s|r"):format(ns.ClassHex(f.classFile), D:ClassName(f.classFile))) end
     if f.rank then add(f.rank) end
     if f.addonOnly then add("using the addon") end
-    self.filterInfo:SetText(table.concat(parts, "  |cff7c6f64-|r  "))
+    self.filterInfo:SetText(table.concat(parts, "  |cff6e6e6e-|r  "))
     self.clearBtn:SetShown(#parts > 0)
     self.filterBtn:SetText(filterCount > 0 and ("Filter (%d)"):format(filterCount) or "Filter")
 end
@@ -887,10 +887,10 @@ end
 
 
 local function MainLabel(e)
-    if not e.isAlt then return "|cffd5c4a1Main|r" end
+    if not e.isAlt then return "|cffffffffMain|r" end
     local mainEntry = ns.Roster.byName[e.main]
     local hex = mainEntry and ns.ClassHex(mainEntry.classFile) or "ffbbbbbb"
-    return ("|cffa89984Alt of|r |c%s%s|r"):format(hex, e.mainShort)
+    return ("|cff9d9d9dAlt of|r |c%s%s|r"):format(hex, e.mainShort)
 end
 RV.MainLabel = MainLabel
 
@@ -935,18 +935,18 @@ function RV:InitRow(row, e)
     row.Spec:ClearAllPoints()
     row.Spec:SetPoint("LEFT", specIcon and row.SpecIcon or row.cells.spec, specIcon and "RIGHT" or "LEFT", specIcon and 4 or 6, 0)
     row.Spec:SetPoint("RIGHT", -4, 0)
-    row.Spec:SetText(e.spec or "|cff7c6f64-|r")
+    row.Spec:SetText(e.spec or "|cff6e6e6e-|r")
 
     row.Main:SetText(MainLabel(e))
 
     -- Location
     if COL.zone.shown then
-        row.Zone:SetText((e.zone ~= "" and e.zone) or "|cff7c6f64-|r")
+        row.Zone:SetText((e.zone ~= "" and e.zone) or "|cff6e6e6e-|r")
     end
 
     -- Last online
     if COL.seen.shown then
-        row.Seen:SetText(e.online and "|cffb8bb26Online|r" or (ns.FormatLastSeen(e.lastOnline) .. " ago"))
+        row.Seen:SetText(e.online and "|cff20ff20Online|r" or (ns.FormatLastSeen(e.lastOnline) .. " ago"))
     end
 
     -- Professions
@@ -971,20 +971,20 @@ function RV:InitRow(row, e)
         row.Remind:SetShown(canRemind and true or false)
         if not e.hasAddon then
             if ns.InstallReminder:Reminded(e.full) then
-                row.Version:SetText("|cff7c6f64(reminded)|r")
+                row.Version:SetText("|cff6e6e6e(reminded)|r")
             elseif canRemind then
                 row.Version:SetText("|cff66bbff(missing)|r") -- clickable: online, not reminded yet
             else
-                row.Version:SetText("|cff7c6f64(missing)|r")
+                row.Version:SetText("|cff6e6e6e(missing)|r")
             end
         elseif not e.version then
             -- uses the addon, but its version hasn't arrived yet
-            row.Version:SetText("|cffa89984?|r")
+            row.Version:SetText("|cff9d9d9d?|r")
         elseif ns.Roster:IsOutdated(e) then
             -- red: someone in the guild has a newer version
-            row.Version:SetText("|cfffb4934" .. e.version .. "|r")
+            row.Version:SetText("|cffff2020" .. e.version .. "|r")
         else
-            row.Version:SetText("|cffebdbb2" .. e.version .. "|r")
+            row.Version:SetText("|cffffffff" .. e.version .. "|r")
         end
     end
 end
@@ -1003,7 +1003,7 @@ function RV:AddMemberLines(e)
         GameTooltip:AddDoubleLine(left, right, GOLD[1], GOLD[2], GOLD[3], 1, 1, 1)
     end
     Pair(e.isAlt and "Alt of" or "Main", e.isAlt and (e.mainShort or "?") or (#(e.alts or {}) > 0
-        and ("|cffa89984" .. #e.alts .. (#e.alts == 1 and " alt" or " alts") .. "|r") or ""))
+        and ("|cff9d9d9d" .. #e.alts .. (#e.alts == 1 and " alt" or " alts") .. "|r") or ""))
     if e.spec then Pair("Spec", e.spec) end
     if e.roleList and #e.roleList > 0 then Pair("Role", table.concat(e.roleList, ", ")) end
     local shown = 0
@@ -1140,9 +1140,9 @@ function RV:Refresh()
 
     -- summary: "9 members - 3 online - 2 using the addon - showing 4"
     local total, online, withAddon = ns.Roster:Stats()
-    local SEP = "  |cff7c6f64-|r  "
+    local SEP = "  |cff6e6e6e-|r  "
     local summary = (total == 1 and "1 member" or (total .. " members")) .. SEP
-        .. ("|cffb8bb26%d online|r"):format(online) .. SEP
+        .. ("|cff20ff20%d online|r"):format(online) .. SEP
         .. (withAddon == 1 and "1 using the addon" or (withAddon .. " using the addon"))
     if #list ~= total then summary = summary .. SEP .. ((ns.GOLD .. "showing %d|r")):format(#list) end
     self.countText:SetText(summary)

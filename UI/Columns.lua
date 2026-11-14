@@ -346,7 +346,7 @@ function CS:Menu(owner)
     for _, c in ipairs(self:Ordered()) do
         if not c.locked then
             items[#items + 1] = {
-                text = c.label .. (c.autoHidden and "  |cffa89984(window too narrow)|r" or ""),
+                text = c.label .. (c.autoHidden and "  |cff9d9d9d(window too narrow)|r" or ""),
                 checked = function() return self:IsShown(c.key) end,
                 func = function() self:SetShown(c.key, not self:IsShown(c.key)) end,
             }
@@ -368,7 +368,7 @@ function CS:Menu(owner)
     end }
     items[#items + 1] = { text = "Reset all columns", func = function() self:Reset() end }
     items[#items + 1] = { divider = true }
-    items[#items + 1] = { text = "|cffa89984Drag a header to move it, or its edge to resize.|r", disabled = true }
+    items[#items + 1] = { text = "|cff9d9d9dDrag a header to move it, or its edge to resize.|r", disabled = true }
     W.ShowMenu(owner, items)
 end
 

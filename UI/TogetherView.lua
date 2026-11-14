@@ -19,7 +19,7 @@ ns.TogetherView = TV
 local ROW_H = 22
 local HEADER_H = 26
 local RANGES = { 3, 5, 10, 0 }
-local GRAY = "|cffa89984"
+local GRAY = "|cff9d9d9d"
 
 function TV:Range()
     local r = ns.DB:Settings().playRange
@@ -189,7 +189,7 @@ function TV:InitRow(row, e)
     row.Level:SetText(("Level %d%s"):format(e.level or 0, diffText))
     if e.online then
         local same = e.zone ~= "" and e.zone == self.myZone
-        row.Where:SetText(same and ("|cffb8bb26" .. e.zone .. "|r  " .. GRAY .. "(your zone)|r") or (e.zone ~= "" and e.zone or "-"))
+        row.Where:SetText(same and ("|cff20ff20" .. e.zone .. "|r  " .. GRAY .. "(your zone)|r") or (e.zone ~= "" and e.zone or "-"))
     else
         row.Where:SetText(GRAY .. "Last online " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r")
     end

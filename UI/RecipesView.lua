@@ -15,7 +15,7 @@ ns.RecipesView = RV
 
 local ROW_H = 22
 local MAX_RESULTS = 300
-local GREEN, GRAY = "|cffb8bb26", "|cffa89984"
+local GREEN, GRAY = "|cff20ff20", "|cff9d9d9d"
 
 function RV:Build()
     local f = CreateFrame("Frame", "NootropicGMRecipesWindow", UIParent, "BasicFrameTemplateWithInset")
@@ -126,7 +126,7 @@ function RV:ShowRowTooltip(row, r)
     GameTooltip:AddLine(("Known by %d guildmate%s (%s):"):format(#r.crafters, #r.crafters == 1 and "" or "s", r.prof), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
     for i, full in ipairs(r.crafters) do
         if i > 15 then GameTooltip:AddLine(("...and %d more"):format(#r.crafters - 15), 0.6, 0.6, 0.6) break end
-        GameTooltip:AddLine(ns.ShortName(full) .. (Online(full) and "  |cffb8bb26online|r" or ""), 1, 1, 1)
+        GameTooltip:AddLine(ns.ShortName(full) .. (Online(full) and "  |cff20ff20online|r" or ""), 1, 1, 1)
     end
     GameTooltip:AddLine("Click to open a crafter's profile.", 0.5, 0.5, 0.5)
     GameTooltip:Show()
@@ -141,7 +141,7 @@ function RV:ShowRowMenu(row, r)
     local items = { { text = r.name, isTitle = true } }
     for i, full in ipairs(r.crafters) do
         if i > 25 then break end
-        items[#items + 1] = { text = ns.ShortName(full) .. (Online(full) and "  |cffb8bb26online|r" or ""),
+        items[#items + 1] = { text = ns.ShortName(full) .. (Online(full) and "  |cff20ff20online|r" or ""),
             func = function() ns.DetailPanel:Show(full, ns.UI.frame) end }
     end
     W.ShowMenu(row, items)

@@ -10,7 +10,7 @@ local W = ns.Widgets
 local EV = {}
 ns.EventsView = EV
 
-local GRAY = "|cffa89984"
+local GRAY = "|cff9d9d9d"
 local KIND = { dungeon = "Dungeon", raid = "Raid", event = "Event" }
 local PAD, EDGE, GAP = 14, 4, 16
 

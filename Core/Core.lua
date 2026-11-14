@@ -6,10 +6,10 @@ local ADDON_NAME, ns = ...
 _G.NootropicGuildManager = ns -- exposed for /dump debugging
 
 ns.name = ADDON_NAME
-ns.GOLD = "|cfffabd2f"   -- the accent (the guild theme changes these: UI/Theme.lua ApplyPalette)
-ns.ORANGE = "|cfffe8019"
-ns.BLUE = "|cff83a598"
-ns.GRAY = "|cffa89984"
+ns.GOLD = "|cffffd100"   -- the accent (the guild theme changes these: UI/Theme.lua ApplyPalette)
+ns.ORANGE = "|cffff8000"
+ns.BLUE = "|cff71d5ff"
+ns.GRAY = "|cff9d9d9d"
 
 local function Meta(field)
     if C_AddOns and C_AddOns.GetAddOnMetadata then
@@ -233,7 +233,7 @@ function ns.Safe(fn, where)
             local msg = tostring(err)
             if not reported[msg] then
                 reported[msg] = true
-                ns:Print(("|cfffb4934error in %s:|r %s"):format(where or "a handler", msg))
+                ns:Print(("|cffff2020error in %s:|r %s"):format(where or "a handler", msg))
                 ns:Print("Please send that line to the addon author. Everything else keeps working.")
             end
         end
@@ -338,7 +338,7 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.DNWView:Init()
     ns.WhoWhisper:Init()
     ns.Brand:Init()
-    ns:Print(("v%s loaded. Type |cffebdbb2/ngm|r to open."):format(ns.version))
+    ns:Print(("v%s loaded. Type |cffffffff/ngm|r to open."):format(ns.version))
 end)
 
 ------------------------------------------------------------------------
@@ -346,26 +346,26 @@ end)
 ------------------------------------------------------------------------
 local function PrintHelp()
     ns:Print("commands:")
-    ns:Print("  |cffebdbb2/ngm|r  - open or close the window")
-    ns:Print("  |cffebdbb2/ngm find <text>|r  - open with a search")
-    ns:Print("  |cffebdbb2/ngm sync|r  - check your data against the guild now, and show sync status")
-    ns:Print(("  |cffebdbb2/ngm audit|r  - open the %s tab (officers)"):format(ns.TabName("audit")))
-    ns:Print("  |cffebdbb2/ngm welcome|r  - the welcome tour (what's where, your sharing choices)")
-    ns:Print("  |cffebdbb2/ngm craft <name>|r  - who in the guild can craft it")
-    ns:Print(("  |cffebdbb2/ngm play|r  - the %s tab: who's around near your level"):format(ns.TabName("together")))
-    ns:Print(("  |cffebdbb2/ngm overview|r  - the %s tab: classes, levels, professions and when the guild plays"):format(ns.TabName("overview")))
-    ns:Print(("  |cffebdbb2/ngm hof|r  - the %s tab: guild leaderboards from everyone's statistics"):format(ns.TabName("hof")))
-    ns:Print("  |cffebdbb2/ngm dnw|r  - the Do Not Whisper list and who was whispered recently")
-    ns:Print("  |cffebdbb2/ngm minimap|r  - show or hide the minimap button")
-    ns:Print(("  |cffebdbb2/ngm recruit|r  - open the %s tab"):format(ns.TabName("recruit")))
-    ns:Print("  |cffebdbb2/ngm options|r  - open the options")
-    ns:Print("  |cffebdbb2/ngm discord|r  - Guild Master: the update code for NGM Peon (ngmpeon.app, Sync tab, step 2)")
-    ns:Print("  |cffebdbb2/ngm discord all|r  - the same, with everything (not just what changed)")
-    ns:Print("  |cffebdbb2/ngm discord setup|r  - the short code for /ngm-guild setup in Discord")
-    ns:Print("  |cffebdbb2/ngm peon|r  - bring in the code from NGM Peon's dashboard (ngmpeon.app, Sync tab, step 3)")
-    ns:Print("  |cffebdbb2/ngm events|r  - the guild's upcoming events from NGM Peon, and where to sign up")
-    ns:Print("  |cffebdbb2/ngm diag|r  - troubleshooting: version, sync, and the addon's hooks into game windows")
-    ns:Print("  |cffebdbb2/ngm reset|r  - reset the window size and position")
+    ns:Print("  |cffffffff/ngm|r  - open or close the window")
+    ns:Print("  |cffffffff/ngm find <text>|r  - open with a search")
+    ns:Print("  |cffffffff/ngm sync|r  - check your data against the guild now, and show sync status")
+    ns:Print(("  |cffffffff/ngm audit|r  - open the %s tab (officers)"):format(ns.TabName("audit")))
+    ns:Print("  |cffffffff/ngm welcome|r  - the welcome tour (what's where, your sharing choices)")
+    ns:Print("  |cffffffff/ngm craft <name>|r  - who in the guild can craft it")
+    ns:Print(("  |cffffffff/ngm play|r  - the %s tab: who's around near your level"):format(ns.TabName("together")))
+    ns:Print(("  |cffffffff/ngm overview|r  - the %s tab: classes, levels, professions and when the guild plays"):format(ns.TabName("overview")))
+    ns:Print(("  |cffffffff/ngm hof|r  - the %s tab: guild leaderboards from everyone's statistics"):format(ns.TabName("hof")))
+    ns:Print("  |cffffffff/ngm dnw|r  - the Do Not Whisper list and who was whispered recently")
+    ns:Print("  |cffffffff/ngm minimap|r  - show or hide the minimap button")
+    ns:Print(("  |cffffffff/ngm recruit|r  - open the %s tab"):format(ns.TabName("recruit")))
+    ns:Print("  |cffffffff/ngm options|r  - open the options")
+    ns:Print("  |cffffffff/ngm discord|r  - Guild Master: the update code for NGM Peon (ngmpeon.app, Sync tab, step 2)")
+    ns:Print("  |cffffffff/ngm discord all|r  - the same, with everything (not just what changed)")
+    ns:Print("  |cffffffff/ngm discord setup|r  - the short code for /ngm-guild setup in Discord")
+    ns:Print("  |cffffffff/ngm peon|r  - bring in the code from NGM Peon's dashboard (ngmpeon.app, Sync tab, step 3)")
+    ns:Print("  |cffffffff/ngm events|r  - the guild's upcoming events from NGM Peon, and where to sign up")
+    ns:Print("  |cffffffff/ngm diag|r  - troubleshooting: version, sync, and the addon's hooks into game windows")
+    ns:Print("  |cffffffff/ngm reset|r  - reset the window size and position")
 end
 
 SLASH_NOOTROPICGM1 = "/ngm"
@@ -382,7 +382,7 @@ SlashCmdList.NOOTROPICGM = function(msg)
     elseif cmd == "diag" then
         local me = ns.PlayerFullName()
         ns:Print(("Version %s, playing as %s%s. Sync: %s."):format(ns.version, me,
-            ns.Roster.byName[me] and "" or " (|cfffb4934not found on the guild roster|r)", select(2, ns.Sync:Health())))
+            ns.Roster.byName[me] and "" or " (|cffff2020not found on the guild roster|r)", select(2, ns.Sync:Health())))
         ns:Print(("Rank settings (Officer, Invite) of other ranks: %s."):format(ns.Sync:RankFlags(1)
             and "read from the game" or "not given by the game, taken from the Guild Master's addon"))
         ns.Communities:Diagnose()

@@ -98,7 +98,7 @@ function IP:SelectCommand()
     if not full then return end
     local ok, err = ns.Recruit:CanInviteNow(full)
     if not ok then
-        if err then ns:Print("|cfffb4934" .. err .. "|r") end
+        if err then ns:Print("|cffff2020" .. err .. "|r") end
         return
     end
     self.box:SetText(self.command or "")
@@ -141,8 +141,8 @@ function IP:Render()
     if self.box and not self.box:HasFocus() then self.box:SetText(self.command) end
     local copied = self.copied and self.copied == self.full
     self.hint:SetText(copied
-        and "Copied. Now press |cffebdbb2Enter|r, |cffebdbb2Ctrl+V|r, |cffebdbb2Enter|r."
-        or "Click Copy Invite, press |cffebdbb2Ctrl+C|r, then |cffebdbb2Enter|r, |cffebdbb2Ctrl+V|r, |cffebdbb2Enter|r.")
+        and "Copied. Now press |cffffffffEnter|r, |cffffffffCtrl+V|r, |cffffffffEnter|r."
+        or "Click Copy Invite, press |cffffffffCtrl+C|r, then |cffffffffEnter|r, |cffffffffCtrl+V|r, |cffffffffEnter|r.")
 end
 
 function IP:Show(full, reply)

@@ -99,7 +99,7 @@ local function NameLink(parent)
         self.full = full
         local e = ns.Roster.byName[full]
         self.inRoster = e ~= nil
-        self.Text:SetText(ns.ShortName(full) .. (e and "" or " |cff7c6f64(not in guild)|r"))
+        self.Text:SetText(ns.ShortName(full) .. (e and "" or " |cff6e6e6e(not in guild)|r"))
         if e then
             W.SetClassIcon(self.Icon, e.classFile)
             self.Text:SetTextColor(ns.ClassColor(e.classFile))
@@ -290,13 +290,13 @@ function DP:RefreshHeader(e)
     h.Name:SetTextColor(ns.ClassColor(e.classFile))
     local specIcon = e.spec and D:SpecIcon(e.classFile, e.spec)
     local spec = e.spec and ((specIcon and ("|T" .. specIcon .. ":12:12:0:0:64:64:5:59:5:59|t ") or "") .. e.spec .. " ") or ""
-    local roles = (e.roleList and #e.roleList > 0) and ("  |cffa89984-|r  " .. table.concat(e.roleList, ", ")) or ""
-    h.Sub:SetText(("Level %d %s%s  |cffa89984-|r  %s%s"):format(e.level, spec, e.className, e.rank, roles))
+    local roles = (e.roleList and #e.roleList > 0) and ("  |cff9d9d9d-|r  " .. table.concat(e.roleList, ", ")) or ""
+    h.Sub:SetText(("Level %d %s%s  |cff9d9d9d-|r  %s%s"):format(e.level, spec, e.className, e.rank, roles))
     local status
     if e.online then
-        status = "|cffb8bb26Online|r  " .. (e.zone ~= "" and e.zone or "")
+        status = "|cff20ff20Online|r  " .. (e.zone ~= "" and e.zone or "")
     else
-        status = "|cffa89984Offline - last seen " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r"
+        status = "|cff9d9d9dOffline - last seen " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r"
     end
     -- On Discord: a Discord name on their profile (or their main's)
     if e.discord then status = status .. "  " .. ns.Profile.DISCORD_BADGE end
@@ -323,11 +323,11 @@ function DP:RefreshLinkLine(e)
     for _, l in ipairs(s.links) do l:Hide() end
     local names = e.isAlt and { e.main } or e.alts
     if e.isAlt then
-        s.Label:SetText("|cffa89984Alt of|r")
+        s.Label:SetText("|cff9d9d9dAlt of|r")
     elseif #names == 0 then
-        s.Label:SetText("|cffa89984Main character  -  no alts linked|r")
+        s.Label:SetText("|cff9d9d9dMain character  -  no alts linked|r")
     else
-        s.Label:SetText(("|cffa89984Main  -  %s:|r"):format(#names == 1 and "1 alt" or (#names .. " alts")))
+        s.Label:SetText(("|cff9d9d9dMain  -  %s:|r"):format(#names == 1 and "1 alt" or (#names .. " alts")))
     end
     local x, y = math.ceil(s.Label:GetStringWidth()) + 6, 0
     for i, full in ipairs(names) do
@@ -433,7 +433,7 @@ function DP:ScheduleTooltip(cell, day, block)
     local h = block * 2
     local on = self.schedule.Grid:Block(day, block)
     GameTooltip:SetOwner(cell, "ANCHOR_RIGHT")
-    GameTooltip:AddLine(("%s %s-%s  |cffa89984(%s)|r"):format(PF.DAYS[day + 1], PF.HourText(h), PF.HourText(h + 2), PF.ClockLabel(mode)))
+    GameTooltip:AddLine(("%s %s-%s  |cff9d9d9d(%s)|r"):format(PF.DAYS[day + 1], PF.HourText(h), PF.HourText(h + 2), PF.ClockLabel(mode)))
     -- the same hours on the other clock
     local off = PF.LocalMinusServer()
     if off and off ~= 0 then
@@ -454,7 +454,7 @@ function DP:RefreshSchedule(e)
     local bits = PF:Hours(e.full, mode)
     if not bits or not next(bits) then return false end
     local open = self.schedOpen
-    s.Summary:SetText((PF.Summary(bits) or "") .. ("  |cffa89984(%s)|r"):format(PF.ClockLabel(mode)))
+    s.Summary:SetText((PF.Summary(bits) or "") .. ("  |cff9d9d9d(%s)|r"):format(PF.ClockLabel(mode)))
     local sh = math.ceil(s.Summary:GetStringHeight())
     s.Toggle:SetLabel(open and "Hide week" or "Show week")
     s.Toggle:ClearAllPoints()
@@ -736,7 +736,7 @@ function DP:RefreshProfs(e)
             if p.rank and p.rank > 0 then
                 r.BarText:SetText(p.max and p.max > 0 and (p.rank .. " / " .. p.max) or tostring(p.rank))
             else
-                r.BarText:SetText(edit and "|cffa89984set level|r" or "|cffa89984-|r")
+                r.BarText:SetText(edit and "|cff9d9d9dset level|r" or "|cff9d9d9d-|r")
             end
             r.Remove:SetShown(edit and p.source == "manual")
             r:ClearAllPoints()
@@ -910,7 +910,7 @@ function DP:RefreshLog(e)
     for i, entry in ipairs(list) do
         local f = LogEntryFrame(s, i)
         f.entry = entry
-        f.Meta:SetText(ns.FormatDate(entry.ts) .. "  |cffa89984-  " .. (entry.author or "?") .. "|r")
+        f.Meta:SetText(ns.FormatDate(entry.ts) .. "  |cff9d9d9d-  " .. (entry.author or "?") .. "|r")
         f.Text:SetText(entry.text)
         local h = 12 + 3 + math.max(12, math.ceil(f.Text:GetStringHeight()))
         f:SetHeight(h)
@@ -1046,7 +1046,7 @@ function DP:FlushText()
     self.pendingText = nil
     for save, text in pairs(p) do
         local ok, err = save(text)
-        if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
+        if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
     end
 end
 
@@ -1098,7 +1098,7 @@ function DP:PickMainFor(full)
         exclude = { [full] = true },
         onPick = function(main)
             local ok, err = ns.DB:SetMain(full, main)
-            if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
+            if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
         end,
     })
 end
@@ -1111,7 +1111,7 @@ function DP:PickAltFor(main)
         exclude = exclude,
         onPick = function(alt)
             local ok, err = ns.DB:SetMain(alt, main)
-            if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
+            if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
         end,
     })
 end
@@ -1238,7 +1238,7 @@ function DP:BuildRoleSection(parent)
             for key in pairs(e.roles or {}) do set[key] = true end
             set[r.key] = self:GetChecked() and true or nil
             local ok, err = ns.DB:SetRoles(e.full, set)
-            if not ok and err then ns:Print("|cfffb4934" .. err .. "|r") end
+            if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
         end)
         s.checks[r.key] = cb
     end
@@ -1292,7 +1292,7 @@ function DP:RefreshSpec(e)
         W.SetClassIcon(sp.Icon, e.classFile)
         sp.Icon:SetDesaturated(not e.spec)
     end
-    sp.Value:SetText(e.spec and (e.spec .. (e.dist and ("  |cffa89984(" .. e.dist .. ")|r") or "")) or "|cffa89984Unknown|r")
+    sp.Value:SetText(e.spec and (e.spec .. (e.dist and ("  |cff9d9d9d(" .. e.dist .. ")|r") or "")) or "|cff9d9d9dUnknown|r")
     if e.specSource == "manual" then
         sp.Source:SetText("Set by hand")
     elseif e.specSource == "addon" then
