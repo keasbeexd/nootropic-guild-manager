@@ -47,11 +47,13 @@ function W.TryCreate(frameType, name, parent, ...)
     return CreateFrame(frameType, name, parent)
 end
 
-function W.Button(parent, text, width, height)
+-- style: nil (the main action: the theme's accent), "alt" (a secondary
+-- one: neutral gray) or "bad" (deletes or undoes something: red)
+function W.Button(parent, text, width, height, style)
     local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     b:SetSize(width or 90, height or 22)
     b:SetText(text)
-    ns.Theme:SkinButton(b)
+    ns.Theme:SkinButton(b, style)
     return b
 end
 

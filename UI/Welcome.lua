@@ -171,7 +171,7 @@ function WL:Build()
     self:BuildPerms(f)
 
     -- footer
-    self.back = W.Button(f, "Back", 90, 24)
+    self.back = W.Button(f, "Back", 90, 24, "alt")
     self.back:SetPoint("BOTTOMLEFT", 16, 14)
     self.back:SetScript("OnClick", function() WL:Go(WL.index - 1) end)
     self.next = W.Button(f, "Next", 110, 24)

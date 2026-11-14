@@ -154,7 +154,7 @@ function DP:Build()
     self.frame = f
 
     -- Edit / Done beside the close button
-    local edit = W.Button(f, "Edit", 56, 18)
+    local edit = W.Button(f, "Edit", 56, 18, "alt")
     local close = f.CloseButton or _G[f:GetName() .. "CloseButton"]
     if close then edit:SetPoint("RIGHT", close, "LEFT", -12, 0) else edit:SetPoint("TOPRIGHT", -30, -3) end
     edit:SetFrameLevel((close and close:GetFrameLevel() or f:GetFrameLevel() + 10) + 1)
@@ -1088,7 +1088,7 @@ function DP:BuildAltSection(parent)
     s.NoAlts:SetText("No alts linked yet.")
     s.Primary = W.Button(s, "Mark as Alt", 140, 22)
     s.Secondary = W.Button(s, "Add Alt", 140, 22)
-    s.Tertiary = W.Button(s, "Unlink", 140, 22)
+    s.Tertiary = W.Button(s, "Unlink", 140, 22, "bad")
     self.alt = s
 end
 
@@ -1209,7 +1209,7 @@ function DP:BuildSpecSection(parent)
     s.Value:SetJustifyH("LEFT")
     s.Source = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Source:SetPoint("TOPLEFT", s.Value, "BOTTOMLEFT", 0, -3)
-    s.Change = W.Button(s, "Change", 78, 22)
+    s.Change = W.Button(s, "Change", 78, 22, "alt")
     s.Change:SetPoint("TOPRIGHT", 0, -18)
     s.Change:SetScript("OnClick", function(btn) DP:ShowSpecMenu(btn) end)
     self.spec = s

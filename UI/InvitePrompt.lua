@@ -84,7 +84,7 @@ function IP:Build()
     self.hint:SetPoint("BOTTOM", 0, 48)
     self.hint:SetWidth(350)
 
-    local later = W.Button(f, "Not now", 110, 24)
+    local later = W.Button(f, "Not now", 110, 24, "alt")
     later:SetPoint("BOTTOMLEFT", f, "BOTTOM", 6, 14)
     later:SetScript("OnClick", function() IP:Next() end)
 

@@ -35,7 +35,7 @@ function AV:Build(frame)
     end)
     self.searchBox = search
 
-    local kind = W.Button(page, "All changes", 130, 22)
+    local kind = W.Button(page, "All changes", 130, 22, "alt")
     kind:SetPoint("LEFT", search, "RIGHT", 10, 0)
     kind:SetScript("OnClick", function(btn) AV:ShowCategoryMenu(btn) end)
     self.kindButton = kind

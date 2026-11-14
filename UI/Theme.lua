@@ -135,6 +135,9 @@ end
 -- drawn after uses them; buttons and tabs already drawn repaint (OnAccent).
 -- Saved per guild, so it's in place at login before any window is built.
 ------------------------------------------------------------------------
+-- fixed shadows for neutral and danger buttons (never the theme's)
+T.NEUTRAL_SHADE = { 0x1d / 255, 0x20 / 255, 0x21 / 255 }
+T.DANGER_SHADE = { 0x9d / 255, 0, 6 / 255 }
 local HOUSE = {}
 for k, h in pairs(T.HEX) do HOUSE[k] = h end
 T.A = { face = T.C.yellow, shade = T.C.shade } -- the same tables, changed in place
@@ -447,10 +450,16 @@ end
 function T:SkinButton(b, style)
     if not b or b._ngmSkinned then return b end
     b._ngmSkinned = true
-    -- everyday buttons wear the guild's accent; alt and bad keep theirs
-    local fill = (style == "bad" and T.C.red) or (style == "alt" and T.C.aqua) or function() return T.A.face end
+    -- main buttons wear the theme's accent; secondary ones a neutral gray and
+    -- danger ones red, each on a fixed shadow, so neither fights the theme
     ClearArt(b)
-    Pressable(b, fill, 2, { 3, -4 }, 3, type(fill) == "function" and function() return T.A.shade end or nil)
+    if style == "alt" then
+        Pressable(b, T.C.dim, 2, { 3, -4 }, 3, function() return T.NEUTRAL_SHADE end)
+    elseif style == "bad" then
+        Pressable(b, T.C.red, 2, { 3, -4 }, 3, function() return T.DANGER_SHADE end)
+    else
+        Pressable(b, function() return T.A.face end, 2, { 3, -4 }, 3, function() return T.A.shade end)
+    end
     local fs = b:GetFontString()
     if fs then fs:SetFontObject(NGMFontButton) end
     if b.SetNormalFontObject then
@@ -484,7 +493,7 @@ function T:SkinClose(b)
         b:ClearAllPoints()
         b:SetPoint("TOPRIGHT", p, "TOPRIGHT", -9, -7)
     end
-    local face = Pressable(b, T.C.red, 2, { 3, -4 })
+    local face = Pressable(b, T.C.red, 2, { 3, -4 }, 0, function() return T.DANGER_SHADE end)
     local x = b:CreateFontString(nil, "OVERLAY", "NGMFontButton")
     x:SetPoint("CENTER", face, "CENTER", 1, 0)
     x:SetText("X")

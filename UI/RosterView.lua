@@ -563,7 +563,7 @@ function RV:BuildFilterPanel(page)
     end)
     p.Addon = addon
 
-    local reset = W.Button(p, "Reset filters", 110, 20)
+    local reset = W.Button(p, "Reset filters", 110, 20, "alt")
     reset:SetPoint("BOTTOMLEFT", 12, 12)
     reset:SetScript("OnClick", function()
         ns.DB:Settings().onlineOnly = false
