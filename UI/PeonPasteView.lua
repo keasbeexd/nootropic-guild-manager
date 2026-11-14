@@ -79,9 +79,14 @@ function V:BringIn()
         lines[#lines + 1] = ("|cfffe8019%d not taken|r: your rank can only bring in your own. An officer can bring in the rest."):format(got.refused)
     end
     lines[#lines + 1] = "Shared with the guild."
+    if (got.events or 0) > 0 then
+        lines[#lines + 1] = ("|cfffabd2f%d %s|r to add to the calendar."):format(got.events, got.events == 1 and "event" or "events")
+    end
     self.result:SetText(table.concat(lines, "\n"))
     local changed = got.players + got.characters + got.names + got.months
     ns.Theme:Toast(changed > 0 and "Level up!" or "All clear!", changed > 0 and "NGM Peon's code is in, and shared with the guild." or "Nothing new from NGM Peon.")
+    -- new events: the Add to calendar list, for those who can add them
+    if (got.events or 0) > 0 and ns.Calendar:CanAdd() then ns.CalendarView:Open() end
     self.box:SetText("")
     self.box:ClearFocus()
 end

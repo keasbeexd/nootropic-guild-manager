@@ -254,11 +254,16 @@ function DC:ParsePeon(code)
     if not payload or DC.Adler32(payload) ~= sum:lower() then return nil, "The code doesn't check out. Copy it again from the dashboard." end
     local lines = {}
     for line in (payload .. "\n"):gmatch("([^\n]*)\n") do lines[#lines + 1] = line end
-    local out = { region = lines[1], guild = lines[2], records = {} }
+    local out = { region = lines[1], guild = lines[2], records = {}, events = {} }
     for i = 3, #lines do
         local f = ns.Split(lines[i], "\t")
         if f[1] == "has" then out.has = tonumber(f[2] or "", 36)
         elseif f[1] == "hours" then out.hoursHash = tonumber(f[2] or "", 36)
+        elseif f[1] == "E" and #f >= 7 then
+            -- an upcoming event, for the in-game calendar (Services/Calendar.lua)
+            local id, starts, minutes = tonumber(f[2], 36), tonumber(f[4], 36), tonumber(f[5], 36)
+            if not (id and starts and minutes) then return nil, "The code looks damaged. Copy it again from the dashboard." end
+            out.events[#out.events + 1] = { id = id, kind = f[3], starts = starts, minutes = minutes, title = f[6], description = table.concat(f, "\t", 7) }
         elseif f[1] == "R" and #f >= 5 then
             local t = tonumber(f[3], 36)
             if not t then return nil, "The code looks damaged. Copy it again from the dashboard." end
@@ -318,6 +323,8 @@ function DC:ApplyPeon(code)
     g.peon.hoursHash = c.hoursHash
     -- when the guild last brought NGM Peon's code in (for the reminder); officers share it
     if ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peonat") then ns.Sync:Set("GS:peonat", tostring(ns.DB:Now())) end
+    -- upcoming events, for the in-game calendar
+    if ns.Calendar then out.events = ns.Calendar:Take(c.events) end
     return out
 end
 
