@@ -95,6 +95,11 @@ end
 for name, spec in pairs(OBJECTS) do
     if not _G[name] then _G[name] = MakeFont(name, spec) end
 end
+-- the titles' hard drop shadow (the theme's shade), on the font itself
+if NGMFontTitle.SetShadowColor then
+    NGMFontTitle:SetShadowColor(T.C.shade[1], T.C.shade[2], T.C.shade[3], 1)
+    NGMFontTitle:SetShadowOffset(2, -2)
+end
 
 -- Upper case, as the dashboard's headings and buttons; text carrying the
 -- game's escape codes (colours, links, icons) is left as it is.
@@ -186,15 +191,15 @@ function T:ApplyPalette(p)
         local font, c = _G[name], T.C[spec[4]]
         if font and font.SetTextColor and c then font:SetTextColor(c[1], c[2], c[3]) end
     end
+    -- the titles' drop shadow lives on their font (set on each title, the
+    -- game reset it whenever the font changed, as a theme switch does)
+    if NGMFontTitle and NGMFontTitle.SetShadowColor then
+        local s = T.C.shade
+        NGMFontTitle:SetShadowColor(s[1], s[2], s[3], 1)
+        NGMFontTitle:SetShadowOffset(2, -2)
+    end
     for obj, v in pairs(painted) do pcall(Redo, obj, v) end
     for _, fn in ipairs(accentUsers) do pcall(fn) end
-    -- a font's change reaches its text a moment later, and resets the text's
-    -- own drop shadow to the game's black: put the theme's back after it
-    if C_Timer then
-        C_Timer.After(0, function()
-            for obj, v in pairs(painted) do if v[1] == "shadow" then pcall(Redo, obj, v) end end
-        end)
-    end
 end
 
 local function Colours(bg, border, emblem)
@@ -347,11 +352,7 @@ function T:Skin(frame)
     -- the title: mono, upper case, yellow, with the dashboard's hard red shadow
     local title = frame.TitleText or (frame.TitleContainer and frame.TitleContainer.TitleText) or frame._title
     if title then
-        title:SetFontObject(NGMFontTitle)
-        if title.SetShadowColor then
-            T:ShadowInk(title, T.C.shade)
-            title:SetShadowOffset(2, -2)
-        end
+        title:SetFontObject(NGMFontTitle) -- its drop shadow comes with the font (ApplyPalette)
         local set = title.SetText
         set(title, T.Upper(title:GetText() or ""))
         hooksecurefunc(title, "SetText", function(fs, text)
