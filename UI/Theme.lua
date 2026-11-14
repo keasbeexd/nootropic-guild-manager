@@ -113,16 +113,9 @@ function T:ApplyPalette(p)
     for _, fn in ipairs(accentUsers) do pcall(fn) end
 end
 
--- Options > Appearance > Theme: Guild (the default) or Nootropic (Blizzard's gold).
-function T:UseGuild()
-    local s = ns.DB and ns.DB.Settings and ns.DB:Settings()
-    return not (s and s.theme == "default")
-end
-
-function T:SetUseGuild(on)
-    ns.DB:Settings().theme = (not on) and "default" or nil
-    self:LoadTheme()
-end
+-- Always the guild's colours; Blizzard's gold only for a guild without a
+-- tabard (no choice: the look barely changes, and it's the guild's).
+function T:UseGuild() return true end
 
 -- At login (Core.lua, after the saved data loads): the guild's saved theme.
 function T:LoadTheme()

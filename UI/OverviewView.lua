@@ -286,6 +286,7 @@ function OV:Build(frame)
     self.grid.frame:SetPoint("TOPLEFT", IN_X, -IN_Y)
     self.whenNote = self.when:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     self.whenNote:SetPoint("TOPLEFT", self.grid.frame, "BOTTOMLEFT", 0, -6)
+    self.whenNote:SetWordWrap(true)
     self.whenNote:SetJustifyH("LEFT")
 
     page:SetScript("OnShow", function()
@@ -378,7 +379,7 @@ function OV:Refresh()
     self.whenNote:SetWidth(colW - 2 * IN_X)
     self.whenNote:SetText(c.sharing == 0
         and "Nobody counted here shares their hours yet. Hours come from \"Learn when I usually play\" (Options > Sharing)."
-        or (("%d of %d %s share their hours. Brighter yellow means more of them usually play then; hover a block for who."):format(c.sharing, c.people, who)))
+        or (("%d of %d %s share their hours. Brighter means more of them usually play then. Hover a block for who."):format(c.sharing, c.people, who)))
     heights[self.when] = IN_Y + self.grid.frame:GetHeight() + 6 + math.max(14, self.whenNote:GetStringHeight()) + BELOW
 
     self:Layout(width, heights)

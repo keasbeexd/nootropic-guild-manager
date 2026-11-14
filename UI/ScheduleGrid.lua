@@ -71,10 +71,12 @@ function SG.New(parent, opts)
             cell:SetPoint("TOPLEFT", LABEL_W + b * (cw + gap), y)
             cell:SetBackdrop({ bgFile = ns.Widgets.WHITE, edgeFile = ns.Widgets.WHITE, edgeSize = 1 })
             cell.day, cell.block = d, b
-            cell.Count = cell:CreateFontString(nil, "OVERLAY", "NGMFontNumber")
+            -- the game's plain black small font (its number font has a heavy
+            -- outline that turns into a blob on the coloured block)
+            cell.Count = cell:CreateFontString(nil, "OVERLAY", _G.GameFontBlackSmall and "GameFontBlackSmall" or "GameFontNormalSmall")
             cell.Count:SetPoint("CENTER")
-            local bg = C().bg
-            ns.Theme:Ink(cell.Count, bg)
+            cell.Count:SetTextColor(0, 0, 0)
+            cell.Count:SetShadowColor(0, 0, 0, 0)
             cell:SetScript("OnMouseDown", function(c)
                 if not opts.editable then return end
                 self.painting = true

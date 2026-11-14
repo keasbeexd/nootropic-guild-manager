@@ -29,7 +29,8 @@ local BORDER_COORDS = { 0.63183594, 0.69238281, 0.74414063, 0.86523438 }
 Brand.icons = {}
 
 function Brand:Style()
-    return ns.DB:Settings().iconStyle or "emblem"
+    -- always the guild's tabard; the medallion only without one (no choice)
+    return "emblem"
 end
 
 -- True when there's a guild tabard to draw, and the game has loaded it:

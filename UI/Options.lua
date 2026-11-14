@@ -204,52 +204,6 @@ function O:BuildMain()
     L:Space(4)
 
     L:Header("Appearance")
-    local y = L:Row(34)
-    local iconLabel = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
-    iconLabel:SetPoint("TOPLEFT", 18, y - 8)
-    iconLabel:SetText("Addon icon")
-    self.iconPreview = ns.Brand:Attach(L.panel, 28, { "TOPLEFT", L.panel, "TOPLEFT", 110, y - 2 })
-    local iconBtn = W.Button(L.panel, "", 160, 22)
-    iconBtn:SetPoint("TOPLEFT", 148, y - 4)
-    iconBtn:SetScript("OnClick", function(btn)
-        local items = { { text = "Addon icon", isTitle = true } }
-        for _, style in ipairs(D.ICON_STYLES) do
-            items[#items + 1] = {
-                text = style.menuLabel or style.label, radio = true,
-                checked = function() return (ns.DB:Settings().iconStyle or "emblem") == style.key end,
-                func = function()
-                    ns.Brand:SetStyle(style.key)
-                    if style.key == "emblem" and not ns.Brand:CanShowEmblem() then
-                        ns:Print("You'll see your guild's tabard once you're in a guild with one. Until then the Nootropic medallion is shown.")
-                    end
-                    O:Refresh()
-                end,
-            }
-        end
-        W.ShowMenu(btn, items)
-    end)
-    W.Tooltip(iconBtn, "Addon icon", "Shown on the window, the minimap button and the Guild & Communities shortcut.")
-    self.iconButton = iconBtn
-
-    -- the theme, beside the icon: Nootropic's own colors or the guild tabard's
-    y = L:Row(34)
-    local themeLabel = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
-    themeLabel:SetPoint("TOPLEFT", 18, y - 8)
-    themeLabel:SetText("Theme")
-    local themeBtn = W.Button(L.panel, "", 160, 22)
-    themeBtn:SetPoint("TOPLEFT", 148, y - 4)
-    themeBtn:SetScript("OnClick", function(btn)
-        W.ShowMenu(btn, {
-            { text = "Theme", isTitle = true },
-            { text = "Guild (default)", radio = true, checked = function() return ns.Theme:UseGuild() end,
-              func = function() ns.Theme:SetUseGuild(true); O:Refresh() end },
-            { text = "Nootropic", radio = true, checked = function() return not ns.Theme:UseGuild() end,
-              func = function() ns.Theme:SetUseGuild(false); O:Refresh() end },
-        })
-    end)
-    W.Tooltip(themeBtn, "Theme", "Guild: buttons, headings and the window in your guild tabard's colors. Nootropic: the addon's own colors. NGM Peon's dashboard has the same choice.")
-    self.themeButton = themeBtn
-
     self.addonCountCheck = L:Check("Show how many guildmates use the addon",
         "The \"x using ... Guild Manager\" text at the bottom of the window.", function(on)
             ns.DB:Settings().showAddonCount = on
@@ -675,8 +629,6 @@ function O:Refresh()
     for _, logo in ipairs(self.logos or {}) do logo:Apply() end
 
     -- main
-    self.iconButton:SetText(D:IconStyle(s.iconStyle).label)
-    self.iconPreview:Apply()
     self.addonCountCheck:SetChecked(s.showAddonCount ~= false)
     self.communitiesCheck:SetChecked(s.communitiesButton ~= false)
     self.blizzRosterCheck:SetChecked(s.blizzRoster ~= false)
@@ -687,7 +639,6 @@ function O:Refresh()
     self.statsCheck:SetChecked(ns.Sharing:Get("stats"))
     if not self.reminderBox:HasFocus() then self.reminderBox:SetText(ns.InstallReminder:Text()) end
     self.minimapCheck:SetChecked(not s.minimap.hide)
-    if self.themeButton then self.themeButton:SetText(ns.Theme:UseGuild() and "Guild" or "Nootropic") end
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end
     self.syncStatus:SetText((ns.GOLD .. "Sync:|r ") .. select(2, ns.Sync:Health()))
 
