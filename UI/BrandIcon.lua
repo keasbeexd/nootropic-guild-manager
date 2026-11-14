@@ -36,12 +36,15 @@ function Brand:Style()
     return ns.DB:Settings().iconStyle or "emblem"
 end
 
--- True when there's a guild tabard to draw.
+-- True when there's a guild tabard to draw, and the game has loaded it:
+-- drawn before then, the game paints its placeholder (a parchment) and the
+-- icon kept it ("sometimes" a map on the Guild window's button).
 function Brand:CanShowEmblem()
     if not IsInGuild() or not SetLargeGuildTabardTextures then return false end
     if C_GuildInfo and C_GuildInfo.GetGuildTabardInfo then
         local ok, info = pcall(C_GuildInfo.GetGuildTabardInfo, "player")
         if ok and info == nil then return false end
+        if ok and type(info) == "table" and type(info.emblemFileID) == "number" and info.emblemFileID <= 0 then return false end
     end
     return true
 end
@@ -72,7 +75,8 @@ local function TabardBackground()
     return 0.15, 0.15, 0.15
 end
 
-function IconMixin:Apply()
+-- again: this is the one recheck after drawing (never schedules another)
+function IconMixin:Apply(again)
     local key = self.fixedStyle or Brand:Style()
     if key == "emblem" and Brand:CanShowEmblem() then
         local s = self.size / 60
@@ -94,6 +98,11 @@ function IconMixin:Apply()
         end
         if ok then
             self:ShowEmblem(true)
+            -- the tabard can finish loading just after: draw it once more (once)
+            if not again and not self.recheck and C_Timer then
+                self.recheck = true
+                C_Timer.After(3, function() self.recheck = nil; self:Apply(true) end)
+            end
             return
         end
     end
