@@ -154,7 +154,10 @@ local function Redo(obj, v)
     elseif v[1] == "ink" then obj:SetTextColor(c[1], c[2], c[3], a)
     elseif v[1] == "fill" then obj:SetBackdropColor(c[1], c[2], c[3], a)
     elseif v[1] == "edge" then obj:SetBackdropBorderColor(c[1], c[2], c[3], a)
-    elseif v[1] == "shadow" then obj:SetShadowColor(c[1], c[2], c[3], a) end
+    elseif v[1] == "shadow" then
+        obj:SetShadowColor(c[1], c[2], c[3], a)
+        obj:SetShadowOffset(2, -2)
+    end
 end
 local function Mark(kind, obj, c, a)
     if not obj then return end
@@ -185,6 +188,13 @@ function T:ApplyPalette(p)
     end
     for obj, v in pairs(painted) do pcall(Redo, obj, v) end
     for _, fn in ipairs(accentUsers) do pcall(fn) end
+    -- a font's change reaches its text a moment later, and resets the text's
+    -- own drop shadow to the game's black: put the theme's back after it
+    if C_Timer then
+        C_Timer.After(0, function()
+            for obj, v in pairs(painted) do if v[1] == "shadow" then pcall(Redo, obj, v) end end
+        end)
+    end
 end
 
 local function Colours(bg, border, emblem)
