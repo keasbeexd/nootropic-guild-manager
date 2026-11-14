@@ -326,7 +326,7 @@ function DC:ApplyPeon(code)
     -- when the guild last brought NGM Peon's code in (for the reminder); officers share it
     if ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peonat") then ns.Sync:Set("GS:peonat", tostring(ns.DB:Now())) end
     -- Upcoming Events (shared with the guild by an officer)
-    if ns.Events then out.events = ns.Events:Take(c.events) end
+    if ns.Events then out.events, out.eventsNew, out.eventsRemoved = ns.Events:Take(c.events) end
     return out
 end
 

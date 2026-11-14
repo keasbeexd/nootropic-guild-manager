@@ -79,8 +79,13 @@ function V:BringIn()
         lines[#lines + 1] = ((ns.ORANGE .. "%d not taken|r: your rank can only bring in your own. An officer can bring in the rest.")):format(got.refused)
     end
     lines[#lines + 1] = "Shared with the guild."
-    if (got.events or 0) > 0 then
-        lines[#lines + 1] = ((ns.GOLD .. "%d upcoming %s|r: see the Upcoming Events tab.")):format(got.events, got.events == 1 and "event" or "events")
+    -- Upcoming Events: what changed, then how many there are
+    local changes = {}
+    if (got.eventsNew or 0) > 0 then changes[#changes + 1] = n(got.eventsNew, "new event", "new events") end
+    if (got.eventsRemoved or 0) > 0 then changes[#changes + 1] = n(got.eventsRemoved, "event removed", "events removed") end
+    if #changes > 0 or (got.events or 0) > 0 then
+        lines[#lines + 1] = "Upcoming Events: " .. (#changes > 0 and (table.concat(changes, ", ") .. "; ") or "")
+            .. ns.GOLD .. n(got.events or 0, "upcoming", "upcoming") .. "|r (Upcoming Events tab)"
     end
     self.result:SetText(table.concat(lines, "\n"))
     local changed = got.players + got.characters + got.names + got.months

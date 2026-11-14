@@ -38,18 +38,22 @@ local guild, store, officer = {}, {}, false
 ns.DB = { Guild = function() return guild end, Now = function() return now end }
 ns.Sync = { CanWrite = function() return officer end, Get = function(_, k) return store[k] end,
   Set = function(_, k, v) store[k] = { v = v } end, Store = function() return store end }
-assert(E:Take(c.events) == 1 and next(store) == nil, "not shared")
+local up, new, removed = E:Take(c.events)
+assert(up == 1 and new == 1 and removed == 0 and next(store) == nil, "not shared")
 assert(E:List()[1].title == "Molten Core")
 
 -- an officer: shared with the guild; one NGM Peon no longer has is cleared
 officer = true
 store["EV:z"] = { v = E.Value({ kind = "event", starts = now + 3600, minutes = 60, coming = 0, channel = "", server = "", title = "Old", description = "" }) }
-assert(E:Take(c.events) == 1)
+up, new, removed = E:Take(c.events)
+assert(up == 1 and new == 0 and removed == 1, "the old one, cancelled: 1 event removed")
 assert(store["EV:16"] and store["EV:16"].v == E.Value(ev), "shared as EV:<id>")
 assert(store["EV:z"].v == "", "cancelled in Discord: cleared")
--- past events aren't listed
+-- past events aren't listed, and one that has started isn't "removed"
 now = ev.starts + 1
 assert(#E:List() == 0)
+up, new, removed = E:Take({})
+assert(up == 0 and new == 0 and removed == 0)
 
 -- the records' rules
 assert(loadfile(ROOT .. "/Core/Records.lua"))("NGM", ns)

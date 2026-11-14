@@ -11,7 +11,7 @@
     events gone from NGM Peon (cancelled) are cleared. Anyone else keeps
     the code's events for themselves.
 
-      ns.Events:Take(events)   the code's events -> how many are upcoming
+      ns.Events:Take(events)   the code's events -> upcoming, new, removed (counts)
       ns.Events:List()         upcoming events, soonest first
 ]]
 local _, ns = ...
@@ -41,7 +41,7 @@ function E.Parse(id, v)
     for part in (v .. ";"):gmatch("([^;]*);") do f[#f + 1] = part end
     local starts, minutes, coming = tonumber(f[2] or "", 36), tonumber(f[3] or "", 36), tonumber(f[4] or "", 36)
     if not (starts and minutes) then return nil end
-    return { id = id, kind = f[1], starts = starts, minutes = minutes, coming = coming or 0, channel = f[5] or "", server = f[6] or "",
+    return { id = tonumber(id, 36) or 0, kind = f[1], starts = starts, minutes = minutes, coming = coming or 0, channel = f[5] or "", server = f[6] or "",
              title = f[7] or "", description = table.concat(f, ";", 8) }
 end
 
@@ -57,6 +57,9 @@ function E:Take(events)
     events = events or {}
     local now = ns.DB:Now()
     local key = function(ev) return "EV:" .. B36(ev.id) end
+    -- what was listed before, to say what's new and what's gone
+    local before = {}
+    for _, ev in ipairs(self:List()) do before[B36(ev.id)] = ev.starts end
     if ns.Sync and ns.Sync.CanWrite and ns.Sync:CanWrite("EV:0") then
         -- an officer: for the whole guild
         local wanted = {}
@@ -79,7 +82,17 @@ function E:Take(events)
         wipe(l)
         for _, ev in ipairs(events) do l[#l + 1] = ev end
     end
-    return #self:List()
+    local list = self:List()
+    local added, after = 0, {}
+    for _, ev in ipairs(list) do
+        local id = B36(ev.id)
+        after[id] = true
+        if not before[id] then added = added + 1 end
+    end
+    local removed = 0
+    -- gone from NGM Peon while still to come (one that has started isn't "removed")
+    for id, starts in pairs(before) do if not after[id] and starts > now then removed = removed + 1 end end
+    return #list, added, removed
 end
 
 function E:List()
