@@ -76,7 +76,7 @@ function EV:Refresh()
     local y = EDGE
     self.empty:SetShown(#list == 0)
     self.empty:SetWidth(inner)
-    self.empty:SetText("No upcoming events yet. They come from NGM Peon's dashboard: an officer brings its code in with " .. ns.GOLD .. "/ngm peon|r.")
+    self.empty:SetText("No upcoming events yet. Events are made on " .. ns.GOLD .. "ngmpeon.app|r (Create Events), and reach the game when an officer brings in NGM Peon's code (" .. ns.GOLD .. "/ngm peon|r).")
     for i, ev in ipairs(list) do
         local c = self.cards[i] or Card(self.content)
         self.cards[i] = c
@@ -93,9 +93,10 @@ function EV:Refresh()
         c.Where:ClearAllPoints()
         c.Where:SetPoint("TOPLEFT", c.Text:IsShown() and c.Text or c.When, "BOTTOMLEFT", 0, -8)
         c.Where:SetWidth(inner - 2 * PAD)
-        local where = ev.channel ~= "" and ("#" .. ev.channel) or "its post"
-        local server = ev.server ~= "" and (" on " .. ev.server .. "'s Discord") or " in Discord"
-        c.Where:SetText("Sign up in " .. ns.GOLD .. where .. "|r" .. server .. ", with the buttons on its post.")
+        -- sign-ups are in Discord only: one list per event
+        local where = ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or ""
+        local server = ev.server ~= "" and (" " .. GRAY .. "on|r " .. ev.server) or ""
+        c.Where:SetText(ns.GOLD .. "Sign up in Discord|r" .. where .. server)
         local h = PAD + c.Title:GetStringHeight() + 6 + c.When:GetStringHeight()
             + (c.Text:IsShown() and (6 + c.Text:GetStringHeight()) or 0) + 8 + c.Where:GetStringHeight() + PAD
         c:SetHeight(h)
@@ -106,6 +107,6 @@ function EV:Refresh()
     self.note:ClearAllPoints()
     self.note:SetPoint("TOPLEFT", EDGE, -(#list == 0 and (EDGE + 30) or y))
     self.note:SetWidth(inner)
-    self.note:SetText("Times are your own. The same list is on NGM Peon's dashboard: its Upcoming Events tab.")
+    self.note:SetText("Times are your own. Sign up in Discord, with the buttons on each event's post. New events are made on " .. ns.GOLD .. "ngmpeon.app|r (Create Events).")
     self.content:SetSize(width, y + 40)
 end
