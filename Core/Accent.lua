@@ -85,10 +85,47 @@ function A.For(bg, border)
 end
 
 -- Your guild's tabard colours as hex, or nil (no guild, no tabard yet).
+-- Never errors: anything unexpected from the game gives nil (house colours).
 function A:Tabard()
     if not (IsInGuild and IsInGuild() and C_GuildInfo and C_GuildInfo.GetGuildTabardInfo) then return nil end
     local ok, info = pcall(C_GuildInfo.GetGuildTabardInfo, "player")
-    if not (ok and info and info.backgroundColor and info.borderColor) then return nil end
-    local function h(c) return Hex(c:GetRGB()) end
-    return h(info.backgroundColor), h(info.borderColor)
+    if not (ok and type(info) == "table") then return nil end
+    -- a colour object (GetRGB) on some clients, a plain { r, g, b } on others
+    local function h(c)
+        if type(c) ~= "table" then return nil end
+        local r, g, b
+        if type(c.GetRGB) == "function" then
+            local fine, x, y, z = pcall(c.GetRGB, c)
+            if fine then r, g, b = x, y, z end
+        end
+        if not r then r, g, b = c.r, c.g, c.b end
+        if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return nil end
+        return Hex(r, g, b)
+    end
+    local bg, border = h(info.backgroundColor), h(info.borderColor)
+    if not (bg and border) then return nil end
+    return bg, border
+end
+
+-- /ngm diag: what the game says about the tabard, for troubleshooting.
+function A:Diagnose()
+    local api = C_GuildInfo and C_GuildInfo.GetGuildTabardInfo
+    local line = ("Guild colours: tabard info %s"):format(api and "available" or "|cfffb4934not given by this client|r")
+    if api then
+        local ok, info = pcall(api, "player")
+        if not ok then
+            line = line .. ", |cfffb4934error|r: " .. tostring(info)
+        elseif type(info) ~= "table" then
+            line = line .. ", returned " .. tostring(info)
+        else
+            local function describe(c)
+                if type(c) ~= "table" then return tostring(c) end
+                return (type(c.GetRGB) == "function" and "object" or "table") .. (c.r and (" r=%.2f"):format(c.r) or "")
+            end
+            line = line .. (", background %s, border %s"):format(describe(info.backgroundColor), describe(info.borderColor))
+        end
+    end
+    local bg, border = self:Tabard()
+    local face, shade = A.For(bg, border)
+    ns:Print(line .. (". Read as %s/%s, accent %s/%s."):format(tostring(bg), tostring(border), face, shade))
 end

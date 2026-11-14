@@ -137,7 +137,8 @@ local accentUsers = {}
 function T:OnAccent(fn) accentUsers[#accentUsers + 1] = fn end
 function T:RefreshAccent()
     if not ns.Accent then return end
-    local face, shade = ns.Accent.For(ns.Accent:Tabard())
+    local ok, face, shade = pcall(function() return ns.Accent.For(ns.Accent:Tabard()) end)
+    if not ok then return end
     local function C3(h) return { tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 } end
     if self.A.hex == face .. shade then return end
     self.A = { face = C3(face), shade = C3(shade), hex = face .. shade }
@@ -266,7 +267,10 @@ function T:Skin(frame)
     local close = frame.CloseButton or (frame:GetName() and _G[frame:GetName() .. "CloseButton"])
     if close then T:SkinClose(close) end
     -- what's inside: now, and each time it opens (pages are built later)
-    frame:HookScript("OnShow", function(f) C_Timer.After(0, function() T:SkinTree(f) end) end)
+    frame:HookScript("OnShow", function(f)
+        T:RefreshAccent() -- cheap; catches a tabard that loaded after login
+        C_Timer.After(0, function() T:SkinTree(f) end)
+    end)
     T:SkinTree(frame)
     return frame
 end

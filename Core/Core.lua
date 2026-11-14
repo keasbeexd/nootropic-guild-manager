@@ -384,6 +384,7 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns.GuildRoster:Diagnose()
         ns.WhoWhisper:Diagnose()
         ns.Recruit:Diagnose()
+        ns.Accent:Diagnose()
     elseif cmd == "options" or cmd == "config" or cmd == "settings" then
         ns.Options:Open()
     elseif cmd == "recruit" then
