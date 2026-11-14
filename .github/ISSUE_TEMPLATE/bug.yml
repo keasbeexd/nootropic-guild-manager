@@ -1,0 +1,62 @@
+name: Bug report
+description: Something isn't working, in game, on ngmpeon.app or in Discord.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. A few quick questions help us find it fast.
+        **Security problems:** please don't post them here. Message keasbeexd on our Discord (https://discord.gg/BCnPbyBSyb) instead.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where is the problem?
+      options:
+        - In game (the NGM addon)
+        - On ngmpeon.app (the dashboard or the website)
+        - In Discord (the NGM Peon bot)
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: peon
+    attributes:
+      label: Does your guild use NGM Peon (the Discord bot)?
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Addon version
+      description: In the bottom corner of the NGM window, or from /ngm diag. Leave empty if the problem isn't in game.
+      placeholder: "3.0.0"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: And what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we make it happen?
+      description: The steps, if you know them.
+      placeholder: |
+        1. Open the Upcoming Events tab
+        2. ...
+  - type: textarea
+    id: diag
+    attributes:
+      label: /ngm diag
+      description: For problems in game, type /ngm diag and paste what it prints in chat.
+      render: text
+  - type: textarea
+    id: shots
+    attributes:
+      label: Screenshots
+      description: Drag images here if they help. Please blur other players' names if they'd rather not be shown.

@@ -1,0 +1,41 @@
+name: Feature idea
+description: Suggest something new for the addon, ngmpeon.app or the Discord bot.
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: What's it for?
+      options:
+        - The NGM addon (in game)
+        - NGM Peon's dashboard or website (ngmpeon.app)
+        - The Discord bot (NGM Peon)
+        - More than one of these
+    validations:
+      required: true
+  - type: dropdown
+    id: peon
+    attributes:
+      label: Does your guild use NGM Peon (the Discord bot)?
+      options:
+        - "Yes"
+        - "No"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would it help with?
+      description: The problem or the wish, in your own words.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How you picture it working. Rough is fine.
+  - type: textarea
+    id: else
+    attributes:
+      label: Anything else?
+      description: How you do it today, other addons that do it, screenshots...
