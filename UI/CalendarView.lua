@@ -94,15 +94,30 @@ function V:Add(e)
     if not e then return end
     local ok, why = ns.Calendar:Add(e)
     if ok then
-        self.result:SetText("|cffb8bb26Added:|r " .. e.title)
+        self.result:SetText("Adding " .. e.title .. "...")
     else
         self.result:SetText("|cfffb4934" .. why .. "|r")
     end
-    self:Refresh()
 end
+
+-- The game's answer (Services/Calendar.lua): added, or why not.
+ns:On("CALENDAR_RESULT", function(ok, text)
+    if not V.frame then return end
+    V.result:SetText(ok and ("|cffb8bb26Added:|r " .. tostring(text)) or ("|cfffb4934Not added:|r " .. tostring(text)))
+    V:Refresh()
+end)
 
 function V:Open()
     if not self.frame then self:Build() end
+    ns.Calendar:Prepare() -- the game needs the calendar open before an event can be made
+    -- beside the /ngm peon window when it's open, not on top of it
+    local peon = ns.PeonPasteView and ns.PeonPasteView.frame
+    self.frame:ClearAllPoints()
+    if peon and peon:IsShown() then
+        self.frame:SetPoint("TOPLEFT", peon, "TOPRIGHT", 16, 0)
+    else
+        self.frame:SetPoint("TOP", 0, -200)
+    end
     self.result:SetText("")
     local can, why = ns.Calendar:CanAdd()
     if not can then self.result:SetText("|cfffb4934" .. why .. "|r") end

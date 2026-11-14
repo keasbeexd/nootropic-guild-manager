@@ -670,7 +670,7 @@ function T:Toast(title, text)
     if not toast then
         toast = CreateFrame("Frame", nil, UIParent)
         toast:SetSize(360, 64)
-        toast:SetPoint("TOP", 0, -140)
+        toast:SetPoint("TOP", 0, -50) -- above the windows that open at -140
         toast:SetFrameStrata("DIALOG")
         T:Box(toast, T.C.bg1, T.C.yellow, 4)
         T:Scanlines(toast, 0.12, "ARTWORK")

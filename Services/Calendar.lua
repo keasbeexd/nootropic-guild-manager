@@ -10,9 +10,15 @@
     added twice; if its time changes in Discord, it's listed again.
     Remembered per character's guild (not shared with officers yet).
 
+    The calls follow Blizzard's own calendar (Blizzard_Calendar, Forever):
+    the calendar opened first (OpenCalendar), then create, date, title,
+    description, time, type, add. It's only marked added once the game says
+    so (CALENDAR_NEW_EVENT); an error (CALENDAR_UPDATE_ERROR) leaves it listed.
+
       ns.Calendar:Take(events)        keep the code's events -> how many to add
       ns.Calendar:Pending()           events still to add, soonest first
-      ns.Calendar:Add(event)          true, or nil and why
+      ns.Calendar:Add(event)          true (sent), or nil and why
+      ns.Calendar:Prepare()           asks the game for the calendar (before adding)
       ns.Calendar.RealmTime(t)        server time -> the realm's date and time
 ]]
 local _, ns = ...
@@ -27,6 +33,12 @@ local function Store()
     local g = ns.DB:Guild()
     if not g then return nil end
     g.calendar = g.calendar or { events = {}, added = {} }
+    -- tests up to 29 marked events added before the game said so (and the
+    -- adds failed): start that list afresh, once
+    if not g.calendar.confirmed then
+        g.calendar.confirmed = true
+        g.calendar.added = {}
+    end
     return g.calendar
 end
 
@@ -82,32 +94,70 @@ function CAL:CanAdd()
     return true
 end
 
+-- The calendar has to be opened before events can be made (Blizzard's
+-- calendar does this when it opens).
+function CAL:Prepare()
+    if C_Calendar and C_Calendar.OpenCalendar then pcall(C_Calendar.OpenCalendar) end
+end
+
 function CAL:Add(e)
     local ok, why = self:CanAdd()
     if not ok then return nil, why end
     if e.starts <= ns.DB:Now() then return nil, "That event has started." end
+    if self.pending then return nil, "Still adding the last one. Try again in a moment." end
+    self:Prepare()
     local when = self.RealmTime(e.starts)
     local length = e.minutes >= 60 and (e.minutes / 60 .. " h") or (e.minutes .. " min")
     local text = ("%s, %s. %s%sSign up in Discord."):format(KIND[e.kind] or "Event", length, e.description or "", (e.description or "") ~= "" and " " or "")
     local done, err = pcall(function()
+        -- in Blizzard's order (CalendarDayContextMenu_CreateGuildAnnouncement,
+        -- CalendarCreateEventFrame_Update, the Create button)
         if C_Calendar.CloseEvent then C_Calendar.CloseEvent() end
         C_Calendar.CreateGuildAnnouncementEvent()
+        C_Calendar.EventSetDate(when.month, when.day, when.year)
         C_Calendar.EventSetTitle(Cut(e.title or "Event", self.TITLE_MAX))
         if C_Calendar.EventSetDescription then C_Calendar.EventSetDescription(Cut(text, self.TEXT_MAX)) end
-        C_Calendar.EventSetDate(when.month, when.day, when.year)
         C_Calendar.EventSetTime(when.hour, when.min)
+        if C_Calendar.EventSetType and Enum and Enum.CalendarEventType and Enum.CalendarEventType.Other then
+            C_Calendar.EventSetType(Enum.CalendarEventType.Other)
+        end
         C_Calendar.AddEvent()
     end)
     if not done then return nil, "The game refused: " .. tostring(err) end
+    -- added once the game says so (Confirmed), not before
+    self.pending = { key = Key(e), starts = e.starts, title = e.title }
+    if C_Timer then
+        local mine = self.pending
+        C_Timer.After(15, function() if CAL.pending == mine then CAL.pending = nil; ns:Fire("CALENDAR_RESULT", false, "No answer from the game. Try again.") end end)
+    end
+    return true
+end
+
+-- The game: the event is made.
+function CAL:Confirmed()
+    local p = self.pending
+    if not p then return end
+    self.pending = nil
     local s = Store()
-    if s then s.added[Key(e)] = e.starts end
+    if s then s.added[p.key] = p.starts end
+    ns:Fire("CALENDAR_RESULT", true, p.title)
+end
+
+-- The game: it wasn't (msg: the game's error key, e.g. CALENDAR_ERROR_NEEDS_TITLE).
+function CAL:Failed(msg)
+    if not self.pending then return false end
+    self.pending = nil
+    local text = (msg and _G[msg]) or tostring(msg)
+    ns:Fire("CALENDAR_RESULT", false, text)
     return true
 end
 
 -- The game says when an add fails (no permission, a bad date): pass it on.
 function CAL:Init()
     if not ns.RegisterEvent then return end
+    ns:RegisterEvent("CALENDAR_NEW_EVENT", function() CAL:Confirmed() end)
     ns:RegisterEvent("CALENDAR_UPDATE_ERROR", function(_, msg)
-        if msg and msg ~= "" then ns:Print("|cfffb4934Calendar:|r " .. tostring(msg)) end
+        -- ours: shown in the Add to calendar window; anything else, in chat
+        if not CAL:Failed(msg) and msg and msg ~= "" then ns:Print("|cfffb4934Calendar:|r " .. tostring((msg and _G[msg]) or msg)) end
     end)
 end

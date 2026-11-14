@@ -17,6 +17,9 @@ end
 assert(loadfile(ROOT .. "/Services/DiscordCode.lua"))("NGM", ns)
 assert(loadfile(ROOT .. "/Services/Calendar.lua"))("NGM", ns)
 local DC, CAL = ns.DiscordCode, ns.Calendar
+local fired = {}
+ns.Fire = function(_, msg, ...) fired[#fired + 1] = { msg, ... } end
+Enum = { CalendarEventType = { Other = 4 } }
 
 local c = assert(DC:ParsePeon("NGMP1.dXMKTm9vdHJvcGljCmhhcwl0b2Y3eGMKRQkxNglyYWlkCXRvaW8wMAk1MAlNb2x0ZW4gQ29yZQlCcmluZyBmaXJlIHJlc2lzdC4gT24gdGltZSE.68a01aeb"))
 assert(#c.events == 1)
@@ -37,17 +40,31 @@ local want = date("*t", e.starts - 5 * 3600)
 local got = CAL.RealmTime(e.starts)
 assert(got.year == want.year and got.month == want.month and got.day == want.day and got.hour == want.hour and got.min == want.min)
 
--- adding: a guild announcement with title, text, date and time, then saved; never twice
+-- adding: in Blizzard's order (Blizzard_Calendar on Forever): the calendar
+-- opened, then a guild announcement's date, title, text, time and type; added
+-- only once the game confirms it (CALENDAR_NEW_EVENT), never twice
 local calls = {}
 local function rec(name) return function(...) calls[#calls + 1] = { name, ... } end end
-C_Calendar = { CanAddEvent = function() return true end, CloseEvent = rec("close"), CreateGuildAnnouncementEvent = rec("create"),
-  EventSetTitle = rec("title"), EventSetDescription = rec("text"), EventSetDate = rec("date"), EventSetTime = rec("time"), AddEvent = rec("add") }
+C_Calendar = { CanAddEvent = function() return true end, OpenCalendar = rec("open"), CloseEvent = rec("close"), CreateGuildAnnouncementEvent = rec("create"),
+  EventSetTitle = rec("title"), EventSetDescription = rec("text"), EventSetDate = rec("date"), EventSetTime = rec("time"), EventSetType = rec("type"), AddEvent = rec("add") }
 assert(CAL:Add(e))
 local seq = {}
 for _, call in ipairs(calls) do seq[#seq + 1] = call[1] end
-assert(table.concat(seq, ",") == "close,create,title,text,date,time,add", table.concat(seq, ","))
-assert(calls[3][2] == "Molten Core" and calls[4][2] == "Raid, 3 h. Bring fire resist. On time! Sign up in Discord.", calls[4][2])
-assert(calls[5][2] == want.month and calls[5][3] == want.day and calls[5][4] == want.year and calls[6][2] == want.hour and calls[6][3] == want.min)
+assert(table.concat(seq, ",") == "open,close,create,date,title,text,time,type,add", table.concat(seq, ","))
+local by = {}
+for _, call in ipairs(calls) do by[call[1]] = call end
+assert(by.title[2] == "Molten Core" and by.text[2] == "Raid, 3 h. Bring fire resist. On time! Sign up in Discord.", by.text[2])
+assert(by.date[2] == want.month and by.date[3] == want.day and by.date[4] == want.year and by.time[2] == want.hour and by.time[3] == want.min)
+assert(by.type[2] == 4, "type Other, as Blizzard's")
+assert(#CAL:Pending() == 1, "not confirmed yet: still listed")
+assert(not CAL:Add(e), "one at a time")
+-- the game says no: still listed, and the reason passed on
+CAL:Failed("CALENDAR_ERROR_NEEDS_TITLE")
+assert(#CAL:Pending() == 1 and fired[#fired][1] == "CALENDAR_RESULT" and fired[#fired][2] == false)
+-- the game says yes: added
+assert(CAL:Add(e))
+CAL:Confirmed()
+assert(fired[#fired][2] == true)
 assert(#CAL:Pending() == 0, "added: not listed again")
 -- moved in Discord: listed again
 CAL:Take({ { id = 42, kind = "raid", starts = e.starts + 3600, minutes = 180, title = "Molten Core", description = "" } })
@@ -56,7 +73,10 @@ assert(#CAL:Pending() == 1)
 local long = { id = 7, kind = "event", starts = now + 100, minutes = 60, title = ("\195\171"):rep(20), description = "" }
 calls = {}
 assert(CAL:Add(long))
-assert(#calls[3][2] <= 31 and calls[3][2] == ("\195\171"):rep(15), #calls[3][2])
+CAL:Confirmed()
+by = {}
+for _, call in ipairs(calls) do by[call[1]] = call end
+assert(#by.title[2] <= 31 and by.title[2] == ("\195\171"):rep(15), #by.title[2])
 -- started, or a client that can't: refused with a reason
 assert(not CAL:Add({ id = 8, kind = "event", starts = now - 1, minutes = 60, title = "x", description = "" }))
 C_Calendar.CanAddEvent = function() return false end
