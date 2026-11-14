@@ -19,8 +19,14 @@ ns.ScheduleGrid = SG
 local DAYS = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }
 local LABELS = { [0] = "12a", [3] = "6a", [6] = "12p", [9] = "6p" }
 local LABEL_W = 30
-local ON = { 0.16, 0.62, 0.42 }
-local OFF = { 0.05, 0.04, 0.03 }
+-- as the dashboard's heatmap: empty blocks in the line colour, filled ones
+-- yellow; counts in four steps from line toward yellow, the number on top
+local function C() return ns.Theme.C end
+local STEPS = { 0.30, 0.55, 0.80, 1 }
+local function Mix(t)
+    local l, y = C().line, C().yellow
+    return l[1] + (y[1] - l[1]) * t, l[2] + (y[2] - l[2]) * t, l[3] + (y[3] - l[3]) * t
+end
 
 function SG.New(parent, opts)
     opts = opts or {}
@@ -65,6 +71,10 @@ function SG.New(parent, opts)
             cell:SetPoint("TOPLEFT", LABEL_W + b * (cw + gap), y)
             cell:SetBackdrop({ bgFile = ns.Widgets.WHITE, edgeFile = ns.Widgets.WHITE, edgeSize = 1 })
             cell.day, cell.block = d, b
+            cell.Count = cell:CreateFontString(nil, "OVERLAY", "NGMFontNumber")
+            cell.Count:SetPoint("CENTER")
+            local bg = C().bg
+            cell.Count:SetTextColor(bg[1], bg[2], bg[3])
             cell:SetScript("OnMouseDown", function(c)
                 if not opts.editable then return end
                 self.painting = true
@@ -83,7 +93,8 @@ function SG.New(parent, opts)
             end)
             cell:SetScript("OnMouseUp", function() self:StopPaint() end)
             cell:SetScript("OnEnter", function(c)
-                c:SetBackdropBorderColor(0.98, 0.74, 0.18, 1)
+                local fg = C().fg
+                c:SetBackdropBorderColor(fg[1], fg[2], fg[3], 1)
                 if opts.onHover then opts.onHover(c, c.day, c.block) end
             end)
             cell:SetScript("OnLeave", function(c)
@@ -121,16 +132,19 @@ end
 function SG:Paint(cell)
     if self.counts then
         local n = self.counts[cell.day * 12 + cell.block] or 0
-        local t = (self.countMax or 0) > 0 and n / self.countMax or 0
-        if n > 0 then t = 0.2 + 0.8 * t end -- anyone at all shows
-        cell:SetBackdropColor(OFF[1] + (ON[1] - OFF[1]) * t, OFF[2] + (ON[2] - OFF[2]) * t, OFF[3] + (ON[3] - OFF[3]) * t, 1)
-        if n > 0 then cell:SetBackdropBorderColor(0.36, 0.79, 0.65, 0.25 + 0.75 * t) else cell:SetBackdropBorderColor(0.2, 0.18, 0.14, 1) end
+        local top = math.max(1, self.countMax or 0)
+        local step = n > 0 and math.min(4, math.ceil(n / top * 4)) or 0
+        local r, g, b = Mix(step > 0 and STEPS[step] or 0)
+        cell:SetBackdropColor(r, g, b, 1)
+        cell:SetBackdropBorderColor(r, g, b, 1)
+        cell.Count:SetText(n > 0 and n or "")
         return
     end
+    cell.Count:SetText("")
     local on = self:Block(cell.day, cell.block)
-    local c = on and ON or OFF
-    cell:SetBackdropColor(c[1], c[2], c[3], 1)
-    if on then cell:SetBackdropBorderColor(0.36, 0.79, 0.65, 1) else cell:SetBackdropBorderColor(0.2, 0.18, 0.14, 1) end
+    local r, g, b = Mix(on and 1 or 0)
+    cell:SetBackdropColor(r, g, b, 1)
+    cell:SetBackdropBorderColor(r, g, b, 1)
 end
 
 function SG:Redraw()

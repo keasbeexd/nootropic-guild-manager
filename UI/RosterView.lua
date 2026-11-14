@@ -396,6 +396,9 @@ local function MenuButton(parent, text, width, arrow)
     b.Arrow:SetSize(16, 16)
     b.Arrow:SetPoint("RIGHT", -4, 0)
     b.Arrow:SetTexture(arrow == "down" and "Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up" or "Interface\\ChatFrame\\ChatFrameExpandArrow")
+    local dark = ns.Theme.C.bg
+    b.Arrow:SetDesaturated(true)
+    b.Arrow:SetVertexColor(dark[1], dark[2], dark[3]) -- dark on the yellow face, as the label
     return b
 end
 

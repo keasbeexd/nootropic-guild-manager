@@ -62,14 +62,11 @@ end
 -- Page
 ------------------------------------------------------------------------
 local function Card(parent)
-    local c = CreateFrame("Frame", nil, parent, BackdropTemplateMixin and "BackdropTemplate" or nil)
+    -- as the dashboard's cards: a dark box with a notched edge, the title in
+    -- yellow upper case, names plain, yours in aqua, last month's in yellow
+    local c = CreateFrame("Frame", nil, parent)
     c:SetHeight(CARD_H)
-    if c.SetBackdrop then
-        c:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-                        edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-        c:SetBackdropColor(0.05, 0.04, 0.03, 0.85)
-        c:SetBackdropBorderColor(0.5, 0.42, 0.25, 0.9)
-    end
+    ns.Theme:Box(c, ns.Theme.C.bg1, ns.Theme.C.edge, 4)
     c.Icon = c:CreateTexture(nil, "ARTWORK")
     c.Icon:SetSize(18, 18)
     c.Icon:SetPoint("TOPLEFT", 8, -7)
@@ -110,23 +107,23 @@ local function Card(parent)
     return c
 end
 
+local AQUA = "|cff8ec07c"
 local function NameText(p, mine)
-    local r, g, b = ns.ClassColor(p.e.classFile)
-    local hex = ("|cff%02x%02x%02x"):format(r * 255, g * 255, b * 255)
-    return hex .. p.e.short .. "|r" .. (p.key == mine and (GOLD .. " (you)|r") or "")
+    return p.key == mine and (AQUA .. p.e.short .. "|r") or p.e.short
 end
 
 function HV:FillCard(c, stat, data)
     local list = data.boards[stat.key]
     c.stat, c.list = stat, list
     W.SetIcon(c.Icon, stat.icon)
-    c.Title:SetText(stat.label)
+    c.Title:SetText(ns.Theme.Upper(stat.label))
     for i, r in ipairs(c.rows) do
         local p = list[i]
         if p then
             r.Rank:SetText(i .. ".")
             r.Name:SetText(NameText(p, data.mine))
-            r.Value:SetText(ns.HallOfFame.Format(stat, p.n))
+            local v = ns.HallOfFame.Format(stat, p.n)
+            r.Value:SetText(p.key == data.mine and (AQUA .. v .. "|r") or v)
         else
             r.Rank:SetText("")
             r.Name:SetText(i == 1 and (GRAY .. "Nobody yet|r") or "")
@@ -153,9 +150,9 @@ function HV:FillCard(c, stat, data)
         local names = {}
         for i, p in ipairs(champ.winners) do
             if i > 2 then names[#names + 1] = ("+%d"):format(#champ.winners - 2) break end
-            names[#names + 1] = NameText(p, data.mine)
+            names[#names + 1] = p.e.short
         end
-        c.Champ:SetText(GOLD .. "Last month:|r " .. table.concat(names, ", ") .. GRAY .. " (" .. ns.HallOfFame.Format(stat, champ.n) .. ")|r")
+        c.Champ:SetText(GOLD .. "Last month: " .. table.concat(names, ", ") .. "|r" .. GRAY .. " (" .. ns.HallOfFame.Format(stat, champ.n) .. ")|r")
     elseif data.crown and (data.crown.state == "tallying" or data.crown.state == "due") then
         c.Champ:SetText(GRAY .. "Last month: tallying...|r")
     else
@@ -347,14 +344,17 @@ function HV:Refresh()
         top = top + 24
     end
 
-    local cols = math.max(1, math.floor((width + CARD_GAP) / (CARD_W + CARD_GAP)))
-    local cardW = math.floor((width - (cols - 1) * CARD_GAP) / cols)
+    -- the cards' edges sit outside them: keep 4 units clear all round
+    local inner = width - 8
+    local cols = math.max(1, math.floor((inner + CARD_GAP) / (CARD_W + CARD_GAP)))
+    local cardW = math.floor((inner - (cols - 1) * CARD_GAP) / cols)
+    top = top + 4
     for i, stat in ipairs(ns.HallOfFame.STATS) do
         local c = self.cards[i] or Card(self.content)
         self.cards[i] = c
         local col, row = (i - 1) % cols, math.floor((i - 1) / cols)
         c:ClearAllPoints()
-        c:SetPoint("TOPLEFT", col * (cardW + CARD_GAP), -(top + row * (CARD_H + CARD_GAP)))
+        c:SetPoint("TOPLEFT", 4 + col * (cardW + CARD_GAP), -(top + row * (CARD_H + CARD_GAP)))
         c:SetWidth(cardW)
         self:FillCard(c, stat, data)
         c:Show()

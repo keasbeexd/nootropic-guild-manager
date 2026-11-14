@@ -156,7 +156,7 @@ function DP:Build()
     -- Edit / Done beside the close button
     local edit = W.Button(f, "Edit", 56, 18)
     local close = f.CloseButton or _G[f:GetName() .. "CloseButton"]
-    if close then edit:SetPoint("RIGHT", close, "LEFT", -2, 0) else edit:SetPoint("TOPRIGHT", -30, -3) end
+    if close then edit:SetPoint("RIGHT", close, "LEFT", -12, 0) else edit:SetPoint("TOPRIGHT", -30, -3) end
     edit:SetFrameLevel((close and close:GetFrameLevel() or f:GetFrameLevel() + 10) + 1)
     edit:SetScript("OnClick", function() DP:SetEditing(not DP.editing) end)
     edit:SetScript("OnEnter", function(self)

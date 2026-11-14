@@ -21,8 +21,13 @@ local OV = {}
 ns.OverviewView = OV
 
 local GRAY = "|cffa89984"
+local FAINT = "|cff7c6f64"
 local WINDOWS = { 7, 30, 90, 0 }
-local BAR_H, BAR_GAP = 18, 3
+local BAR_H, BAR_GAP = 20, 3
+-- each section as the dashboard's: a heading with a dashed rule, then a box
+local HEAD, PAD, EDGE = 26, 14, 4
+local IN_X, IN_Y = EDGE + PAD, HEAD + EDGE + PAD -- where a box's content starts
+local BELOW = PAD + EDGE + 4                     -- room under a box's content
 local COUNT_W = 62 -- room right of the bar for "11  44%"
 local LEVEL_BANDS = { { 1, 9 }, { 10, 19 }, { 20, 29 }, { 30, 39 }, { 40, 49 }, { 50, 59 }, { 60, 60 } }
 local DAYS = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" }
@@ -132,14 +137,25 @@ local function ClassName(file)
         or (file:sub(1, 1) .. file:sub(2):lower())
 end
 
--- A section: a title and a frame below it, placed by Layout().
+-- A section, as the dashboard's: an upper-case heading and a dashed rule,
+-- then a box (dark fill, notched edge) holding it. Placed by Layout().
 local function Section(parent, title)
+    local T = ns.Theme
     local s = CreateFrame("Frame", nil, parent)
     s.Title = s:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
-    s.Title:SetPoint("TOPLEFT", 0, 0)
-    s.Title:SetText(title)
+    s.Title:SetPoint("TOPLEFT", 0, -2)
+    s.Title:SetTextColor(T.C.fg[1], T.C.fg[2], T.C.fg[3])
+    s.Title:SetText(T.Upper(title))
     s.Sub = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Sub:SetPoint("LEFT", s.Title, "RIGHT", 8, 0)
+    s.Rule = T:Dashes(s)
+    s.Rule:SetPoint("LEFT", s.Sub, "RIGHT", 10, 0)
+    s.Rule:SetPoint("RIGHT", s, "RIGHT", -EDGE, 0)
+    s.Box = CreateFrame("Frame", nil, s)
+    s.Box:SetPoint("TOPLEFT", EDGE, -(HEAD + EDGE))
+    s.Box:SetPoint("BOTTOMRIGHT", -EDGE, EDGE)
+    s.Box:SetFrameLevel(s:GetFrameLevel())
+    T:Box(s.Box, T.C.bg1, T.C.edge, EDGE)
     s.bars = {}
     return s
 end
@@ -148,7 +164,9 @@ end
 local function Bar(section)
     local b = CreateFrame("Button", nil, section)
     b:SetHeight(BAR_H)
-    b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(1, 1, 1, 0.05)
     b.Icon = b:CreateTexture(nil, "ARTWORK")
     b.Icon:SetSize(16, 16)
     b.Icon:SetPoint("LEFT", 2, 0)
@@ -160,11 +178,13 @@ local function Bar(section)
     b.Track = b:CreateTexture(nil, "BACKGROUND")
     b.Track:SetPoint("LEFT", b.Label, "RIGHT", 6, 0)
     b.Track:SetPoint("RIGHT", -COUNT_W, 0)
-    b.Track:SetHeight(BAR_H - 6)
-    b.Track:SetColorTexture(0.05, 0.04, 0.03, 1)
+    -- as the dashboard's bars: a 14-unit track in the line colour
+    b.Track:SetHeight(14)
+    local line = ns.Theme.C.line
+    b.Track:SetColorTexture(line[1], line[2], line[3], 1)
     b.Fill = b:CreateTexture(nil, "ARTWORK")
     b.Fill:SetPoint("LEFT", b.Track, "LEFT", 0, 0)
-    b.Fill:SetHeight(BAR_H - 6)
+    b.Fill:SetHeight(14)
     b.Count = b:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     b.Count:SetPoint("RIGHT", -4, 0)
     b.Count:SetJustifyH("RIGHT")
@@ -183,29 +203,30 @@ local function Bar(section)
 end
 
 -- rows: { { icon, label, n, color = {r,g,b}, search, tip } ... }
+-- As the dashboard: each bar's length is its share of everyone counted;
+-- classes in their colours, everything else yellow.
 local function FillBars(section, rows, total, width)
-    local max = 0
-    for _, r in ipairs(rows) do if r.n > max then max = r.n end end
+    width = width - 2 * IN_X
     for i, r in ipairs(rows) do
         local b = section.bars[i] or Bar(section)
         section.bars[i] = b
         b:ClearAllPoints()
-        b:SetPoint("TOPLEFT", 0, -20 - (i - 1) * (BAR_H + BAR_GAP))
+        b:SetPoint("TOPLEFT", IN_X, -IN_Y - (i - 1) * (BAR_H + BAR_GAP))
         b:SetWidth(width)
         if r.classFile then W.SetClassIcon(b.Icon, r.classFile) else W.SetIcon(b.Icon, r.icon) end
         b.Label:SetText(r.label)
         local track = width - 2 - 16 - 6 - 96 - 6 - COUNT_W
-        b.Fill:SetWidth(math.max(1, track * (max > 0 and r.n / max or 0)))
+        b.Fill:SetWidth(math.max(1, track * (total > 0 and r.n / total or 0)))
         b.Fill:SetShown(r.n > 0)
-        local c = r.color or { 0.16, 0.62, 0.42 }
-        b.Fill:SetColorTexture(c[1], c[2], c[3], 0.85)
+        local c = r.color or ns.Theme.C.yellow
+        b.Fill:SetColorTexture(c[1], c[2], c[3], 1)
         local pct = total > 0 and math.floor(r.n / total * 100 + 0.5) or 0
-        b.Count:SetText(r.n > 0 and (r.n .. GRAY .. "  " .. pct .. "%|r") or (GRAY .. "0|r"))
+        b.Count:SetText(r.n > 0 and (r.n .. FAINT .. "  " .. pct .. "%|r") or (FAINT .. "0|r"))
         b.search, b.tipTitle, b.tipText = r.search, r.label, r.tip
         b:Show()
     end
     for i = #rows + 1, #section.bars do section.bars[i]:Hide() end
-    return 20 + #rows * (BAR_H + BAR_GAP)
+    return IN_Y + #rows * (BAR_H + BAR_GAP) - BAR_GAP + BELOW
 end
 
 function OV:Build(frame)
@@ -262,7 +283,7 @@ function OV:Build(frame)
     self.profs = Section(content, "Professions")
     self.when = Section(content, "When we play")
     self.grid = ns.ScheduleGrid.New(self.when, { cell = 30, cellH = 20, onHover = function(cell, d, b) OV:ShowHeatTip(cell, d, b) end })
-    self.grid.frame:SetPoint("TOPLEFT", 0, -20)
+    self.grid.frame:SetPoint("TOPLEFT", IN_X, -IN_Y)
     self.whenNote = self.when:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     self.whenNote:SetPoint("TOPLEFT", self.grid.frame, "BOTTOMLEFT", 0, -6)
     self.whenNote:SetJustifyH("LEFT")
@@ -354,11 +375,11 @@ function OV:Refresh()
 
     self.grid:SetCounts(c.heat, c.heatMax)
     self.when.Sub:SetText(ns.Profile.ClockLabel and ("(" .. ns.Profile.ClockLabel() .. ")") or "")
-    self.whenNote:SetWidth(colW)
+    self.whenNote:SetWidth(colW - 2 * IN_X)
     self.whenNote:SetText(c.sharing == 0
         and "Nobody counted here shares their hours yet. Hours come from \"Learn when I usually play\" (Options > Sharing)."
-        or (("%d of %d %s share their hours. Darker green means more of them usually play then; hover a block for who."):format(c.sharing, c.people, who)))
-    heights[self.when] = 20 + self.grid.frame:GetHeight() + 6 + math.max(14, self.whenNote:GetStringHeight()) + 4
+        or (("%d of %d %s share their hours. Brighter yellow means more of them usually play then; hover a block for who."):format(c.sharing, c.people, who)))
+    heights[self.when] = IN_Y + self.grid.frame:GetHeight() + 6 + math.max(14, self.whenNote:GetStringHeight()) + BELOW
 
     self:Layout(width, heights)
 end

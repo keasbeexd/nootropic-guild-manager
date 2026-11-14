@@ -123,7 +123,11 @@ local function NewPage(key, name, subtitle)
     panel:SetSize(600, 800)
     scroll:SetScrollChild(panel)
     outer:SetScript("OnSizeChanged", function(_, w) panel:SetWidth(math.max(400, (w or 600) - 30)) end)
-    outer:SetScript("OnShow", function() O:Refresh() end)
+    outer:SetScript("OnShow", function(f)
+        O:Refresh()
+        -- tick boxes, fields, scroll bars and panels as the dashboard's
+        C_Timer.After(0, function() ns.Theme:SkinTree(f) end)
+    end)
     O.pages[key] = outer
 
     -- the addon's own logo, whatever the icon choice (this is about the addon)

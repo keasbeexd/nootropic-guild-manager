@@ -72,11 +72,9 @@ end
 function W.SectionHeader(parent, text)
     local title = parent:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
     title:SetText(ns.Theme.Upper(text))
-    local line = parent:CreateTexture(nil, "ARTWORK")
-    local c = ns.Theme.C.line
-    line:SetColorTexture(c[1], c[2], c[3], 1)
-    line:SetHeight(2)
-    line:SetPoint("LEFT", title, "RIGHT", 6, 0)
+    -- the dashboard's heading: the title, then a dashed rule to the edge
+    local line = ns.Theme:Dashes(parent)
+    line:SetPoint("LEFT", title, "RIGHT", 10, 0)
     line:SetPoint("RIGHT", parent, "RIGHT", 0, 0)
     return title, line
 end

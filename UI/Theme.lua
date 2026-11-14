@@ -9,8 +9,11 @@
 
     ns.Theme.C.yellow          {r, g, b}
     ns.Theme.HEX.yellow        "fabd2f" (for |cff...|r)
-    ns.Theme:Skin(frame)       a window in the theme's colours (template art hidden)
-    ns.Theme:SkinButton(b)     a button in the theme's colours
+    ns.Theme:Skin(frame)       a window as the dashboard's page (template art hidden;
+                               tick boxes, fields, scroll bars and panels inside too)
+    ns.Theme:SkinButton(b)     a button as the dashboard's
+    ns.Theme:Box(frame)        a dashboard box: dark fill, notched pixel edge
+    ns.Theme:Dashes(host)      the dashboard's dashed rule
     ns.Theme:Scanlines(region, alpha)   faint CRT lines over a frame (tiled)
     ns.Theme:Toast(title, text)        an arcade banner ("LEVEL UP!") that drops in
 ]]
@@ -32,6 +35,8 @@ end
 
 local MEDIA = "Interface\\AddOns\\NootropicGuildManager\\Media\\"
 T.SCANLINES = MEDIA .. "Scanlines"
+T.DASH = MEDIA .. "Dash"
+T.CRT = { mask = MEDIA .. "CRTMask", shade = MEDIA .. "CRTShade", glass = MEDIA .. "CRTGlass" }
 local DIR = MEDIA .. "Fonts\\"
 T.FONTS = {
     mono = DIR .. "JetBrainsMono-Regular.ttf",
@@ -123,8 +128,76 @@ function T:Scanlines(host, alpha, layer, sublevel, anchor)
 end
 
 ------------------------------------------------------------------------
--- Windows: the template's art (stone borders, gold title bar) hidden, a
--- dark box with a square edge instead, as the dashboard's boxes.
+-- Pixel edges, as the dashboard's boxes and buttons: four strips of
+-- `thick` units just outside `anchor`, corners left open (notched).
+------------------------------------------------------------------------
+local WHITE = "Interface\\Buttons\\WHITE8x8"
+
+function T:Edge(host, anchor, thick, color, layer, sublevel)
+    local parts = {}
+    local function Strip()
+        local x = host:CreateTexture(nil, layer or "BORDER", nil, sublevel or 0)
+        parts[#parts + 1] = x
+        return x
+    end
+    local top = Strip()
+    top:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", 0, 0)
+    top:SetPoint("BOTTOMRIGHT", anchor, "TOPRIGHT", 0, 0)
+    top:SetHeight(thick)
+    local bottom = Strip()
+    bottom:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, 0)
+    bottom:SetPoint("TOPRIGHT", anchor, "BOTTOMRIGHT", 0, 0)
+    bottom:SetHeight(thick)
+    local left = Strip()
+    left:SetPoint("TOPRIGHT", anchor, "TOPLEFT", 0, 0)
+    left:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMLEFT", 0, 0)
+    left:SetWidth(thick)
+    local right = Strip()
+    right:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 0, 0)
+    right:SetPoint("BOTTOMLEFT", anchor, "BOTTOMRIGHT", 0, 0)
+    right:SetWidth(thick)
+    local e = { parts = parts }
+    function e:SetColor(c, a) for _, x in ipairs(parts) do x:SetColorTexture(c[1], c[2], c[3], a or 1) end end
+    function e:SetShown(on) for _, x in ipairs(parts) do x:SetShown(on) end end
+    e:SetColor(color or T.C.edge)
+    return e
+end
+
+-- A box: `fill` across the frame and a notched edge around it.
+function T:Box(frame, fill, edge, thick)
+    local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+    bg:SetAllPoints(frame)
+    local c = fill or T.C.bg1
+    bg:SetColorTexture(c[1], c[2], c[3], 1)
+    return bg, T:Edge(frame, frame, thick or 4, edge or T.C.edge, "BACKGROUND", -7)
+end
+
+-- A dashed rule (the dashboard's section headings: 4 tall, 8 on, 4 off).
+function T:Dashes(host, layer)
+    local tex = host:CreateTexture(nil, layer or "ARTWORK")
+    local ok = pcall(tex.SetTexture, tex, T.DASH, "REPEAT", "CLAMP", "NEAREST")
+    if not ok then tex:SetTexture(T.DASH) end
+    if tex.SetHorizTile then tex:SetHorizTile(true) end
+    tex:SetHeight(4)
+    local c = T.C.line
+    tex:SetVertexColor(c[1], c[2], c[3], 1)
+    local function Fit()
+        local w = tex:GetWidth()
+        if w and w > 0 then tex:SetTexCoord(0, w / 12, 0, 1) end
+    end
+    if host.HookScript then
+        host:HookScript("OnSizeChanged", Fit)
+        host:HookScript("OnShow", Fit)
+    end
+    tex.Fit = Fit
+    C_Timer.After(0, Fit)
+    return tex
+end
+
+------------------------------------------------------------------------
+-- Windows: the template's art (stone borders, gold title bar) hidden; the
+-- dashboard's page instead: its dark background, a notched 4-unit edge,
+-- faint scanlines. Everything in the window is then skinned (SkinTree).
 ------------------------------------------------------------------------
 local ART = { "NineSlice", "Bg", "TitleBg", "TopTileStreaks", "TitleContainer", "Inset", "PortraitContainer" }
 
@@ -137,7 +210,7 @@ local function HideArt(region)
     end
 end
 
-function T:Skin(frame, opts)
+function T:Skin(frame)
     if not frame or frame._ngmSkinned then return frame end
     frame._ngmSkinned = true
     pcall(function()
@@ -149,32 +222,23 @@ function T:Skin(frame, opts)
         local portrait = frame.portrait or frame.Portrait or (frame.PortraitContainer and frame.PortraitContainer.portrait)
         if portrait then portrait:SetAlpha(0) end
     end)
-    local box = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+    local box = CreateFrame("Frame", nil, frame)
     box:SetAllPoints(frame)
     box:SetFrameLevel(math.max(frame:GetFrameLevel() - 1, 0))
-    box:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 2 })
-    box:SetBackdropColor(T.C.bg[1], T.C.bg[2], T.C.bg[3], 0.97)
-    box:SetBackdropBorderColor(T.C.edge[1], T.C.edge[2], T.C.edge[3], 1)
+    local bg = box:CreateTexture(nil, "BACKGROUND", nil, -8)
+    bg:SetAllPoints(box)
+    bg:SetColorTexture(T.C.bg[1], T.C.bg[2], T.C.bg[3], 0.97)
+    T:Edge(box, box, 4, T.C.edge, "BACKGROUND", -7)
+    T:Scanlines(box, 0.06, "BACKGROUND", -6)
     frame._ngmBox = box
-    -- arcade: a hard drop shadow (no blur) and faint scanlines
-    local shadow = CreateFrame("Frame", nil, frame)
-    shadow:SetPoint("TOPLEFT", 6, -6)
-    shadow:SetPoint("BOTTOMRIGHT", 6, -6)
-    shadow:SetFrameLevel(math.max(box:GetFrameLevel() - 1, 0))
-    local dark = shadow:CreateTexture(nil, "BACKGROUND")
-    dark:SetAllPoints()
-    dark:SetColorTexture(0, 0, 0, 0.55)
-    T:Scanlines(box, 0.10, "ARTWORK")
-    -- a yellow HUD line under the title bar
-    local hud = box:CreateTexture(nil, "ARTWORK", nil, 6)
-    hud:SetColorTexture(T.C.yellow[1], T.C.yellow[2], T.C.yellow[3], 0.9)
-    hud:SetHeight(2)
-    hud:SetPoint("TOPLEFT", 2, -(opts and opts.hud or 24))
-    hud:SetPoint("TOPRIGHT", -2, -(opts and opts.hud or 24))
-    -- the title: mono, upper case, yellow
+    -- the title: mono, upper case, yellow, with the dashboard's hard red shadow
     local title = frame.TitleText or (frame.TitleContainer and frame.TitleContainer.TitleText) or frame._title
     if title then
         title:SetFontObject(NGMFontTitle)
+        if title.SetShadowColor then
+            title:SetShadowColor(T.C.shade[1], T.C.shade[2], T.C.shade[3], 1)
+            title:SetShadowOffset(2, -2)
+        end
         local set = title.SetText
         set(title, T.Upper(title:GetText() or ""))
         hooksecurefunc(title, "SetText", function(fs, text)
@@ -182,13 +246,19 @@ function T:Skin(frame, opts)
             if up ~= text then set(fs, up) end
         end)
     end
+    local close = frame.CloseButton or (frame:GetName() and _G[frame:GetName() .. "CloseButton"])
+    if close then T:SkinClose(close) end
+    -- what's inside: now, and each time it opens (pages are built later)
+    frame:HookScript("OnShow", function(f) C_Timer.After(0, function() T:SkinTree(f) end) end)
+    T:SkinTree(frame)
     return frame
 end
 
 ------------------------------------------------------------------------
--- Buttons: yellow with dark mono text and a hard shadow, as the dashboard's.
--- Mono upper case runs wider than the game's font, so a label that doesn't
--- fit drops to a smaller size, and past that ends in "..." inside the face.
+-- Buttons, as the dashboard's: a solid face, a notched 3-unit border in
+-- the text colour, a hard drop shadow in deep red; pressed, the button
+-- moves onto its shadow. Mono upper case runs wider than the game's font,
+-- so a label that doesn't fit drops a size, and past that ends in "...".
 ------------------------------------------------------------------------
 local function Fit(b)
     local fs = b:GetFontString()
@@ -206,14 +276,11 @@ local function Fit(b)
     fs:SetWidth(room)
     fs:SetWordWrap(false)
     fs:ClearAllPoints()
-    fs:SetPoint("CENTER", b, "CENTER", b.Arrow and -7 or 0, 0)
+    fs:SetPoint("CENTER", b._ngmFace or b, "CENTER", b.Arrow and -7 or 0, 0)
 end
 T.FitButton = Fit
 
-function T:SkinButton(b, style)
-    if not b or b._ngmSkinned then return b end
-    b._ngmSkinned = true
-    local fill = T.C[style == "bad" and "red" or style == "alt" and "aqua" or "yellow"]
+local function ClearArt(b)
     for _, key in ipairs({ "Left", "Middle", "Right", "LeftSeparator", "RightSeparator" }) do
         if b[key] then b[key]:SetAlpha(0) end
     end
@@ -224,20 +291,56 @@ function T:SkinButton(b, style)
     if b.SetPushedTexture then b:SetPushedTexture("") end
     if b.SetHighlightTexture then b:SetHighlightTexture("") end
     if b.SetDisabledTexture then b:SetDisabledTexture("") end
-    local shadow = b:CreateTexture(nil, "BACKGROUND", nil, -2)
+end
+
+-- The face, border and shadow; pressing moves face and border by (3, -4).
+local function Pressable(b, fill, thick, shadowAt)
+    local shadow = b:CreateTexture(nil, "BACKGROUND", nil, -3)
     shadow:SetColorTexture(T.C.shade[1], T.C.shade[2], T.C.shade[3], 1)
-    shadow:SetPoint("TOPLEFT", 3, -3)
-    shadow:SetPoint("BOTTOMRIGHT", 3, -3)
+    shadow:SetPoint("TOPLEFT", shadowAt[1], shadowAt[2])
+    shadow:SetPoint("BOTTOMRIGHT", shadowAt[1], shadowAt[2])
     local face = b:CreateTexture(nil, "BACKGROUND", nil, -1)
     face:SetColorTexture(fill[1], fill[2], fill[3], 1)
     face:SetAllPoints(b)
+    local edge = T:Edge(b, face, thick, T.C.fg, "BACKGROUND", -2)
     local hi = b:CreateTexture(nil, "HIGHLIGHT")
     hi:SetColorTexture(1, 1, 1, 0.12)
-    hi:SetAllPoints(b)
-    b._ngmFace, b._ngmShadow = face, shadow
+    hi:SetAllPoints(face)
+    b._ngmFace, b._ngmShadow, b._ngmEdge = face, shadow, edge
+    b:HookScript("OnMouseDown", function(self)
+        if not self:IsEnabled() then return end
+        face:ClearAllPoints()
+        face:SetPoint("TOPLEFT", 3, -4)
+        face:SetPoint("BOTTOMRIGHT", 3, -4)
+        shadow:Hide()
+    end)
+    b:HookScript("OnMouseUp", function(self)
+        face:ClearAllPoints()
+        face:SetAllPoints(b)
+        shadow:SetShown(self:IsEnabled())
+    end)
+    local function State()
+        local on = b:IsEnabled()
+        local c = on and fill or T.C.line
+        face:SetColorTexture(c[1], c[2], c[3], 1)
+        edge:SetColor(on and T.C.fg or T.C.edge)
+        shadow:SetShown(on)
+    end
+    hooksecurefunc(b, "Enable", State)
+    hooksecurefunc(b, "Disable", State)
+    if b.SetEnabled then hooksecurefunc(b, "SetEnabled", State) end
+    State()
+    return face
+end
+
+function T:SkinButton(b, style)
+    if not b or b._ngmSkinned then return b end
+    b._ngmSkinned = true
+    local fill = T.C[style == "bad" and "red" or style == "alt" and "aqua" or "yellow"]
+    ClearArt(b)
+    Pressable(b, fill, 3, { 5, -6 })
     local fs = b:GetFontString()
     if fs then fs:SetFontObject(NGMFontButton) end
-    T:Scanlines(b, 0.10, "BACKGROUND", 0, face)
     if b.SetNormalFontObject then
         b:SetNormalFontObject(NGMFontButton)
         b:SetHighlightFontObject(NGMFontButton)
@@ -255,22 +358,172 @@ function T:SkinButton(b, style)
     Fit(b)
     b:HookScript("OnSizeChanged", Fit)
     b:HookScript("OnShow", Fit)
-    -- pressed: the face moves onto its shadow
-    b:HookScript("OnMouseDown", function(self) if self:IsEnabled() then face:SetPoint("TOPLEFT", 2, -2); face:SetPoint("BOTTOMRIGHT", 2, -2) end end)
-    b:HookScript("OnMouseUp", function() face:ClearAllPoints(); face:SetAllPoints(b) end)
-    local function State()
-        local on = b:IsEnabled()
-        local c = on and fill or T.C.line
-        face:SetColorTexture(c[1], c[2], c[3], 1)
-        shadow:SetShown(on)
-    end
-    hooksecurefunc(b, "Enable", State)
-    hooksecurefunc(b, "Disable", State)
-    if b.SetEnabled then hooksecurefunc(b, "SetEnabled", State) end
-    State()
     return b
 end
 
+-- A window's close button: a small red button with an X.
+function T:SkinClose(b)
+    if not b or b._ngmSkinned then return b end
+    b._ngmSkinned = true
+    ClearArt(b)
+    b:SetSize(18, 18)
+    local p = b:GetParent()
+    if p then
+        b:ClearAllPoints()
+        b:SetPoint("TOPRIGHT", p, "TOPRIGHT", -9, -7)
+    end
+    local face = Pressable(b, T.C.red, 2, { 3, -4 })
+    local x = b:CreateFontString(nil, "OVERLAY", "NGMFontButton")
+    x:SetPoint("CENTER", face, "CENTER", 1, 0)
+    x:SetText("X")
+    return b
+end
+
+------------------------------------------------------------------------
+-- Everything else Blizzard drew, the dashboard's way. SkinTree walks a
+-- window once each time it opens and skins what it hasn't yet.
+------------------------------------------------------------------------
+local function SolidFrame(host, anchor, fill, edge, thick, inset)
+    inset = inset or 0
+    local border = host:CreateTexture(nil, "BACKGROUND", nil, -8)
+    border:SetPoint("TOPLEFT", anchor, "TOPLEFT", inset - thick, thick - inset)
+    border:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", thick - inset, inset - thick)
+    border:SetColorTexture(edge[1], edge[2], edge[3], 1)
+    local bg = host:CreateTexture(nil, "BACKGROUND", nil, -7)
+    bg:SetPoint("TOPLEFT", border, "TOPLEFT", thick, -thick)
+    bg:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", -thick, thick)
+    bg:SetColorTexture(fill[1], fill[2], fill[3], 1)
+    return bg, border
+end
+
+-- Tick boxes: the dashboard's dark square with a 2-unit edge; ticked, a
+-- yellow square inside.
+function T:SkinCheck(cb)
+    if cb._ngmSkinned then return end
+    cb._ngmSkinned = true
+    for _, get in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
+        local t = cb[get] and cb[get](cb)
+        if t then t:SetAlpha(0) end
+    end
+    local box = cb:CreateTexture(nil, "BACKGROUND", nil, -6)
+    box:SetSize(14, 14)
+    box:SetPoint("CENTER")
+    box:SetColorTexture(0, 0, 0, 0)
+    SolidFrame(cb, box, T.C.bg, T.C.edge, 2)
+    local tick = cb:CreateTexture(nil, "ARTWORK")
+    tick:SetSize(8, 8)
+    tick:SetPoint("CENTER", box, "CENTER")
+    tick:SetColorTexture(T.C.yellow[1], T.C.yellow[2], T.C.yellow[3], 1)
+    cb:SetCheckedTexture(tick)
+    if cb.SetDisabledCheckedTexture then
+        local off = cb:CreateTexture(nil, "ARTWORK")
+        off:SetSize(8, 8)
+        off:SetPoint("CENTER", box, "CENTER")
+        off:SetColorTexture(T.C.faint[1], T.C.faint[2], T.C.faint[3], 1)
+        cb:SetDisabledCheckedTexture(off)
+    end
+    local hl = cb:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints(box)
+    hl:SetColorTexture(1, 1, 1, 0.12)
+    cb:SetHighlightTexture(hl)
+    local label = cb.Text or cb.text
+    if label and label.GetFontObject and label:GetFontObject() ~= NGMFontTextSmall then label:SetFontObject(NGMFontTextSmall) end
+end
+
+-- Text fields: the dashboard's dark field with a solid 2-unit edge.
+function T:SkinEdit(eb)
+    if eb._ngmSkinned then return end
+    eb._ngmSkinned = true
+    local name = eb:GetName()
+    for _, key in ipairs({ "Left", "Middle", "Right", "Mid" }) do
+        local t = eb[key] or (name and _G[name .. key])
+        if t then t:SetAlpha(0) end
+    end
+    local left = eb.searchIcon and -2 or -6
+    local anchor = eb:CreateTexture(nil, "BACKGROUND", nil, -5)
+    anchor:SetPoint("TOPLEFT", left, 0)
+    anchor:SetPoint("BOTTOMRIGHT", 0, 0)
+    anchor:SetColorTexture(0, 0, 0, 0)
+    SolidFrame(eb, anchor, T.C.bg, T.C.edge, 2)
+    if eb.searchIcon then eb.searchIcon:SetVertexColor(T.C.dim[1], T.C.dim[2], T.C.dim[3]) end
+    eb:SetFontObject(NGMFontTextSmall)
+    if eb.Instructions then eb.Instructions:SetFontObject(NGMFontDimSmall) end
+end
+
+-- Scroll bars: a thin dark track and a block for a thumb; the arrows go.
+function T:SkinScroll(sf)
+    local sb = sf.ScrollBar or (sf:GetName() and _G[sf:GetName() .. "ScrollBar"])
+    if not sb or sb._ngmSkinned then return end
+    sb._ngmSkinned = true
+    local function Hide(f)
+        for _, r in ipairs({ f:GetRegions() }) do
+            if r.GetObjectType and r:GetObjectType() == "Texture" then r:SetAlpha(0) end
+        end
+        for _, c in ipairs({ f:GetChildren() }) do Hide(c) end
+    end
+    Hide(sb)
+    local track = sb:CreateTexture(nil, "BACKGROUND", nil, -8)
+    track:SetWidth(6)
+    local c = T.C.line
+    track:SetColorTexture(c[1], c[2], c[3], 1)
+    local e = T.C.edge
+    local thumbFrame = sb.Track and sb.Track.Thumb
+    if thumbFrame then
+        track:SetPoint("TOP", sb.Track, "TOP")
+        track:SetPoint("BOTTOM", sb.Track, "BOTTOM")
+        local t = thumbFrame:CreateTexture(nil, "OVERLAY", nil, 7)
+        t:SetPoint("TOP")
+        t:SetPoint("BOTTOM")
+        t:SetWidth(6)
+        t:SetColorTexture(e[1], e[2], e[3], 1)
+    else
+        track:SetPoint("TOP", sb, "TOP", 0, 0)
+        track:SetPoint("BOTTOM", sb, "BOTTOM", 0, 0)
+        local thumb = sb.ThumbTexture or (sb.GetThumbTexture and sb:GetThumbTexture())
+        if thumb then
+            thumb:SetColorTexture(e[1], e[2], e[3], 1)
+            thumb:SetSize(6, 28)
+            thumb:SetAlpha(1)
+        end
+    end
+end
+
+-- Panels drawn with the old tooltip border: the dashboard's box instead
+-- (their own background colour is kept; the edge becomes notched pixels).
+function T:SkinBackdrop(f)
+    if f._ngmSkinned or not f.SetBackdrop then return end
+    local info = f.backdropInfo
+    local edgeFile = info and info.edgeFile
+    if type(edgeFile) ~= "string" or not edgeFile:find("Tooltip") then return end
+    f._ngmSkinned = true
+    local r, g, b, a = f:GetBackdropColor()
+    f:SetBackdrop({ bgFile = WHITE })
+    if r then f:SetBackdropColor(r, g, b, a) end
+    -- the old warm near-black becomes the dashboard's box colour
+    if r and r < 0.1 and g < 0.1 and b < 0.1 then f:SetBackdropColor(T.C.bg1[1], T.C.bg1[2], T.C.bg1[3], 1) end
+    T:Edge(f, f, 3, T.C.edge, "BACKGROUND", 1)
+end
+
+function T:SkinTree(root)
+    if not root or not root.GetChildren then return end
+    for _, c in ipairs({ root:GetChildren() }) do
+        local kind = c.GetObjectType and c:GetObjectType()
+        if not c._ngmSkinned then
+            if kind == "CheckButton" and c.GetCheckedTexture and (c.Text or c.text or c:GetCheckedTexture()) and not c._ngmTab then
+                T:SkinCheck(c)
+            elseif kind == "EditBox" and (c.Left or c.Middle or c.searchIcon or (c:GetName() and _G[c:GetName() .. "Left"])) then
+                T:SkinEdit(c)
+            elseif kind == "ScrollFrame" then
+                T:SkinScroll(c)
+            elseif kind == "Button" and c == root.CloseButton then
+                T:SkinClose(c)
+            elseif c.backdropInfo then
+                T:SkinBackdrop(c)
+            end
+        end
+        T:SkinTree(c)
+    end
+end
 ------------------------------------------------------------------------
 -- Toast: an arcade banner at the top of the screen. The title drops in
 -- in steps, blinks three times, then the banner goes after a few seconds.
@@ -278,17 +531,11 @@ end
 local toast
 function T:Toast(title, text)
     if not toast then
-        toast = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+        toast = CreateFrame("Frame", nil, UIParent)
         toast:SetSize(360, 64)
         toast:SetPoint("TOP", 0, -140)
         toast:SetFrameStrata("DIALOG")
-        toast:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 2 })
-        toast:SetBackdropColor(T.C.bg[1], T.C.bg[2], T.C.bg[3], 0.97)
-        toast:SetBackdropBorderColor(T.C.yellow[1], T.C.yellow[2], T.C.yellow[3], 1)
-        local sh = toast:CreateTexture(nil, "BACKGROUND", nil, -8)
-        sh:SetColorTexture(T.C.shade[1], T.C.shade[2], T.C.shade[3], 1)
-        sh:SetPoint("TOPLEFT", 5, -5)
-        sh:SetPoint("BOTTOMRIGHT", 5, -5)
+        T:Box(toast, T.C.bg1, T.C.yellow, 4)
         T:Scanlines(toast, 0.12, "ARTWORK")
         toast.title = toast:CreateFontString(nil, "OVERLAY", "NGMFontHuge")
         toast.title:SetPoint("TOP", 0, -10)
