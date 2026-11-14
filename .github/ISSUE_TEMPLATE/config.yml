@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://discord.gg/BCnPbyBSyb
+    about: "Ask on our Discord: setting up, how something works, or just to say hi."
+  - name: Security problem
+    url: https://discord.gg/BCnPbyBSyb
+    about: "Please don't post security problems publicly. Message keasbeexd on our Discord instead."
