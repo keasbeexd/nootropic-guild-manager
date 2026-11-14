@@ -532,13 +532,21 @@ local function EnsureWatcher()
             end
         end
     end)
+    -- follows the hosts (a window being dragged) only while one is on
+    -- screen: with none showing it stops itself, and a host showing again
+    -- starts it (SecureOverlay), so nothing runs while the windows are shut
     local elapsed = 0
-    watcher:SetScript("OnUpdate", function(_, dt)
+    watcher:SetScript("OnUpdate", function(self, dt)
         elapsed = elapsed + (dt or 0)
         if elapsed < 0.1 then return end
         elapsed = 0
         if InCombatLockdown() then return end
-        for _, b in ipairs(overlays) do Place(b) end
+        local any = false
+        for _, b in ipairs(overlays) do
+            Place(b)
+            if b.host:IsVisible() then any = true end
+        end
+        if not any then self:Hide() end
     end)
 end
 
@@ -581,6 +589,7 @@ function W.SecureOverlay(host, opts)
     for _, script in ipairs({ "OnShow", "OnHide", "OnEnable", "OnDisable", "OnSizeChanged" }) do
         if host:HasScript(script) then host:HookScript(script, b.Update) end
     end
+    if host:HasScript("OnShow") then host:HookScript("OnShow", function() if watcher then watcher:Show() end end) end
     overlays[#overlays + 1] = b
     host.secure = b
     EnsureWatcher()

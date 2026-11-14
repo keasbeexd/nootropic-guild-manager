@@ -345,10 +345,12 @@ end
 
 function WI:Init()
     local watcher = CreateFrame("Frame")
+    watcher:Hide() -- runs only while /who results are on screen (started below)
     -- the window fills its rows a moment after the results arrive
     ns:RegisterEvent("WHO_LIST_UPDATE", function()
         if not WI:Enabled() then return end
         WI:Results()
+        watcher:Show()
         for _, delay in ipairs({ 0.1, 0.6, 1.5 }) do
             C_Timer.After(delay, function() WI:Scan() end)
         end
@@ -359,12 +361,12 @@ function WI:Init()
         elapsed = elapsed + (dt or 0)
         if elapsed < 0.25 then return end
         elapsed = 0
-        if not WI:Enabled() or not next(WI.buttons) then return end
+        if not WI:Enabled() or not next(WI.buttons) then watcher:Hide() return end
         local any = false
         for container in pairs(WI.containers) do
             if container:IsVisible() then any = true break end
         end
-        if any then WI:UpdateAll() end
+        if any then WI:UpdateAll() else watcher:Hide() end -- the /who window closed: stop
     end)
     ns:On("ROSTER_UPDATED", function() if next(WI.buttons) then WI:UpdateAll() end end)
     ns:On("RECRUITS_CHANGED", function() if next(WI.buttons) then WI:UpdateAll() end end)

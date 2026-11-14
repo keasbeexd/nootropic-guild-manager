@@ -187,11 +187,6 @@ function Brand:Refresh()
     ns:Fire("BRAND_CHANGED")
 end
 
-function Brand:SetStyle(key)
-    ns.DB:Settings().iconStyle = key
-    self:Refresh()
-end
-
 function Brand:Init()
     -- The emblem isn't known until guild data arrives, and it can change.
     local function queue()
