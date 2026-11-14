@@ -217,7 +217,7 @@ function O:BuildMain()
         local items = { { text = "Addon icon", isTitle = true } }
         for _, style in ipairs(D.ICON_STYLES) do
             items[#items + 1] = {
-                text = style.label, radio = true,
+                text = style.menuLabel or style.label, radio = true,
                 checked = function() return (ns.DB:Settings().iconStyle or "emblem") == style.key end,
                 func = function()
                     ns.Brand:SetStyle(style.key)
@@ -243,10 +243,10 @@ function O:BuildMain()
     themeBtn:SetScript("OnClick", function(btn)
         W.ShowMenu(btn, {
             { text = "Theme", isTitle = true },
+            { text = "Guild (default)", radio = true, checked = function() return ns.Theme:UseGuild() end,
+              func = function() ns.Theme:SetUseGuild(true); O:Refresh() end },
             { text = "Nootropic", radio = true, checked = function() return not ns.Theme:UseGuild() end,
               func = function() ns.Theme:SetUseGuild(false); O:Refresh() end },
-            { text = "Guild", radio = true, checked = function() return ns.Theme:UseGuild() end,
-              func = function() ns.Theme:SetUseGuild(true); O:Refresh() end },
         })
     end)
     W.Tooltip(themeBtn, "Theme", "Guild: buttons, headings and the window in your guild tabard's colors. Nootropic: the addon's own colors. NGM Peon's dashboard has the same choice.")

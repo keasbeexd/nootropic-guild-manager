@@ -77,6 +77,13 @@ function DB:Init()
         st.tabardDefault = true
         st.iconStyle = "emblem"
     end
+    -- 3.0: the guild's tabard and the guild's theme are the defaults; anyone
+    -- who changed either while testing starts from them once more
+    if not st.guildLookDefault then
+        st.guildLookDefault = true
+        st.iconStyle = "emblem"
+        st.theme = nil
+    end
     st.logoMigrated, st.titleUseGuild = nil, nil
     -- 2.6.1: every column but Second Name starts shown. Anyone still on the
     -- old default (version, second, level, class, zone, rank hidden, nothing

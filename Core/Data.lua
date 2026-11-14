@@ -66,7 +66,7 @@ end
 -- one. fullArt: it's round already, so it isn't cropped.
 D.LOGO = "Interface\\AddOns\\NootropicGuildManager\\Media\\Logo"
 D.ICON_STYLES = {
-    { key = "emblem",    label = "Guild Tabard",        icon = D.LOGO, fullArt = true },
+    { key = "emblem",    label = "Guild Tabard",        menuLabel = "Guild Tabard (default)", icon = D.LOGO, fullArt = true },
     { key = "nootropic", label = "Nootropic Medallion", icon = D.LOGO, fullArt = true },
 }
 D.DEFAULT_ICON = D.LOGO
