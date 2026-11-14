@@ -117,6 +117,7 @@ function DC:MakeUpdate(region, guild, ranks, update)
     -- the tabard's colours, for NGM Peon's accent (left out while unknown)
     if update.tabard and update.tabard.bg and update.tabard.border then
         lines[#lines + 1] = "accent\t" .. update.tabard.bg .. "," .. update.tabard.border
+            .. (update.tabard.emblem and ("," .. update.tabard.emblem) or "")
     end
     for _, r in ipairs(update.records) do
         lines[#lines + 1] = "R\t" .. r.key .. "\t" .. B36(r.t) .. "\t" .. r.a .. "\t" .. r.v
@@ -208,9 +209,9 @@ function DC:ForMyGuild(mode)
     local hours = self:Hours()
     if hours and since > 0 and g.peon.hoursHash and ns.Sync.Hash(self.HoursValue(hours)) == g.peon.hoursHash then hours = nil end
     -- (not "ns.Accent and ns.Accent:Tabard()": that keeps only the first colour)
-    local bg, border
-    if ns.Accent then bg, border = ns.Accent:Tabard() end
-    local tabard = (bg and border) and { bg = bg, border = border } or nil
+    local bg, border, emblem
+    if ns.Accent then bg, border, emblem = ns.Accent:Tabard() end
+    local tabard = (bg and border) and { bg = bg, border = border, emblem = emblem } or nil
     local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard })
     g.peon.made = upto
     g.peon.ranks = self.RankSignature(ranks)

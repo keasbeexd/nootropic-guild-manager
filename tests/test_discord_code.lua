@@ -92,9 +92,9 @@ local _, _, all3 = DC:ForMyGuild("all")
 assert(all3 == true, "/ngm discord all: everything")
 assert(DC:ForMyGuild("setup"):find("^NGM1%."), "/ngm discord setup: the short code")
 -- the tabard's colours go in the update code (both of them: test 15 lost the border)
-ns.Accent = { Tabard = function() return "5b2a86", "d4a017" end }
+ns.Accent = { Tabard = function() return "111111", "6a2c91", "3fae4a" end }
 local withColours = DC.Base64UrlDecode(DC:ForMyGuild("all"):match("^NGM2%.([^.]+)%."))
-assert(withColours:find("\naccent\t5b2a86,d4a017", 1, true), withColours)
+assert(withColours:find("\naccent\t111111,6a2c91,3fae4a", 1, true), withColours)
 ns.Accent = { Tabard = function() return nil end }
 assert(not DC.Base64UrlDecode(DC:ForMyGuild("all"):match("^NGM2%.([^.]+)%.")):find("accent", 1, true))
 ns.Accent = nil

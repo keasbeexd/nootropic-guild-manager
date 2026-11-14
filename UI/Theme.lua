@@ -137,7 +137,7 @@ local accentUsers = {}
 function T:OnAccent(fn) accentUsers[#accentUsers + 1] = fn end
 function T:RefreshAccent()
     if not ns.Accent then return end
-    local ok, face, shade = pcall(function() return ns.Accent.For(ns.Accent:Tabard()) end)
+    local ok, face, shade = pcall(function() return ns.Accent.For(ns.Accent:Tabard()) end) -- bg, border, emblem
     if not ok then return end
     local function C3(h) return { tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 } end
     if self.A.hex == face .. shade then return end

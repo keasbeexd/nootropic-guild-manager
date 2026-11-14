@@ -1,14 +1,15 @@
 --[[
     Nootropic Guild Manager - the guild's accent
     The guild tabard's colours given a Gruvbox flare, for buttons and the
-    open tab: the face keeps the guild's hue, pulled 60% toward the nearest
+    open tab: the face is the emblem's colour (else the background's, else
+    the border's), keeping the guild's hue pulled 60% toward the nearest
     Gruvbox colour, at Gruvbox's saturation and brightness; the shadow is
     the border's hue at Gruvbox's deep shade. A tabard with no real hue
-    (white, black, grey), or none, keeps the house yellow and red.
+    anywhere (white, black, grey), or none, keeps the house yellow and red.
     NGM Peon works out the same (ngm-hub src/accent.ts; same test vectors).
 
-      ns.Accent.For(bgHex, borderHex) -> faceHex, shadeHex
-      ns.Accent:Tabard()              -> bgHex, borderHex (or nil)
+      ns.Accent.For(bg, border, emblem) -> faceHex, shadeHex
+      ns.Accent:Tabard()                -> bg, border, emblem as hex (or nil)
 ]]
 local _, ns = ...
 local A = {}
@@ -72,9 +73,9 @@ end
 
 local function Valid(x) return type(x) == "string" and x:match("^%x%x%x%x%x%x$") and x:lower() end
 
-function A.For(bg, border)
-    bg, border = Valid(bg), Valid(border)
-    local face = bg and Flare(bg, true)
+function A.For(bg, border, emblem)
+    bg, border, emblem = Valid(bg), Valid(border), Valid(emblem)
+    local face = (emblem and Flare(emblem, true)) or (bg and Flare(bg, true)) or (border and Flare(border, true))
     if not face then return A.HOUSE.face, A.HOUSE.shade end
     local shade = border and Flare(border, false)
     if not shade then
@@ -102,9 +103,9 @@ function A:Tabard()
         if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return nil end
         return Hex(r, g, b)
     end
-    local bg, border = h(info.backgroundColor), h(info.borderColor)
+    local bg, border, emblem = h(info.backgroundColor), h(info.borderColor), h(info.emblemColor)
     if not (bg and border) then return nil end
-    return bg, border
+    return bg, border, emblem
 end
 
 -- /ngm diag: what the game says about the tabard, for troubleshooting.
@@ -122,10 +123,10 @@ function A:Diagnose()
                 if type(c) ~= "table" then return tostring(c) end
                 return (type(c.GetRGB) == "function" and "object" or "table") .. (c.r and (" r=%.2f"):format(c.r) or "")
             end
-            line = line .. (", background %s, border %s"):format(describe(info.backgroundColor), describe(info.borderColor))
+            line = line .. (", background %s, border %s, emblem %s"):format(describe(info.backgroundColor), describe(info.borderColor), describe(info.emblemColor))
         end
     end
-    local bg, border = self:Tabard()
-    local face, shade = A.For(bg, border)
-    ns:Print(line .. (". Read as %s/%s, accent %s/%s."):format(tostring(bg), tostring(border), face, shade))
+    local bg, border, emblem = self:Tabard()
+    local face, shade = A.For(bg, border, emblem)
+    ns:Print(line .. (". Read as %s/%s/%s, accent %s/%s."):format(tostring(bg), tostring(border), tostring(emblem), face, shade))
 end
