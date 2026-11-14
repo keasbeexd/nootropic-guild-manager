@@ -12,28 +12,47 @@ local _, ns = ...
 local CM = {}
 ns.Communities = CM
 
--- Blizzard's side tabs: ours goes under the lowest one showing. Which show
--- changes with the view (a guild or a community, its pages), so anchoring
--- under a fixed one could leave ours sitting on top of another (it showed
--- as their Guild Info map, or their Guild Benefits tabard).
-local SIDE_TABS = { "ChatTab", "RosterTab", "GuildBenefitsTab", "GuildInfoTab" }
+-- Blizzard's side tabs: ours goes under the lowest one showing. They aren't
+-- a fixed set (Chat, Roster, Guild Info, Guild Benefits, Preferred Play
+-- Settings... which show changes with the view), so they're found by where
+-- they are: shown, tab-sized, down the window's right edge. Anchoring under
+-- a named one left ours on top of another (their Preferred Play Settings
+-- map, or their Guild Benefits tabard), sometimes drawn under it.
 local TAB_LEVEL = 510
 local GAP = 12
 
--- Under the lowest of Blizzard's tabs that's showing, and above them all.
-local function Place(b)
-    local host = b:GetParent()
-    local lowest, last, level = nil, nil, TAB_LEVEL
-    for _, key in ipairs(SIDE_TABS) do
-        local t = host[key]
-        if t and t:IsShown() then
-            last = t
-            local bottom = t:GetBottom()
-            if bottom and (not lowest or bottom < lowest:GetBottom()) then lowest = t end
-            level = math.max(level, (t:GetFrameLevel() or 0) + 2)
+local function SideTabs(host, mine)
+    local list = {}
+    local right = host:GetRight()
+    if not right then return list end
+    for _, c in ipairs({ host:GetChildren() }) do
+        if c ~= mine and c:IsShown() and c.GetLeft then
+            local left, w, h = c:GetLeft(), c:GetWidth(), c:GetHeight()
+            if left and left >= right - 12 and left <= right + 40 and w >= 20 and w <= 64 and h >= 20 and h <= 64 then
+                list[#list + 1] = c
+            end
         end
     end
-    lowest = lowest or last -- not laid out yet: the last in Blizzard's order
+    return list
+end
+
+local hooked = setmetatable({}, { __mode = "k" })
+
+-- Under the lowest of Blizzard's tabs that's showing, and above them all;
+-- again whenever one of them shows or hides.
+local function Place(b)
+    local host = b:GetParent()
+    local lowest, level = nil, TAB_LEVEL
+    for _, t in ipairs(SideTabs(host, b)) do
+        local bottom = t:GetBottom()
+        if bottom and (not lowest or bottom < lowest:GetBottom()) then lowest = t end
+        level = math.max(level, (t:GetFrameLevel() or 0) + 2)
+        if not hooked[t] then
+            hooked[t] = true
+            t:HookScript("OnShow", function() Place(b) end)
+            t:HookScript("OnHide", function() Place(b) end)
+        end
+    end
     b:ClearAllPoints()
     if lowest then
         b:SetPoint("TOPLEFT", lowest, "BOTTOMLEFT", 0, -GAP)
@@ -43,41 +62,17 @@ local function Place(b)
     b:SetFrameLevel(math.max(level, host:GetFrameLevel() + 10))
 end
 
-CM.buttons = {} -- [hostName] = button
-
-local function Hosts()
-    local list = {}
-    if CommunitiesFrame then list[#list + 1] = { name = "CommunitiesFrame", frame = CommunitiesFrame } end
-    if GuildFrame then list[#list + 1] = { name = "GuildFrame", frame = GuildFrame } end
-    return list
-end
-
-function CM:IsEnabled()
-    return ns.DB:Settings().communitiesButton ~= false
-end
-
-function CM:SetEnabled(on)
-    ns.DB:Settings().communitiesButton = on and true or false
-    self:Attach()
-    for _, b in pairs(self.buttons) do b:SetShown(on) end
-    ns:Fire("SETTINGS_CHANGED")
-end
-
 local function CreateTab(host)
     local b = CreateFrame("Button", nil, host)
     b:SetSize(32, 32)
     b:SetFrameLevel(math.max(TAB_LEVEL, host:GetFrameLevel() + 10))
 
     Place(b)
-    -- again whenever the window opens or one of Blizzard's tabs comes or goes
-    host:HookScript("OnShow", function() Place(b) end)
-    for _, key in ipairs(SIDE_TABS) do
-        local t = host[key]
-        if t then
-            t:HookScript("OnShow", function() Place(b) end)
-            t:HookScript("OnHide", function() Place(b) end)
-        end
-    end
+    -- again whenever the window opens (and once laid out, a moment later)
+    host:HookScript("OnShow", function()
+        Place(b)
+        if C_Timer then C_Timer.After(0, function() Place(b) end) end
+    end)
 
     local T = ns.Theme
     local bg = b:CreateTexture(nil, "BACKGROUND", nil, -6)
@@ -126,7 +121,11 @@ function CM:Diagnose()
         local _, rel = b:GetPoint(1)
         local relName = rel and rel.GetName and rel:GetName() or (rel and tostring(rel)) or "?"
         ns:Print(("  tab on %s: shown=%s visible=%s level=%d, under %s"):format(name, tostring(b:IsShown()), tostring(b:IsVisible()), b:GetFrameLevel() or 0, relName))
-        -- what the button draws (the "map" hunt): each picture, shown or not, and its file
+        -- Blizzard's tabs it found, top to bottom
+        for _, t in ipairs(SideTabs(b:GetParent(), b)) do
+            ns:Print(("    side tab: %s, bottom %s"):format(t:GetName() or tostring(t), tostring(math.floor(t:GetBottom() or 0))))
+        end
+        -- what the button draws: each picture, shown or not, and its file
         local i = b.Icon
         if i then
             for _, key in ipairs({ "Icon", "Bg", "Emblem", "Border" }) do
