@@ -17,6 +17,7 @@
 # Core
 Core\Core.lua
 Core\Data.lua
+Core\Accent.lua
 Core\Database.lua
 Core\Records.lua
 Core\Sync.lua

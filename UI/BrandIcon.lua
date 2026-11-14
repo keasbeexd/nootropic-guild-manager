@@ -222,6 +222,8 @@ function Brand:Init()
     -- The emblem isn't known until guild data arrives, and it can change.
     local function queue()
         if Brand:Style() == "emblem" then ns.Debounce("brand", 0.5, function() Brand:Refresh() end) end
+        -- the guild's accent comes from the same tabard
+        ns.Debounce("accent", 0.5, function() ns.Theme:RefreshAccent() end)
     end
     ns:RegisterEvent("PLAYER_GUILD_UPDATE", queue)
     ns:RegisterEvent("GUILD_ROSTER_UPDATE", queue)

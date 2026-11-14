@@ -128,6 +128,23 @@ function T:Scanlines(host, alpha, layer, sublevel, anchor)
 end
 
 ------------------------------------------------------------------------
+-- The guild's accent (Core/Accent.lua): everyday buttons and the open tab
+-- wear it. Things that do register a repaint; it changes when the tabard
+-- loads (after login) or the guild changes it.
+------------------------------------------------------------------------
+T.A = { face = T.C.yellow, shade = T.C.shade }
+local accentUsers = {}
+function T:OnAccent(fn) accentUsers[#accentUsers + 1] = fn end
+function T:RefreshAccent()
+    if not ns.Accent then return end
+    local face, shade = ns.Accent.For(ns.Accent:Tabard())
+    local function C3(h) return { tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 } end
+    if self.A.hex == face .. shade then return end
+    self.A = { face = C3(face), shade = C3(shade), hex = face .. shade }
+    for _, fn in ipairs(accentUsers) do pcall(fn) end
+end
+
+------------------------------------------------------------------------
 -- Pixel edges, as the dashboard's boxes and buttons: four strips of
 -- `thick` units just outside `anchor`, corners left open (notched).
 ------------------------------------------------------------------------
@@ -263,7 +280,7 @@ end
 local function Fit(b)
     local fs = b:GetFontString()
     if not fs or not b.SetNormalFontObject then return end
-    local room = b:GetWidth() - (b.Arrow and 26 or 12)
+    local room = b:GetWidth() - (b.Arrow and 30 or 16)
     if room <= 0 then return end
     local function Use(font)
         b:SetNormalFontObject(font)
@@ -293,15 +310,22 @@ local function ClearArt(b)
     if b.SetDisabledTexture then b:SetDisabledTexture("") end
 end
 
--- The face, border and shadow; pressing moves face and border by (3, -4).
-local function Pressable(b, fill, thick, shadowAt)
+-- The face, border and shadow; pressing moves face and border onto the
+-- shadow. `inset`: the face sits that far inside the frame, so the border
+-- stays within it and buttons laid side by side keep a margin.
+local function Pressable(b, fill, thick, shadowAt, inset, shade)
+    inset = inset or 0
+    local function Fill() return type(fill) == "function" and fill() or fill end
+    local function Shade() return shade and shade() or T.C.shade end
+    local function Rest(tex, dx, dy)
+        tex:ClearAllPoints()
+        tex:SetPoint("TOPLEFT", inset + dx, -inset + dy)
+        tex:SetPoint("BOTTOMRIGHT", -inset + dx, inset + dy)
+    end
     local shadow = b:CreateTexture(nil, "BACKGROUND", nil, -3)
-    shadow:SetColorTexture(T.C.shade[1], T.C.shade[2], T.C.shade[3], 1)
-    shadow:SetPoint("TOPLEFT", shadowAt[1], shadowAt[2])
-    shadow:SetPoint("BOTTOMRIGHT", shadowAt[1], shadowAt[2])
+    Rest(shadow, shadowAt[1], shadowAt[2])
     local face = b:CreateTexture(nil, "BACKGROUND", nil, -1)
-    face:SetColorTexture(fill[1], fill[2], fill[3], 1)
-    face:SetAllPoints(b)
+    Rest(face, 0, 0)
     local edge = T:Edge(b, face, thick, T.C.fg, "BACKGROUND", -2)
     local hi = b:CreateTexture(nil, "HIGHLIGHT")
     hi:SetColorTexture(1, 1, 1, 0.12)
@@ -309,23 +333,25 @@ local function Pressable(b, fill, thick, shadowAt)
     b._ngmFace, b._ngmShadow, b._ngmEdge = face, shadow, edge
     b:HookScript("OnMouseDown", function(self)
         if not self:IsEnabled() then return end
-        face:ClearAllPoints()
-        face:SetPoint("TOPLEFT", 3, -4)
-        face:SetPoint("BOTTOMRIGHT", 3, -4)
+        Rest(face, shadowAt[1], shadowAt[2])
         shadow:Hide()
     end)
-    b:HookScript("OnMouseUp", function(self)
-        face:ClearAllPoints()
-        face:SetAllPoints(b)
+    local function Up(self)
+        Rest(face, 0, 0)
         shadow:SetShown(self:IsEnabled())
-    end)
+    end
+    b:HookScript("OnMouseUp", Up)
+    b:HookScript("OnHide", Up) -- a click that hides the button never gets its mouse-up
     local function State()
         local on = b:IsEnabled()
-        local c = on and fill or T.C.line
+        local c = on and Fill() or T.C.line
         face:SetColorTexture(c[1], c[2], c[3], 1)
+        local s = Shade()
+        shadow:SetColorTexture(s[1], s[2], s[3], 1)
         edge:SetColor(on and T.C.fg or T.C.edge)
         shadow:SetShown(on)
     end
+    if type(fill) == "function" then T:OnAccent(State) end
     hooksecurefunc(b, "Enable", State)
     hooksecurefunc(b, "Disable", State)
     if b.SetEnabled then hooksecurefunc(b, "SetEnabled", State) end
@@ -336,9 +362,10 @@ end
 function T:SkinButton(b, style)
     if not b or b._ngmSkinned then return b end
     b._ngmSkinned = true
-    local fill = T.C[style == "bad" and "red" or style == "alt" and "aqua" or "yellow"]
+    -- everyday buttons wear the guild's accent; alt and bad keep theirs
+    local fill = (style == "bad" and T.C.red) or (style == "alt" and T.C.aqua) or function() return T.A.face end
     ClearArt(b)
-    Pressable(b, fill, 3, { 5, -6 })
+    Pressable(b, fill, 2, { 3, -4 }, 3, type(fill) == "function" and function() return T.A.shade end or nil)
     local fs = b:GetFontString()
     if fs then fs:SetFontObject(NGMFontButton) end
     if b.SetNormalFontObject then

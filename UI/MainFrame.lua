@@ -211,8 +211,11 @@ local function CreateSideTab(f, i)
     tab.gap = TAB_GAP
     tab:SetID(i)
     local function Paint(self)
-        local c = self.selected and T.C.yellow or self.hover and T.C.fg or T.C.edge
+        -- the open tab: the guild's accent, as the buttons
+        local c = self.selected and T.A.face or self.hover and T.C.fg or T.C.edge
         self.Edge:SetColor(c)
+        local s = T.A.shade
+        self.Shadow:SetColorTexture(s[1], s[2], s[3], 1)
         self.Shadow:SetShown(self.selected and true or false)
         self.Icon:SetDesaturated(not self.selected and not self.hover)
         self.Icon:SetAlpha((self.selected or self.hover) and 1 or 0.75)
@@ -223,6 +226,7 @@ local function CreateSideTab(f, i)
     tab:HookScript("OnEnter", function(self) self.hover = true; Paint(self) end)
     tab:HookScript("OnLeave", function(self) self.hover = false; Paint(self) end)
     Paint(tab)
+    T:OnAccent(function() Paint(tab) end)
     tab:SetScript("OnClick", function(self)
         UI:SelectTab(self:GetID())
         ns.PlaySound("IG_CHARACTER_INFO_TAB")

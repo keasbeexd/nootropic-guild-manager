@@ -53,6 +53,15 @@ local u = DC:MakeUpdate("us", "Nootropic", {
 assert(u == "NGM2.dXMKTm9vdHJvcGljCk9JOkd1aWxkIE1hc3RlcgpPSTpPZmZpY2VyCi0tOk1lbWJlcgoKc2luY2UJdG8zbjljCnVwdG8JdG9mN3hjCmhvdXJzCWMJMSwwLDAsMCwwLDEsMCwwLDAsMywzLDMsMCwwLDAsMSwwLDAsMCwwLDEsMywzLDMsMCwxLDAsMCwwLDAsMSwwLDAsMywzLDMsMCwwLDAsMCwxLDAsMCwwLDAsMywzLDMsMCwwLDEsMCwwLDAsMCwxLDAsMywzLDMsMSwwLDAsMCwwLDEsMCwwLDAsMywzLDMsMCwwLDAsMSwwLDAsMCwwLDEsMywzLDMKUglNOlpvw6sgQXNoCXRvZWQyOAlNYXJjIFByaWVzdAlNYXJjIFByaWVzdApSCU06TWFyYyBQcmllc3QJdG9lZDI4CU1hcmMgUHJpZXN0CQpSCVJMOlpvw6sgQXNoCXRvZWtzMAlab8OrIEFzaAl0YW5rLGRhbWFnZQ.13f06304", u)
 assert(DC.B36(0) == "0" and DC.B36(35) == "z" and DC.B36(36) == "10")
 
+-- the tabard's colours, for NGM Peon's accent (ngm-hub test/accent.test.ts reads the same line)
+local withTabard = DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite = true }, { name = "M", officer = false, invite = false } },
+    { since = 0, upto = 1, records = {}, tabard = { bg = "5b2a86", border = "d4a017" } })
+local payload = DC.Base64UrlDecode(withTabard:match("^NGM2%.([^.]+)%."))
+assert(payload:find("\naccent\t5b2a86,d4a017", 1, true), payload)
+local without = DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite = true }, { name = "M", officer = false, invite = false } },
+    { since = 0, upto = 1, records = {} })
+assert(not DC.Base64UrlDecode(without:match("^NGM2%.([^.]+)%.")):find("accent", 1, true), "tabard unknown: no line")
+
 -- only changes: since NGM Peon's word, else the last code less two weeks; "all" sends everything
 local now = 3000000
 local store = {

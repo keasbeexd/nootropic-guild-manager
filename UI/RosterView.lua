@@ -394,7 +394,7 @@ local function MenuButton(parent, text, width, arrow)
     local b = W.Button(parent, text, width, 22)
     b.Arrow = b:CreateTexture(nil, "OVERLAY")
     b.Arrow:SetSize(16, 16)
-    b.Arrow:SetPoint("RIGHT", -4, 0)
+    b.Arrow:SetPoint("RIGHT", -8, 0)
     b.Arrow:SetTexture(arrow == "down" and "Interface\\ChatFrame\\UI-ChatIcon-ScrollDown-Up" or "Interface\\ChatFrame\\ChatFrameExpandArrow")
     local dark = ns.Theme.C.bg
     b.Arrow:SetDesaturated(true)

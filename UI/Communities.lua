@@ -1,10 +1,12 @@
 --[[
     Nootropic Guild Manager - Guild & Communities shortcut
     Adds a side tab with the addon icon to the game's Guild & Communities
-    window, matching Blizzard's own side tabs (CommunitiesFrameTabTemplate:
-    32x32, frame level 510, spellbook tab art, 30x30 icon). The older
-    GuildFrame gets one too if this client has it. Each window gets its own
-    tab, so one loading first never blocks the other.
+    window, placed like Blizzard's own side tabs (32x32, frame level 510)
+    but drawn as the addon's pixel tiles (as its own side tabs). No pushed
+    art: the click opens our window, and the button can miss its mouse-up,
+    which left Blizzard's pushed art stuck on. The older GuildFrame gets one
+    too if this client has it. Each window gets its own tab, so one loading
+    first never blocks the other.
 ]]
 local _, ns = ...
 local CM = {}
@@ -49,24 +51,30 @@ local function CreateTab(host)
         b:SetPoint("TOPLEFT", host, "TOPRIGHT", 0, -36)
     end
 
-    local bg = b:CreateTexture(nil, "BORDER")
-    bg:SetTexture("Interface\\SpellBook\\SpellBook-SkillLineTab")
-    bg:SetSize(64, 64)
-    bg:SetPoint("TOPLEFT", -3, 11)
+    local T = ns.Theme
+    local bg = b:CreateTexture(nil, "BACKGROUND", nil, -6)
+    bg:SetAllPoints()
+    bg:SetColorTexture(T.C.bg1[1], T.C.bg1[2], T.C.bg1[3], 1)
+    local edge = T:Edge(b, b, 3, T.C.edge, "BACKGROUND", -5)
 
-    b.Icon = ns.Brand:Attach(b, 30, { "CENTER", b, "CENTER", 0, 0 }, { round = false })
+    b.Icon = ns.Brand:Attach(b, 28, { "CENTER", b, "CENTER", 0, 0 }, { round = false })
 
-    b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-    b:SetPushedTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints()
+    hl:SetColorTexture(1, 1, 1, 0.10)
+    b:HookScript("OnEnter", function() edge:SetColor(T.C.fg) end)
+    b:HookScript("OnLeave", function() edge:SetColor(T.C.edge) end)
+    -- each time the window opens: the icon fresh (the tabard can load late)
+    b:SetScript("OnShow", function(self) self.Icon:Apply() end)
     b:SetScript("OnClick", function() ns.UI:Show() end)
-    b:SetScript("OnEnter", function(self)
+    b:HookScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine(ns.UI:Title())
         GameTooltip:AddLine("Search the guild, recruit and see the audit.", 1, 1, 1, true)
         GameTooltip:AddLine("You can hide this tab in the addon's options.", 0.6, 0.6, 0.6, true)
         GameTooltip:Show()
     end)
-    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:HookScript("OnLeave", function() GameTooltip:Hide() end)
     return b
 end
 
