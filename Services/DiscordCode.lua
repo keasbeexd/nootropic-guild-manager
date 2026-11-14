@@ -261,10 +261,11 @@ function DC:ParsePeon(code)
         if f[1] == "has" then out.has = tonumber(f[2] or "", 36)
         elseif f[1] == "hours" then out.hoursHash = tonumber(f[2] or "", 36)
         elseif f[1] == "E" and #f >= 7 then
-            -- an upcoming event, for the in-game calendar (Services/Calendar.lua)
+            -- an upcoming event (Services/Events.lua): where to sign up and who's coming
             local id, starts, minutes = tonumber(f[2], 36), tonumber(f[4], 36), tonumber(f[5], 36)
             if not (id and starts and minutes) then return nil, "The code looks damaged. Copy it again from the dashboard." end
-            out.events[#out.events + 1] = { id = id, kind = f[3], starts = starts, minutes = minutes, title = f[6], description = table.concat(f, "\t", 7) }
+            out.events[#out.events + 1] = { id = id, kind = f[3], starts = starts, minutes = minutes, title = f[6], description = f[7] or "",
+                channel = f[8] or "", server = f[9] or "", coming = tonumber(f[10] or "", 36) or 0 }
         elseif f[1] == "R" and #f >= 5 then
             local t = tonumber(f[3], 36)
             if not t then return nil, "The code looks damaged. Copy it again from the dashboard." end
@@ -324,8 +325,8 @@ function DC:ApplyPeon(code)
     g.peon.hoursHash = c.hoursHash
     -- when the guild last brought NGM Peon's code in (for the reminder); officers share it
     if ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peonat") then ns.Sync:Set("GS:peonat", tostring(ns.DB:Now())) end
-    -- upcoming events, for the in-game calendar
-    if ns.Calendar then out.events = ns.Calendar:Take(c.events) end
+    -- Upcoming Events (shared with the guild by an officer)
+    if ns.Events then out.events = ns.Events:Take(c.events) end
     return out
 end
 

@@ -11,10 +11,10 @@ ns.UI = UI
 
 local FRAME_W, FRAME_H = 1000, 580
 local MIN_W, MIN_H, MAX_W, MAX_H = 640, 520, 1800, 1100
-local TAB_LABELS = { "Find", "Play Together", "Recruitment", "Audit", "Overview", "Hall of Fame" }
-UI.TAB_ROSTER, UI.TAB_TOGETHER, UI.TAB_RECRUIT, UI.TAB_AUDIT, UI.TAB_OVERVIEW, UI.TAB_HOF = 1, 2, 3, 4, 5, 6
+local TAB_LABELS = { "Find", "Play Together", "Recruitment", "Audit", "Overview", "Hall of Fame", "Upcoming Events" }
+UI.TAB_ROSTER, UI.TAB_TOGETHER, UI.TAB_RECRUIT, UI.TAB_AUDIT, UI.TAB_OVERVIEW, UI.TAB_HOF, UI.TAB_EVENTS = 1, 2, 3, 4, 5, 6, 7
 -- the order the tabs run down the window (ids stay stable for saved settings)
-local TAB_ORDER = { 1, 2, 5, 6, 3, 4 }
+local TAB_ORDER = { 1, 2, 7, 5, 6, 3, 4 }
 local OFFICER_TABS = { [4] = true } -- Audit
 
 ------------------------------------------------------------------------
@@ -65,6 +65,7 @@ function UI:Create()
     ns.AuditView:Build(f)
     ns.OverviewView:Build(f)
     ns.HallOfFameView:Build(f)
+    ns.EventsView:Build(f)
     ns.DetailPanel:Build()
     self:BuildTabs(f)
     self:BuildResizeGrip(f)
@@ -181,6 +182,7 @@ UI.DEFAULT_TAB_ICONS = {
     "Interface\\Icons\\INV_Misc_Spyglass_02",         -- Audit
     IconIfPresent("Interface\\Icons\\INV_Misc_Map_01", "Interface\\Icons\\INV_Misc_Book_09"), -- Overview
     IconIfPresent("Interface\\Icons\\INV_Misc_Trophy_Argent", "Interface\\Icons\\INV_Misc_Gem_Pearl_04"), -- Hall of Fame
+    IconIfPresent("Interface\\Icons\\INV_Misc_PocketWatch_01", "Interface\\Icons\\INV_Misc_Note_01"), -- Upcoming Events
 }
 
 -- The tabs always run down the window's right side.
@@ -331,6 +333,7 @@ function UI:SelectTab(id)
     ns.AuditView.page:SetShown(id == UI.TAB_AUDIT)
     ns.OverviewView.page:SetShown(id == UI.TAB_OVERVIEW)
     ns.HallOfFameView.page:SetShown(id == UI.TAB_HOF)
+    ns.EventsView.page:SetShown(id == UI.TAB_EVENTS)
     if id ~= UI.TAB_ROSTER and ns.DetailPanel.host == f then ns.DetailPanel:Hide() end
 end
 

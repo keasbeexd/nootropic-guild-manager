@@ -324,7 +324,7 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.Readiness:Init()
     ns.HallOfFame:Init()
     ns.DiscordCode:Init()
-    ns.Calendar:Init()
+    ns.Events:Init()
     ns.HofCheck:Init()
     ns.Sharing:Init()
     ns.Comm:Init()
@@ -363,7 +363,7 @@ local function PrintHelp()
     ns:Print("  |cffebdbb2/ngm discord all|r  - the same, with everything (not just what changed)")
     ns:Print("  |cffebdbb2/ngm discord setup|r  - the short code for /ngm-guild setup in Discord")
     ns:Print("  |cffebdbb2/ngm peon|r  - bring in the code from NGM Peon's dashboard (ngmpeon.app, Sync tab, step 3)")
-    ns:Print("  |cffebdbb2/ngm calendar|r  - add the guild's events from NGM Peon to the WoW calendar")
+    ns:Print("  |cffebdbb2/ngm events|r  - the guild's upcoming events from NGM Peon, and where to sign up")
     ns:Print("  |cffebdbb2/ngm diag|r  - troubleshooting: version, sync, and the addon's hooks into game windows")
     ns:Print("  |cffebdbb2/ngm reset|r  - reset the window size and position")
 end
@@ -417,8 +417,8 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns.UI:OpenTab(ns.UI.TAB_HOF)
     elseif cmd == "peon" then
         ns.PeonPasteView:Open()
-    elseif cmd == "calendar" or cmd == "cal" then
-        ns.CalendarView:Open()
+    elseif cmd == "events" or cmd == "calendar" or cmd == "cal" then
+        ns.UI:OpenTab(ns.UI.TAB_EVENTS)
     elseif cmd == "discord" then
         local mode = rest and rest:lower():match("^%s*(%a+)")
         ns.DiscordCodeView:Open((mode == "setup" or mode == "all") and mode or nil)

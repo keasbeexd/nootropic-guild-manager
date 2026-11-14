@@ -33,6 +33,9 @@
       HX:<member>          left out of the Hall of Fame: "1" ("" = shown)
       HW:<month>           that month's champions: "quests=Name,Name;kills=Name"
       HA:<month>           that month's champions were announced: "<time>"
+      EV:<id>              an upcoming event from NGM Peon (Services/Events.lua):
+                           "kind;starts;minutes;coming;channel;server;title;description"
+                           (numbers base 36; "" = gone)
       DN:<player>          Do Not Whisper entry ("" = removed)
       RS:<player>          recruitment status (kept 14 days)
       IR:<member>          reminded to install the addon (kept 30 days)
@@ -80,6 +83,7 @@ S.TYPES = {
     HX = { scope = "guild",   officer = true, label = "Hidden from Hall of Fame" },
     HW = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame champions" },
     HA = { scope = "guild",   officer = true, noAudit = true, label = "Champions announced" },
+    EV = { scope = "guild",   officer = true, noAudit = true, label = "Upcoming event" },
     HC = { scope = "officer", officer = true, noAudit = true, label = "Hall of Fame check" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
@@ -98,7 +102,7 @@ function S.EventSig(typ, member, new)
     return typ .. "|" .. (member or "") .. "|" .. (new or "")
 end
 -- Types whose key is not about one member.
-local NO_MEMBER = { A = true, GS = true, HW = true, HA = true }
+local NO_MEMBER = { A = true, GS = true, HW = true, HA = true, EV = true }
 
 S.storeVersion = 0
 S.officers = {} -- name -> rank index when seen sending on the officer channel this session
@@ -581,6 +585,12 @@ function S.ValidValue(typ, v)
         return true
     elseif typ == "M" then
         return v == "" or (#v <= 40 and not v:find("[,:\t]"))
+    elseif typ == "EV" then
+        if v == "" then return true end
+        if #v > 600 or v:find("[\t\n]") then return false end
+        local kind, starts, minutes, coming = v:match("^(%l+);(%w+);(%w+);(%w+);")
+        return (kind == "dungeon" or kind == "raid" or kind == "event") and tonumber(starts, 36) ~= nil
+            and tonumber(minutes, 36) ~= nil and tonumber(coming, 36) ~= nil
     end
     return true
 end
@@ -589,6 +599,7 @@ function S:WithinLimits(typ, member, rest, rec, ctx, store)
     if #(rec.v or "") > self.MAX_VALUE then return false end
     if not S.ValidValue(typ, rec.v) then return false end
     if (typ == "HW" or typ == "HA") and not rest:match("^%d%d%d%d%d%d$") then return false end
+    if typ == "EV" and not rest:match("^%w+$") then return false end
     -- reminders only about guildmates, holding the time they were sent
     if typ == "IR" then
         if not RosterEntry(member) then return false end
