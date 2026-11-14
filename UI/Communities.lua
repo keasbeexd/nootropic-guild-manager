@@ -12,9 +12,36 @@ local _, ns = ...
 local CM = {}
 ns.Communities = CM
 
--- Blizzard's side tabs, top to bottom; ours goes under the last one present.
+-- Blizzard's side tabs: ours goes under the lowest one showing. Which show
+-- changes with the view (a guild or a community, its pages), so anchoring
+-- under a fixed one could leave ours sitting on top of another (it showed
+-- as their Guild Info map, or their Guild Benefits tabard).
 local SIDE_TABS = { "ChatTab", "RosterTab", "GuildBenefitsTab", "GuildInfoTab" }
 local TAB_LEVEL = 510
+local GAP = 12
+
+-- Under the lowest of Blizzard's tabs that's showing, and above them all.
+local function Place(b)
+    local host = b:GetParent()
+    local lowest, last, level = nil, nil, TAB_LEVEL
+    for _, key in ipairs(SIDE_TABS) do
+        local t = host[key]
+        if t and t:IsShown() then
+            last = t
+            local bottom = t:GetBottom()
+            if bottom and (not lowest or bottom < lowest:GetBottom()) then lowest = t end
+            level = math.max(level, (t:GetFrameLevel() or 0) + 2)
+        end
+    end
+    lowest = lowest or last -- not laid out yet: the last in Blizzard's order
+    b:ClearAllPoints()
+    if lowest then
+        b:SetPoint("TOPLEFT", lowest, "BOTTOMLEFT", 0, -GAP)
+    else
+        b:SetPoint("TOPLEFT", host, "TOPRIGHT", 0, -36)
+    end
+    b:SetFrameLevel(math.max(level, host:GetFrameLevel() + 10))
+end
 
 CM.buttons = {} -- [hostName] = button
 
@@ -41,14 +68,15 @@ local function CreateTab(host)
     b:SetSize(32, 32)
     b:SetFrameLevel(math.max(TAB_LEVEL, host:GetFrameLevel() + 10))
 
-    local anchor
+    Place(b)
+    -- again whenever the window opens or one of Blizzard's tabs comes or goes
+    host:HookScript("OnShow", function() Place(b) end)
     for _, key in ipairs(SIDE_TABS) do
-        if host[key] then anchor = host[key] end
-    end
-    if anchor then
-        b:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -20)
-    else
-        b:SetPoint("TOPLEFT", host, "TOPRIGHT", 0, -36)
+        local t = host[key]
+        if t then
+            t:HookScript("OnShow", function() Place(b) end)
+            t:HookScript("OnHide", function() Place(b) end)
+        end
     end
 
     local T = ns.Theme
@@ -65,7 +93,7 @@ local function CreateTab(host)
     b:HookScript("OnEnter", function() edge:SetColor(T.C.fg) end)
     b:HookScript("OnLeave", function() edge:SetColor(T.C.edge) end)
     -- each time the window opens: the icon fresh (the tabard can load late)
-    b:SetScript("OnShow", function(self) self.Icon:Apply() end)
+    b:SetScript("OnShow", function(self) self.Icon:Apply(); Place(self) end)
     b:SetScript("OnClick", function() ns.UI:Show() end)
     b:HookScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
