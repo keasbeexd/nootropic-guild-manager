@@ -605,8 +605,8 @@ function O:BuildAbout()
     banner:SetHeight(84)
     banner:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
         insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-    banner:SetBackdropColor(0.10, 0.07, 0.03, 0.9)
-    banner:SetBackdropBorderColor(0.85, 0.65, 0.25, 1)
+    ns.Theme:Fill(banner, ns.Theme.C.bg1, 0.9)
+    ns.Theme:EdgeColor(banner, ns.Theme.C.yellow)
     local logo = ns.Brand:Attach(banner, 64, { "LEFT", banner, "LEFT", 12, 0 }, { style = "nootropic" })
     O.logos[#O.logos + 1] = logo
     local name = banner:CreateFontString(nil, "OVERLAY", "NGMFontHuge")

@@ -35,7 +35,7 @@ local function TextLink(parent, onClick)
     b.Text:SetPoint("LEFT", 0, 0)
     b:SetScript("OnClick", onClick)
     b:SetScript("OnEnter", function(self) self.Text:SetTextColor(1, 1, 1) end)
-    b:SetScript("OnLeave", function(self) self.Text:SetTextColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3]) end)
+    b:SetScript("OnLeave", function(self) ns.Theme:Ink(self.Text, ns.Theme.C.yellow) end)
     function b:SetLabel(text)
         self.Text:SetText(text)
         self:SetWidth(math.ceil(self.Text:GetStringWidth()) + 4)
@@ -481,7 +481,7 @@ function DP:BuildTabs(parent)
     s.Line:SetHeight(1)
     s.Line:SetPoint("BOTTOMLEFT")
     s.Line:SetPoint("BOTTOMRIGHT")
-    s.Line:SetColorTexture(0.6, 0.5, 0.3, 0.6)
+    ns.Theme:Paint(s.Line, ns.Theme.C.line)
     s.buttons = {}
     local x = 0
     for _, t in ipairs({ { "profile", "Profile" }, { "raids", "Raids" }, { "notes", "Notes" }, { "officer", "Officer" } }) do
@@ -508,12 +508,12 @@ function DP:RefreshTabs()
     for key, b in pairs(self.tabs.buttons) do
         b:SetShown(key ~= "officer" or officer)
         if key == self.tab then
-            b:SetBackdropColor(0.18, 0.14, 0.08, 1)
-            b:SetBackdropBorderColor(0.8, 0.65, 0.3, 1)
-            b.Text:SetTextColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
+            ns.Theme:Fill(b, ns.Theme.C.bg1)
+            ns.Theme:EdgeColor(b, ns.Theme.C.yellow)
+            ns.Theme:Ink(b.Text, ns.Theme.C.yellow)
         else
-            b:SetBackdropColor(0.05, 0.04, 0.03, 1)
-            b:SetBackdropBorderColor(0.35, 0.3, 0.22, 1)
+            ns.Theme:Fill(b, ns.Theme.C.bg)
+            ns.Theme:EdgeColor(b, ns.Theme.C.edge)
             b.Text:SetTextColor(0.6, 0.6, 0.6)
         end
     end
@@ -595,7 +595,7 @@ function DP:BuildProfSection(parent)
     end
     s.Divider = s:CreateTexture(nil, "ARTWORK")
     s.Divider:SetHeight(1)
-    s.Divider:SetColorTexture(0.4, 0.35, 0.25, 0.5)
+    ns.Theme:Paint(s.Divider, ns.Theme.C.line)
 
     s.Empty = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Empty:SetPoint("TOPLEFT", 0, -22)
@@ -880,7 +880,7 @@ local function LogEntryFrame(s, i)
     f.Bar:SetWidth(2)
     f.Bar:SetPoint("TOPLEFT", 0, 0)
     f.Bar:SetPoint("BOTTOMLEFT", 0, 0)
-    f.Bar:SetColorTexture(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.5)
+    ns.Theme:Paint(f.Bar, ns.Theme.C.yellow, 0.5)
     f.Meta = f:CreateFontString(nil, "OVERLAY", "NGMFontLabelSmall")
     f.Meta:SetPoint("TOPLEFT", 8, 0)
     f.Meta:SetPoint("RIGHT", -20, 0)

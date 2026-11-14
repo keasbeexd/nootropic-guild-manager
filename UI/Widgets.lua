@@ -89,7 +89,7 @@ function W.ColumnHeader(parent, label, width, justify)
     -- as the dashboard's table headers: small faint upper case, a line under
     local under = b:CreateTexture(nil, "BACKGROUND")
     local lc = ns.Theme.C.line
-    under:SetColorTexture(lc[1], lc[2], lc[3], 1)
+    ns.Theme:Paint(under, lc)
     under:SetHeight(2)
     under:SetPoint("BOTTOMLEFT", 2, 0)
     under:SetPoint("BOTTOMRIGHT", -2, 0)
@@ -99,7 +99,7 @@ function W.ColumnHeader(parent, label, width, justify)
     text:SetWordWrap(false)
     text:SetText(ns.Theme.Upper(label))
     local fc = ns.Theme.C.faint
-    text:SetTextColor(fc[1], fc[2], fc[3])
+    ns.Theme:Ink(text, fc)
     b.Text = text
 
     local arrow = b:CreateTexture(nil, "OVERLAY")
@@ -172,8 +172,8 @@ function W.Pill(parent, height, padding)
     function p:SetLabel(text)
         self.Icon:Hide()
         self.Text:SetText(text)
-        self:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-        self:SetBackdropBorderColor(0.45, 0.45, 0.45, 0.9)
+        ns.Theme:Fill(self, ns.Theme.C.bg1, 0.9)
+        ns.Theme:EdgeColor(self, ns.Theme.C.edge, 0.9)
         self.Text:SetTextColor(0.8, 0.8, 0.8)
         Fit(self)
     end

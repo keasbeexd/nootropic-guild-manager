@@ -284,7 +284,7 @@ function RV:StartColumnMove(c)
     h:SetAlpha(0.5)
     if not self.dropMarker then
         local m = self.header:CreateTexture(nil, "OVERLAY")
-        m:SetColorTexture(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1)
+        ns.Theme:Paint(m, ns.Theme.C.yellow, 1)
         m:SetWidth(3)
         self.dropMarker = m
     end
@@ -444,7 +444,7 @@ function RV:BuildToolbar(page, frame)
     clear:SetWidth(math.ceil(clear.Text:GetStringWidth()) + 4)
     clear:SetScript("OnClick", function() RV:ClearFilters() end)
     clear:SetScript("OnEnter", function(self) self.Text:SetTextColor(1, 1, 1) end)
-    clear:SetScript("OnLeave", function(self) self.Text:SetTextColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3]) end)
+    clear:SetScript("OnLeave", function(self) ns.Theme:Ink(self.Text, ns.Theme.C.yellow) end)
     self.clearBtn = clear
 
     local filters = page:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
@@ -469,8 +469,8 @@ local function DropPanel(page, width, height)
     p:EnableMouse(true)
     p:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
         insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-    p:SetBackdropColor(0.06, 0.05, 0.04, 0.97)
-    p:SetBackdropBorderColor(0.7, 0.6, 0.4, 1)
+    ns.Theme:Fill(p, ns.Theme.C.bg1, 0.97)
+    ns.Theme:EdgeColor(p, ns.Theme.C.edge)
     p:Hide()
     return p
 end
@@ -677,7 +677,7 @@ function RV:BuildList(page, inset)
         grip:SetPoint("BOTTOMRIGHT", 4, 0)
         grip:SetFrameLevel(h:GetFrameLevel() + 5)
         grip.Line = grip:CreateTexture(nil, "OVERLAY")
-        grip.Line:SetColorTexture(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.9)
+        ns.Theme:Paint(grip.Line, ns.Theme.C.yellow, 0.9)
         grip.Line:SetWidth(2)
         grip.Line:SetPoint("TOP", 0, -2)
         grip.Line:SetPoint("BOTTOM", 0, 2)
@@ -742,7 +742,7 @@ local function BuildRow(row)
     row.Selected:SetAllPoints()
     row.Selected:SetTexture("Interface\\QuestFrame\\UI-QuestLogTitleHighlight")
     row.Selected:SetBlendMode("ADD")
-    row.Selected:SetVertexColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.5)
+    ns.Theme:Tint(row.Selected, ns.Theme.C.yellow, 0.5)
 
     row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
     row:GetHighlightTexture():SetAlpha(0.45)

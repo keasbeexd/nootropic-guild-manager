@@ -55,7 +55,7 @@ function SG.New(parent, opts)
         if opts.editable then
             day:SetScript("OnClick", function() self:CopyDay(d) end)
             day:SetScript("OnEnter", function(b)
-                b.Text:SetTextColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
+                ns.Theme:Ink(b.Text, ns.Theme.C.yellow)
                 GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(("Copy %s"):format(DAYS[d + 1]))
                 GameTooltip:AddLine(d < 5 and "Copies this day to every weekday." or "Copies this day to the other weekend day.", 1, 1, 1, true)
@@ -74,7 +74,7 @@ function SG.New(parent, opts)
             cell.Count = cell:CreateFontString(nil, "OVERLAY", "NGMFontNumber")
             cell.Count:SetPoint("CENTER")
             local bg = C().bg
-            cell.Count:SetTextColor(bg[1], bg[2], bg[3])
+            ns.Theme:Ink(cell.Count, bg)
             cell:SetScript("OnMouseDown", function(c)
                 if not opts.editable then return end
                 self.painting = true

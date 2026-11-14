@@ -144,7 +144,7 @@ local function Section(parent, title)
     local s = CreateFrame("Frame", nil, parent)
     s.Title = s:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
     s.Title:SetPoint("TOPLEFT", 0, -2)
-    s.Title:SetTextColor(T.C.fg[1], T.C.fg[2], T.C.fg[3])
+    T:Ink(s.Title, T.C.fg)
     s.Title:SetText(T.Upper(title))
     s.Sub = s:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     s.Sub:SetPoint("LEFT", s.Title, "RIGHT", 8, 0)
@@ -181,7 +181,7 @@ local function Bar(section)
     -- as the dashboard's bars: a 14-unit track in the line colour
     b.Track:SetHeight(14)
     local line = ns.Theme.C.line
-    b.Track:SetColorTexture(line[1], line[2], line[3], 1)
+    ns.Theme:Paint(b.Track, line)
     b.Fill = b:CreateTexture(nil, "ARTWORK")
     b.Fill:SetPoint("LEFT", b.Track, "LEFT", 0, 0)
     b.Fill:SetHeight(14)
@@ -219,7 +219,7 @@ local function FillBars(section, rows, total, width)
         b.Fill:SetWidth(math.max(1, track * (total > 0 and r.n / total or 0)))
         b.Fill:SetShown(r.n > 0)
         local c = r.color or ns.Theme.C.yellow
-        b.Fill:SetColorTexture(c[1], c[2], c[3], 1)
+        ns.Theme:Paint(b.Fill, c)
         local pct = total > 0 and math.floor(r.n / total * 100 + 0.5) or 0
         b.Count:SetText(r.n > 0 and (r.n .. FAINT .. "  " .. pct .. "%|r") or (FAINT .. "0|r"))
         b.search, b.tipTitle, b.tipText = r.search, r.label, r.tip

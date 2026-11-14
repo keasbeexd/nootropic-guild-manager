@@ -217,8 +217,8 @@ function RCV:BuildFilterPanel(page, anchor)
     p:EnableMouse(true)
     p:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
         insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-    p:SetBackdropColor(0.06, 0.05, 0.04, 0.97)
-    p:SetBackdropBorderColor(0.7, 0.6, 0.4, 1)
+    ns.Theme:Fill(p, ns.Theme.C.bg1, 0.97)
+    ns.Theme:EdgeColor(p, ns.Theme.C.edge)
     p:Hide()
     page:HookScript("OnHide", function() p:Hide() end)
     self.filterPanel = p

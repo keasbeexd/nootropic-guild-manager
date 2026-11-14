@@ -54,7 +54,7 @@ local function CreateTab(host)
     local T = ns.Theme
     local bg = b:CreateTexture(nil, "BACKGROUND", nil, -6)
     bg:SetAllPoints()
-    bg:SetColorTexture(T.C.bg1[1], T.C.bg1[2], T.C.bg1[3], 1)
+    T:Paint(bg, T.C.bg1)
     local edge = T:Edge(b, b, 3, T.C.edge, "BACKGROUND", -5)
 
     b.Icon = ns.Brand:Attach(b, 28, { "CENTER", b, "CENTER", 0, 0 }, { round = false })

@@ -141,6 +141,31 @@ T.A = { face = T.C.yellow, shade = T.C.shade } -- the same tables, changed in pl
 local accentUsers = {}
 function T:OnAccent(fn) accentUsers[#accentUsers + 1] = fn end
 
+-- Everything drawn in a theme color registers here (the color is one of
+-- T.C's tables, changed in place), so a theme change repaints it all.
+local painted = setmetatable({}, { __mode = "k" })
+local function Redo(obj, v)
+    local c, a = v[2], v[3]
+    if v[1] == "tex" then obj:SetColorTexture(c[1], c[2], c[3], a)
+    elseif v[1] == "tint" then obj:SetVertexColor(c[1], c[2], c[3], a)
+    elseif v[1] == "ink" then obj:SetTextColor(c[1], c[2], c[3], a)
+    elseif v[1] == "fill" then obj:SetBackdropColor(c[1], c[2], c[3], a)
+    elseif v[1] == "edge" then obj:SetBackdropBorderColor(c[1], c[2], c[3], a)
+    elseif v[1] == "shadow" then obj:SetShadowColor(c[1], c[2], c[3], a) end
+end
+local function Mark(kind, obj, c, a)
+    if not obj then return end
+    local v = { kind, c, a or 1 }
+    painted[obj] = v
+    Redo(obj, v)
+end
+function T:Paint(tex, c, a) Mark("tex", tex, c, a) end      -- a texture filled with c
+function T:Tint(tex, c, a) Mark("tint", tex, c, a) end      -- a texture's picture tinted c
+function T:Ink(fs, c, a) Mark("ink", fs, c, a) end          -- text in c
+function T:Fill(f, c, a) Mark("fill", f, c, a) end          -- a backdrop's background
+function T:EdgeColor(f, c, a) Mark("edge", f, c, a) end     -- a backdrop's border
+function T:ShadowInk(fs, c, a) Mark("shadow", fs, c, a) end -- text's drop shadow
+
 local ROLES = { yellow = "accent", orange = "accent2", shade = "shade", blue = "mgr", bg = "bg", bg1 = "bg1", line = "line", edge = "edge" }
 
 function T:ApplyPalette(p)
@@ -155,6 +180,7 @@ function T:ApplyPalette(p)
         local font, c = _G[name], T.C[spec[4]]
         if font and font.SetTextColor and c then font:SetTextColor(c[1], c[2], c[3]) end
     end
+    for obj, v in pairs(painted) do pcall(Redo, obj, v) end
     for _, fn in ipairs(accentUsers) do pcall(fn) end
 end
 
@@ -234,7 +260,7 @@ function T:Edge(host, anchor, thick, color, layer, sublevel)
     right:SetPoint("BOTTOMLEFT", anchor, "BOTTOMRIGHT", 0, 0)
     right:SetWidth(thick)
     local e = { parts = parts }
-    function e:SetColor(c, a) for _, x in ipairs(parts) do x:SetColorTexture(c[1], c[2], c[3], a or 1) end end
+    function e:SetColor(c, a) for _, x in ipairs(parts) do T:Paint(x, c, a) end end
     function e:SetShown(on) for _, x in ipairs(parts) do x:SetShown(on) end end
     e:SetColor(color or T.C.edge)
     return e
@@ -244,8 +270,7 @@ end
 function T:Box(frame, fill, edge, thick)
     local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
     bg:SetAllPoints(frame)
-    local c = fill or T.C.bg1
-    bg:SetColorTexture(c[1], c[2], c[3], 1)
+    T:Paint(bg, fill or T.C.bg1)
     return bg, T:Edge(frame, frame, thick or 4, edge or T.C.edge, "BACKGROUND", -7)
 end
 
@@ -256,8 +281,7 @@ function T:Dashes(host, layer)
     if not ok then tex:SetTexture(T.DASH) end
     if tex.SetHorizTile then tex:SetHorizTile(true) end
     tex:SetHeight(4)
-    local c = T.C.line
-    tex:SetVertexColor(c[1], c[2], c[3], 1)
+    T:Tint(tex, T.C.line)
     local function Fit()
         local w = tex:GetWidth()
         if w and w > 0 then tex:SetTexCoord(0, w / 12, 0, 1) end
@@ -300,21 +324,19 @@ function T:Skin(frame)
         local portrait = frame.portrait or frame.Portrait or (frame.PortraitContainer and frame.PortraitContainer.portrait)
         if portrait then portrait:SetAlpha(0) end
     end)
-    local box = CreateFrame("Frame", nil, frame)
-    box:SetAllPoints(frame)
-    box:SetFrameLevel(math.max(frame:GetFrameLevel() - 1, 0))
-    local bg = box:CreateTexture(nil, "BACKGROUND", nil, -8)
-    bg:SetAllPoints(box)
-    bg:SetColorTexture(T.C.bg[1], T.C.bg[2], T.C.bg[3], 0.97)
-    T:Edge(box, box, 4, T.C.edge, "BACKGROUND", -7)
-    T:Scanlines(box, 0.06, "BACKGROUND", -6)
-    frame._ngmBox = box
+    -- drawn on the window itself: a separate frame below it let another
+    -- window (Blizzard's Guild window) slip between, showing through
+    local bg = frame:CreateTexture(nil, "BACKGROUND", nil, -8)
+    bg:SetAllPoints(frame)
+    T:Paint(bg, T.C.bg, 1)
+    T:Edge(frame, frame, 4, T.C.edge, "BACKGROUND", -7)
+    T:Scanlines(frame, 0.06, "BACKGROUND", -6)
     -- the title: mono, upper case, yellow, with the dashboard's hard red shadow
     local title = frame.TitleText or (frame.TitleContainer and frame.TitleContainer.TitleText) or frame._title
     if title then
         title:SetFontObject(NGMFontTitle)
         if title.SetShadowColor then
-            title:SetShadowColor(T.C.shade[1], T.C.shade[2], T.C.shade[3], 1)
+            T:ShadowInk(title, T.C.shade)
             title:SetShadowOffset(2, -2)
         end
         local set = title.SetText
@@ -409,9 +431,8 @@ local function Pressable(b, fill, thick, shadowAt, inset, shade)
     local function State()
         local on = b:IsEnabled()
         local c = on and Fill() or T.C.line
-        face:SetColorTexture(c[1], c[2], c[3], 1)
-        local s = Shade()
-        shadow:SetColorTexture(s[1], s[2], s[3], 1)
+        T:Paint(face, c)
+        T:Paint(shadow, Shade())
         edge:SetColor(on and T.C.fg or T.C.edge)
         shadow:SetShown(on)
     end
@@ -479,11 +500,11 @@ local function SolidFrame(host, anchor, fill, edge, thick, inset)
     local border = host:CreateTexture(nil, "BACKGROUND", nil, -8)
     border:SetPoint("TOPLEFT", anchor, "TOPLEFT", inset - thick, thick - inset)
     border:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", thick - inset, inset - thick)
-    border:SetColorTexture(edge[1], edge[2], edge[3], 1)
+    T:Paint(border, edge)
     local bg = host:CreateTexture(nil, "BACKGROUND", nil, -7)
     bg:SetPoint("TOPLEFT", border, "TOPLEFT", thick, -thick)
     bg:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", -thick, thick)
-    bg:SetColorTexture(fill[1], fill[2], fill[3], 1)
+    T:Paint(bg, fill)
     return bg, border
 end
 
@@ -504,13 +525,13 @@ function T:SkinCheck(cb)
     local tick = cb:CreateTexture(nil, "ARTWORK")
     tick:SetSize(8, 8)
     tick:SetPoint("CENTER", box, "CENTER")
-    tick:SetColorTexture(T.C.yellow[1], T.C.yellow[2], T.C.yellow[3], 1)
+    T:Paint(tick, T.C.yellow)
     cb:SetCheckedTexture(tick)
     if cb.SetDisabledCheckedTexture then
         local off = cb:CreateTexture(nil, "ARTWORK")
         off:SetSize(8, 8)
         off:SetPoint("CENTER", box, "CENTER")
-        off:SetColorTexture(T.C.faint[1], T.C.faint[2], T.C.faint[3], 1)
+        T:Paint(off, T.C.faint)
         cb:SetDisabledCheckedTexture(off)
     end
     local hl = cb:CreateTexture(nil, "HIGHLIGHT")
@@ -536,14 +557,15 @@ function T:SkinEdit(eb)
     anchor:SetPoint("BOTTOMRIGHT", 0, 0)
     anchor:SetColorTexture(0, 0, 0, 0)
     SolidFrame(eb, anchor, T.C.bg, T.C.edge, 2)
-    if eb.searchIcon then eb.searchIcon:SetVertexColor(T.C.dim[1], T.C.dim[2], T.C.dim[3]) end
+    if eb.searchIcon then T:Tint(eb.searchIcon, T.C.dim) end
     eb:SetFontObject(NGMFontTextSmall)
     if eb.Instructions then eb.Instructions:SetFontObject(NGMFontDimSmall) end
 end
 
 -- Scroll bars: a thin dark track and a block for a thumb; the arrows go.
+-- sf: a scroll frame (its bar is found) or a bar itself (MinimalScrollBar).
 function T:SkinScroll(sf)
-    local sb = sf.ScrollBar or (sf:GetName() and _G[sf:GetName() .. "ScrollBar"])
+    local sb = (sf.Track and sf.Track.Thumb and sf) or sf.ScrollBar or (sf:GetName() and _G[sf:GetName() .. "ScrollBar"])
     if not sb or sb._ngmSkinned then return end
     sb._ngmSkinned = true
     local function Hide(f)
@@ -555,8 +577,7 @@ function T:SkinScroll(sf)
     Hide(sb)
     local track = sb:CreateTexture(nil, "BACKGROUND", nil, -8)
     track:SetWidth(6)
-    local c = T.C.line
-    track:SetColorTexture(c[1], c[2], c[3], 1)
+    T:Paint(track, T.C.line)
     local e = T.C.edge
     local thumbFrame = sb.Track and sb.Track.Thumb
     if thumbFrame then
@@ -566,13 +587,13 @@ function T:SkinScroll(sf)
         t:SetPoint("TOP")
         t:SetPoint("BOTTOM")
         t:SetWidth(6)
-        t:SetColorTexture(e[1], e[2], e[3], 1)
+        T:Paint(t, e)
     else
         track:SetPoint("TOP", sb, "TOP", 0, 0)
         track:SetPoint("BOTTOM", sb, "BOTTOM", 0, 0)
         local thumb = sb.ThumbTexture or (sb.GetThumbTexture and sb:GetThumbTexture())
         if thumb then
-            thumb:SetColorTexture(e[1], e[2], e[3], 1)
+            T:Paint(thumb, e)
             thumb:SetSize(6, 28)
             thumb:SetAlpha(1)
         end
@@ -587,11 +608,17 @@ function T:SkinBackdrop(f)
     local edgeFile = info and info.edgeFile
     if type(edgeFile) ~= "string" or not edgeFile:find("Tooltip") then return end
     f._ngmSkinned = true
+    if not info.bgFile then
+        -- a border only (an icon's frame): just the pixel edge
+        f:SetBackdrop(nil)
+        T:Edge(f, f, 3, T.C.edge, "BACKGROUND", 1)
+        return
+    end
     local r, g, b, a = f:GetBackdropColor()
     f:SetBackdrop({ bgFile = WHITE })
     if r then f:SetBackdropColor(r, g, b, a) end
     -- the old warm near-black becomes the dashboard's box colour
-    if r and r < 0.1 and g < 0.1 and b < 0.1 then f:SetBackdropColor(T.C.bg1[1], T.C.bg1[2], T.C.bg1[3], 1) end
+    if r and r < 0.1 and g < 0.1 and b < 0.1 then T:Fill(f, T.C.bg1) end
     T:Edge(f, f, 3, T.C.edge, "BACKGROUND", 1)
 end
 
@@ -604,7 +631,7 @@ function T:SkinTree(root)
                 T:SkinCheck(c)
             elseif kind == "EditBox" and (c.Left or c.Middle or c.searchIcon or (c:GetName() and _G[c:GetName() .. "Left"])) then
                 T:SkinEdit(c)
-            elseif kind == "ScrollFrame" then
+            elseif kind == "ScrollFrame" or (c.Track and c.Track.Thumb) then
                 T:SkinScroll(c)
             elseif kind == "Button" and c == root.CloseButton then
                 T:SkinClose(c)

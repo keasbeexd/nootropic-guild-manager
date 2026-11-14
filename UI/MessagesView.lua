@@ -206,7 +206,7 @@ function MV:InitRow(row, item)
         row.Selected:SetAllPoints()
         row.Selected:SetTexture("Interface\\QuestFrame\\UI-QuestLogTitleHighlight")
         row.Selected:SetBlendMode("ADD")
-        row.Selected:SetVertexColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.5)
+        ns.Theme:Tint(row.Selected, ns.Theme.C.yellow, 0.5)
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
         row:GetHighlightTexture():SetAlpha(0.35)
         row.Num = row:CreateFontString(nil, "OVERLAY", "NGMFontTitle")
@@ -515,7 +515,7 @@ function MV:BuildTransfer()
     t:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
         insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     t:SetBackdropColor(0.04, 0.04, 0.04, 0.97)
-    t:SetBackdropBorderColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.9)
+    ns.Theme:EdgeColor(t, ns.Theme.C.yellow, 0.9)
     t:Hide()
     self.transfer = t
 
