@@ -62,6 +62,26 @@ local function Place(b)
     b:SetFrameLevel(math.max(level, host:GetFrameLevel() + 10))
 end
 
+CM.buttons = {} -- [hostName] = button
+
+local function Hosts()
+    local list = {}
+    if CommunitiesFrame then list[#list + 1] = { name = "CommunitiesFrame", frame = CommunitiesFrame } end
+    if GuildFrame then list[#list + 1] = { name = "GuildFrame", frame = GuildFrame } end
+    return list
+end
+
+function CM:IsEnabled()
+    return ns.DB:Settings().communitiesButton ~= false
+end
+
+function CM:SetEnabled(on)
+    ns.DB:Settings().communitiesButton = on and true or false
+    self:Attach()
+    for _, b in pairs(self.buttons) do b:SetShown(on) end
+    ns:Fire("SETTINGS_CHANGED")
+end
+
 local function CreateTab(host)
     local b = CreateFrame("Button", nil, host)
     b:SetSize(32, 32)
