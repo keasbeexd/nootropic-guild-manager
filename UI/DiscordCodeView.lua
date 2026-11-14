@@ -105,8 +105,8 @@ function V:Open(mode)
         if everything then
             self.what:SetText("Everything: your ranks, When we play, and " .. changes .. ".")
         else
-            self.what:SetText(("Changes since %s: %s, plus your ranks and When we play (always sent). "
-                .. "Type |cffebdbb2/ngm discord all|r for everything."):format(date("%b %d", since or 0), changes))
+            self.what:SetText(("Holds %s changed in game since %s (NGM Peon skips any it already has), plus your ranks and When we play. "
+                .. "|cffebdbb2/ngm discord all|r sends everything."):format(changes, date("%b %d", since or 0)))
         end
     end
     self.box:SetText(code)

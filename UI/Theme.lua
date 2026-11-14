@@ -56,6 +56,7 @@ local OBJECTS = {
     NGMFontDimSmall     = { "text", 12, "", "dim", "GameFontDisableSmall", false },
     NGMFontNumber       = { "mono", 11, "", "fg", "NumberFontNormalSmall", true },
     NGMFontButton       = { "monoBold", 12, "", "bg", "GameFontNormal", true },
+    NGMFontButtonSmall  = { "monoBold", 10, "", "bg", "GameFontNormalSmall", true },
 }
 
 local function MakeFont(name, spec)
@@ -143,7 +144,29 @@ end
 
 ------------------------------------------------------------------------
 -- Buttons: yellow with dark mono text and a hard shadow, as the dashboard's.
+-- Mono upper case runs wider than the game's font, so a label that doesn't
+-- fit drops to a smaller size, and past that ends in "..." inside the face.
 ------------------------------------------------------------------------
+local function Fit(b)
+    local fs = b:GetFontString()
+    if not fs or not b.SetNormalFontObject then return end
+    local room = b:GetWidth() - (b.Arrow and 26 or 12)
+    if room <= 0 then return end
+    local function Use(font)
+        b:SetNormalFontObject(font)
+        b:SetHighlightFontObject(font)
+    end
+    fs:SetWidth(0)
+    Use(NGMFontButton)
+    local wide = (fs.GetUnboundedStringWidth or fs.GetStringWidth)(fs)
+    if wide > room then Use(NGMFontButtonSmall) end
+    fs:SetWidth(room)
+    fs:SetWordWrap(false)
+    fs:ClearAllPoints()
+    fs:SetPoint("CENTER", b, "CENTER", b.Arrow and -7 or 0, 0)
+end
+T.FitButton = Fit
+
 function T:SkinButton(b, style)
     if not b or b._ngmSkinned then return b end
     b._ngmSkinned = true
@@ -182,8 +205,12 @@ function T:SkinButton(b, style)
         hooksecurefunc(b, "SetText", function(self, text)
             local up = T.Upper(text)
             if up ~= text then set(self, up) end
+            Fit(self)
         end)
     end
+    Fit(b)
+    b:HookScript("OnSizeChanged", Fit)
+    b:HookScript("OnShow", Fit)
     -- pressed: the face moves onto its shadow
     b:HookScript("OnMouseDown", function(self) if self:IsEnabled() then face:SetPoint("TOPLEFT", 2, -2); face:SetPoint("BOTTOMRIGHT", 2, -2) end end)
     b:HookScript("OnMouseUp", function() face:ClearAllPoints(); face:SetAllPoints(b) end)

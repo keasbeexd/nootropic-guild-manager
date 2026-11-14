@@ -170,8 +170,8 @@ ns.DB.Guild = function() return guildData end
 peonat = 1000000
 assert(DC:ReminderText(1000000 + 2 * 86400) == nil, "2 days: nothing yet")
 assert(DC:Remind(1000000 + 4 * 86400), "4 days: told")
-assert(told[#told]:find("best done daily", 1, true) and told[#told]:find("Game to Discord: last done 4 days ago", 1, true)
-  and told[#told]:find("Discord to the game: last done 4 days ago", 1, true), told[#told])
+assert(told[#told]:find("best done daily", 1, true) and told[#told]:find("Game to Discord|r: last done 4 days ago", 1, true)
+  and told[#told]:find("Discord to the game|r: last done 4 days ago", 1, true), told[#told])
 assert(not DC:Remind(1000000 + 4 * 86400 + 3600), "once a day")
 peonat = 1000000 + 4 * 86400 + 7200 -- an officer brought NGM Peon's code in
 local only = DC:ReminderText(1000000 + 5 * 86400)

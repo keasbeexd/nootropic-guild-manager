@@ -332,7 +332,7 @@ function DC:ReminderText(now)
     local toDiscord = "Type |cffebdbb2/ngm discord|r and paste it on |cffebdbb2ngmpeon.app|r (Sync tab, step 2)."
     local ranks = self:MyRanks()
     if ranks and peon.ranks and self.RankSignature(ranks) ~= peon.ranks then
-        return "|cfffabd2fNGM Peon:|r your guild's ranks changed since you last updated Discord. " .. toDiscord, "ranks", self.RankSignature(ranks)
+        return "your guild's ranks changed since you last updated NGM Peon. " .. toDiscord, "ranks", self.RankSignature(ranks)
     end
     -- what's overdue, each way (best done daily; told after REMIND_AFTER)
     local function ago(t) return t and math.floor((now - t) / 86400) or nil end
@@ -342,14 +342,14 @@ function DC:ReminderText(now)
     local late = self.REMIND_AFTER / 86400
     local lines = {}
     if not sent or sent >= late then
-        lines[#lines + 1] = (sent and ("- Game to Discord: last done %d days ago. "):format(sent) or "- Game to Discord: not done yet. ") .. toDiscord
+        lines[#lines + 1] = "  |cfffabd2fGame to Discord|r: " .. (sent and ("last done %d days ago. "):format(sent) or "not done yet. ") .. toDiscord
     end
     if not got or got >= late then
-        lines[#lines + 1] = (got and ("- Discord to the game: last done %d days ago. "):format(got) or "- Discord to the game: not done yet. ")
+        lines[#lines + 1] = "  |cfffabd2fDiscord to the game|r: " .. (got and ("last done %d days ago. "):format(got) or "not done yet. ")
             .. "Copy the Sync tab's step 3 code, type |cffebdbb2/ngm peon|r and press Bring In."
     end
     if #lines == 0 then return nil end
-    return "|cfffabd2fNGM Peon:|r time to sync (best done daily).\n" .. table.concat(lines, "\n"), "days"
+    return "time to sync with NGM Peon (best done daily).\n" .. table.concat(lines, "\n"), "days"
 end
 
 function DC:Remind(now)
