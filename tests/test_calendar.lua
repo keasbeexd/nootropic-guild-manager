@@ -19,6 +19,7 @@ assert(loadfile(ROOT .. "/Services/Calendar.lua"))("NGM", ns)
 local DC, CAL = ns.DiscordCode, ns.Calendar
 local fired = {}
 ns.Fire = function(_, msg, ...) fired[#fired + 1] = { msg, ... } end
+ns.Print = function() end
 Enum = { CalendarEventType = { Other = 4 } }
 
 local c = assert(DC:ParsePeon("NGMP1.dXMKTm9vdHJvcGljCmhhcwl0b2Y3eGMKRQkxNglyYWlkCXRvaW8wMAk1MAlNb2x0ZW4gQ29yZQlCcmluZyBmaXJlIHJlc2lzdC4gT24gdGltZSE.68a01aeb"))
