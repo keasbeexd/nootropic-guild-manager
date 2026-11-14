@@ -11,7 +11,7 @@ ns.RegisterEvent = function() end
 ns.DB = { Settings = function() return {} end }
 ns.Theme = { C = setmetatable({}, { __index = function() return { 0, 0, 0 } end }), Paint = function() end,
   Edge = function() return { SetColor = function() end } end }
-ns.Brand = { Attach = function() return { Apply = function() end } end, Style = function() return "emblem" end, CanShowEmblem = function() return true end }
+ns.Brand = { Attach = function() return { Apply = function() end } end, Style = function() return "banner" end }
 ns.UI = { Show = function() end, Title = function() return "NGM" end }
 C_Timer = { After = function(_, fn) fn() end }
 hooksecurefunc = function() end
@@ -29,6 +29,8 @@ local function Frame(parent, x, y, w, h)
     function m:GetLeft() return self.x end
     function m:GetRight() return self.x + self.w end
     function m:GetBottom() return self.y end
+    function m:GetTop() return self.y + self.h end
+    function m:SetSize(w, h) self.w, self.h = w, h end
     function m:GetWidth() return self.w end
     function m:GetHeight() return self.h end
     function m:GetCenter() return self.x + self.w / 2, self.y + self.h / 2 end
@@ -58,6 +60,7 @@ CM:Init()
 local b = CM.buttons.CommunitiesFrame
 assert(b, "the shortcut is made")
 assert(b.anchor and b.anchor.rel == play, "under the lowest tab showing (Preferred Play Settings)")
+assert(b.anchor.dy == -8, "spaced as theirs are (8 apart here), got " .. tostring(b.anchor.dy))
 play.shown = false
 play.scripts.OnHide()
 assert(b.anchor.rel == roster, "that tab hides: under the next one up")

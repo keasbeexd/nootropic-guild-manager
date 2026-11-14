@@ -19,7 +19,7 @@ ns.Communities = CM
 -- a named one left ours on top of another (their Preferred Play Settings
 -- map, or their Guild Benefits tabard), sometimes drawn under it.
 local TAB_LEVEL = 510
-local GAP = 16 -- their tab art reaches below the tab itself
+local GAP = 16 -- only when there's one tab of theirs to go by (else their own spacing)
 
 local function SideTabs(host, mine)
     local list = {}
@@ -42,10 +42,14 @@ local hooked = setmetatable({}, { __mode = "k" })
 -- again whenever one of them shows or hides.
 local function Place(b)
     local host = b:GetParent()
-    local lowest, level = nil, TAB_LEVEL
+    local lowest, above, level = nil, nil, TAB_LEVEL
     for _, t in ipairs(SideTabs(host, b)) do
         local bottom = t:GetBottom()
-        if bottom and (not lowest or bottom < lowest:GetBottom()) then lowest = t end
+        if bottom and (not lowest or bottom < lowest:GetBottom()) then
+            above, lowest = lowest, t
+        elseif bottom and (not above or bottom < above:GetBottom()) then
+            above = t
+        end
         level = math.max(level, (t:GetFrameLevel() or 0) + 2)
         if not hooked[t] then
             hooked[t] = true
@@ -55,7 +59,15 @@ local function Place(b)
     end
     b:ClearAllPoints()
     if lowest then
-        b:SetPoint("TOPLEFT", lowest, "BOTTOMLEFT", 0, -GAP)
+        -- the same size and spacing as theirs: the gap between their two lowest
+        local w, h = lowest:GetWidth(), lowest:GetHeight()
+        if w and h and w > 0 and h > 0 then b:SetSize(w, h) end
+        local gap = GAP
+        if above and above:GetBottom() and lowest:GetTop() then
+            local g = above:GetBottom() - lowest:GetTop()
+            if g >= 0 and g <= 40 then gap = g end
+        end
+        b:SetPoint("TOPLEFT", lowest, "BOTTOMLEFT", 0, -gap)
     else
         b:SetPoint("TOPLEFT", host, "TOPRIGHT", 0, -36)
     end
@@ -100,7 +112,7 @@ local function CreateTab(host)
     bg:SetSize(64, 64)
     bg:SetPoint("TOPLEFT", -3, 11)
 
-    b.Icon = ns.Brand:Attach(b, 30, { "CENTER", b, "CENTER", 0, 0 }, { round = false })
+    b.Icon = ns.Brand:Attach(b, 30, { "CENTER", b, "CENTER", 0, 0 }, { round = false, crop = 0.1 })
 
     b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
     -- each time the window opens: the icon fresh (the tabard can load late)
@@ -144,11 +156,10 @@ function CM:Diagnose()
         -- what the button draws: each picture, shown or not, and its file
         local i = b.Icon
         if i then
-            for _, key in ipairs({ "Icon", "Bg", "Emblem", "Border" }) do
+            for _, key in ipairs({ "Base", "Cloth", "Band", "Top" }) do
                 local t = i[key]
                 if t then ns:Print(("    %s: shown=%s file=%s"):format(key, tostring(t:IsShown()), tostring(t:GetTexture()))) end
             end
-            ns:Print(("    style=%s emblem ready=%s"):format(tostring(ns.Brand:Style()), tostring(ns.Brand:CanShowEmblem())))
         end
         -- anything of the game's drawn at the same spot, above it
         if b.GetCenter and b:GetParent() then

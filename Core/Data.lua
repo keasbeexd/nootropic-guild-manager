@@ -58,25 +58,12 @@ function D:SpecIcon(classFile, spec)
 end
 
 ------------------------------------------------------------------------
--- Addon icon choices (window portrait, minimap button, shortcuts)
+-- NGM's herald banner in herald blue (Media/Logo.tga, from docs/logo.svg,
+-- the same art as the README): the AddOns list and the welcome pages. The
+-- window, minimap button and shortcuts draw it in the guild's colors
+-- (UI/BrandIcon.lua).
 ------------------------------------------------------------------------
--- Your guild's tabard (the default), or the addon's own herald banner
--- (Media/Logo.tga, drawn from docs/logo.svg, the same art as the README),
--- which is also what the tabard falls back to outside a guild or without
--- one. fullArt: it's round already, so it isn't cropped.
 D.LOGO = "Interface\\AddOns\\NootropicGuildManager\\Media\\Logo"
-D.ICON_STYLES = {
-    { key = "emblem",    label = "Guild Tabard",        menuLabel = "Guild Tabard (default)", icon = D.LOGO, fullArt = true },
-    { key = "nootropic", label = "NGM Banner", icon = D.LOGO, fullArt = true },
-}
-D.DEFAULT_ICON = D.LOGO
-
-function D:IconStyle(key)
-    for _, s in ipairs(self.ICON_STYLES) do
-        if s.key == key then return s end
-    end
-    return self.ICON_STYLES[1]
-end
 
 ------------------------------------------------------------------------
 -- Minimap button click actions (Options > Minimap Button)

@@ -99,6 +99,7 @@ function T:EdgeColor(f, c, a) Mark("edge", f, c, a) end     -- a backdrop's bord
 local ROLES = { yellow = "accent", orange = "accent2" }
 
 function T:ApplyPalette(p)
+    T.palette = p -- the whole palette (the banner's cloth and band: UI/BrandIcon.lua)
     for key, role in pairs(ROLES) do
         local h = (p and p[role]) or HOUSE[key]
         T.HEX[key] = h
@@ -117,26 +118,57 @@ end
 -- Always the guild's colors (no choice to make); herald blue without a tabard.
 function T:UseGuild() return true end
 
+-- Applies a tabard's colors, unless they're exactly the ones on screen.
+function T:Use(bg, border, emblem)
+    if not ns.Accent then return self:ApplyPalette(nil) end
+    local p, now = ns.Accent.Palette(bg, border, emblem), T.palette
+    if now and now.accent == p.accent and now.accent2 == p.accent2 and now.cloth == p.cloth and now.band == p.band then return end
+    self:ApplyPalette(p)
+end
+
+-- This character's last guild colors (kept per character: at login the game
+-- often hasn't said which guild you're in yet, and every window built
+-- before then would be in the wrong colors).
+local function Me()
+    local name, realm = UnitName and UnitName("player"), GetRealmName and GetRealmName()
+    return name and (name .. "-" .. (realm or "")) or nil
+end
+local function CharThemes()
+    local sv = ns.DB and ns.DB.sv
+    if not sv then return nil end
+    sv.charThemes = sv.charThemes or {}
+    return sv.charThemes
+end
+
 -- At login (Core.lua, after the saved data loads): the guild's saved colors,
--- or herald blue until the tabard is known.
+-- else this character's last ones, else herald blue until the tabard is known.
 function T:LoadTheme()
     local g = ns.DB and ns.DB.Guild and ns.DB:Guild()
-    local saved = g and g.theme
-    if not ns.Accent then return self:ApplyPalette(nil) end
-    self:ApplyPalette(ns.Accent.Palette(saved and saved.bg, saved and saved.border, saved and saved.emblem))
+    local chars, me = CharThemes(), Me()
+    local saved = (g and g.theme) or (chars and me and chars[me])
+    self:Use(saved and saved.bg, saved and saved.border, saved and saved.emblem)
 end
 
 -- When the tabard is known (after login) or changes: save and apply it.
+-- Outside a guild: herald blue.
 function T:RefreshAccent()
     if not ns.Accent then return end
     local ok, bg, border, emblem = pcall(ns.Accent.Tabard, ns.Accent)
-    if not ok or not bg then return end -- not known yet: keep what's saved
+    if not ok then return end
+    local chars, me = CharThemes(), Me()
+    if not bg then
+        -- not known yet, or no guild: only a guildless character goes blue
+        if IsInGuild and not IsInGuild() then
+            if chars and me then chars[me] = nil end
+            self:Use(nil, nil, nil)
+        end
+        return
+    end
+    local t = { bg = bg, border = border, emblem = emblem }
     local g = ns.DB and ns.DB.Guild and ns.DB:Guild()
-    if not g then return end
-    local saved = g.theme
-    if saved and saved.bg == bg and saved.border == border and saved.emblem == emblem then return end
-    g.theme = { bg = bg, border = border, emblem = emblem }
-    if self:UseGuild() then self:ApplyPalette(ns.Accent.Palette(bg, border, emblem)) end
+    if g then g.theme = t end
+    if chars and me then chars[me] = t end
+    self:Use(bg, border, emblem)
 end
 
 ------------------------------------------------------------------------
