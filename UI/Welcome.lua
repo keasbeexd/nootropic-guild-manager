@@ -38,15 +38,18 @@ local function Pages()
           text = "Search the whole guild by name, class, spec, profession, Discord or notes. Every main is grouped with their alts.\n\n"
               .. ("Type words to search, or use fields like " .. ns.GOLD .. "prof:alchemy|r, " .. ns.GOLD .. "spec:holy|r or " .. ns.GOLD .. "is:online|r. Right-click a column header to choose columns. Click anyone to open their profile.\n\n")
               .. GRAY .. "On the game's own Guild roster you'll also see alt markers, richer tooltips and Profile on the right-click menu.|r" },
-        { key = "together", icon = TAB_ICONS[2], title = "Play Together",
-          text = "Who to play with right now: guildmates online within a few levels of you (people in your zone first), and guildmates who usually play at this hour.\n\n"
-              .. "Usual hours are learned from when people actually play, so this list grows over the first few days." },
+        { key = "events", icon = TAB_ICONS[7], title = "Upcoming Events",
+          text = "The guild's events for the next 30 days: dungeons, raids and guild nights, with the time (your own), how long, and how many are coming.\n\n"
+              .. ("Sign up in " .. ns.GOLD .. "Discord|r, with the buttons on each event's post: the tab says which channel. Events are created on the " .. ns.GOLD .. "NGM Peon dashboard|r.") },
         { key = "overview", icon = TAB_ICONS[5], title = "Overview",
           text = "The guild at a glance: how many of each class, level and profession, counting the people who've played lately.\n\n"
               .. (ns.GOLD .. "When we play|r is a week heatmap from the hours guildmates share: hover a block to see who usually plays then. Click any bar to list those members on the Find tab.") },
         { key = "hof", icon = TAB_ICONS[6], title = "Hall of Fame",
           text = ("Guild leaderboards from everyone's character statistics: quests, kills, dungeon bosses, honorable kills, deaths, flights, fish, hugs and more, plus " .. ns.GOLD .. "Social Butterfly|r, the time spent chatting with guildmates.\n\n")
               .. ("Each card's leader for the month is its " .. ns.GOLD .. "champion|r, shown on the card all next month; titles add up on " .. ns.GOLD .. "Most Champion Wins|r. Each member's own addon shares their numbers (never gold); turn it off in Options > Sharing.") },
+        { key = "together", icon = TAB_ICONS[2], title = "Play Together",
+          text = "Who to play with right now: guildmates online within a few levels of you (people in your zone first), and guildmates who usually play at this hour.\n\n"
+              .. "Usual hours are learned from when people actually play, so this list grows over the first few days." },
         { key = "craft", icon = "Interface\\Icons\\Trade_Alchemy", title = "Who Can Craft It?",
           text = "Every recipe your guildmates know, in one search, with crafters who are online first.\n\n"
               .. ("Open it from the " .. ns.GOLD .. "Who Can Craft?|r button on the Find tab, or type " .. ns.GOLD .. "/ngm craft flask|r.\n\n")

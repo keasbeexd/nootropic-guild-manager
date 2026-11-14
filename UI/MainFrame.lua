@@ -14,7 +14,12 @@ local MIN_W, MIN_H, MAX_W, MAX_H = 640, 520, 1800, 1100
 local TAB_LABELS = { "Find", "Play Together", "Recruitment", "Audit", "Overview", "Hall of Fame", "Upcoming Events" }
 UI.TAB_ROSTER, UI.TAB_TOGETHER, UI.TAB_RECRUIT, UI.TAB_AUDIT, UI.TAB_OVERVIEW, UI.TAB_HOF, UI.TAB_EVENTS = 1, 2, 3, 4, 5, 6, 7
 -- the order the tabs run down the window (ids stay stable for saved settings)
-local TAB_ORDER = { 1, 2, 7, 5, 6, 3, 4 }
+-- as the dashboard: everyone's tabs first (Find, then Upcoming Events,
+-- Overview, Hall of Fame as there; Play Together has no twin), then the
+-- ones for recruiters and officers after a wider gap (the dashboard's
+-- manager tabs)
+local TAB_ORDER = { 1, 7, 5, 6, 2, 3, 4 }
+local GROUP_START = { [3] = true } -- a wider gap above this tab
 local OFFICER_TABS = { [4] = true } -- Audit
 
 ------------------------------------------------------------------------
@@ -293,7 +298,7 @@ function UI:LayoutTabs()
                 elseif left then
                     tab:SetPoint("TOPRIGHT", prev, "BOTTOMRIGHT", 0, -tab.gap)
                 else
-                    tab:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -tab.gap)
+                    tab:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -(GROUP_START[i] and tab.gap * 2.5 or tab.gap))
                 end
             elseif bottom then
                 -- under the window, starting near its left corner
