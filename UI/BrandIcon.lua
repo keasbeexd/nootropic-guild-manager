@@ -15,10 +15,6 @@
       ns.Brand:AttachPortrait(frame)                 -- window portrait
       ns.Brand:Attach(host, size, point, opts)       -- anywhere else
 
-    Large icons (the window portrait) are a little CRT screen, as the
-    dashboard's arcade look: either style shown on rounded glass, with
-    scanlines, darker curved edges and a glare, in a casing with a hard
-    drop shadow. The tabard's own ring isn't drawn there.
 ]]
 local _, ns = ...
 local D = ns.Data
@@ -60,7 +56,7 @@ local SMALL = 48
 function IconMixin:ShowEmblem(on)
     local small = self.size < SMALL
     self.Bg:SetShown(on)
-    self.Border:SetShown(on and not small and not self.crt)
+    self.Border:SetShown(on and not small)
     self.Emblem:SetShown(on)
     self.Icon:SetShown(not on)
 end
@@ -82,9 +78,8 @@ function IconMixin:Apply(again)
         local s = self.size / 60
         self.Emblem:SetSize(56 * s, 64 * s) -- the game sets width from height (7:8)
         local ok
-        if self.size < SMALL or self.crt then
-            -- the game colors the emblem (on the CRT, the tabard's colour
-            -- fills the whole screen); the rest it would draw goes to
+        if self.size < SMALL then
+            -- the game colors the emblem; the rest it would draw goes to
             -- textures that are never shown
             ok = pcall(SetLargeGuildTabardTextures, "player", self.Emblem, self.SpareBg, self.SpareBorder)
             self.Bg:SetColorTexture(TabardBackground())
@@ -157,37 +152,6 @@ function Brand:Attach(host, size, point, opts)
 
     local masked = { icon.Icon, icon.Bg, icon.Emblem, icon.Border }
     local shape = MASK
-    if size >= SMALL and ns.Theme and ns.Theme.CRT and opts.round ~= false then
-        -- a CRT: casing and its hard shadow, a dark screen, then over the
-        -- picture scanlines, the glass's darker edges and its glare
-        local crt = ns.Theme.CRT
-        icon.crt = true
-        shape = crt.mask
-        local casing = 6 * s
-        icon.Shadow = host:CreateTexture(nil, layer, nil, -4)
-        icon.Shadow:SetTexture(crt.mask)
-        icon.Shadow:SetVertexColor(0, 0, 0, 0.7)
-        icon.Shadow:SetPoint("TOPLEFT", slot, "TOPLEFT", -casing + 4 * s, casing - 4 * s)
-        icon.Shadow:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", casing + 4 * s, -casing - 4 * s)
-        icon.Casing = host:CreateTexture(nil, layer, nil, -3)
-        icon.Casing:SetTexture(crt.mask)
-        local e = ns.Theme.C.edge
-        ns.Theme:Tint(icon.Casing, e)
-        icon.Casing:SetPoint("TOPLEFT", slot, "TOPLEFT", -casing, casing)
-        icon.Casing:SetPoint("BOTTOMRIGHT", slot, "BOTTOMRIGHT", casing, -casing)
-        icon.Screen = host:CreateTexture(nil, layer, nil, -2)
-        icon.Screen:SetAllPoints(slot)
-        local bg = ns.Theme.C.bg
-        ns.Theme:Paint(icon.Screen, bg)
-        icon.Lines = ns.Theme:Scanlines(host, 0.35, layer, 4, slot)
-        icon.Shade = host:CreateTexture(nil, layer, nil, 5)
-        icon.Shade:SetTexture(crt.shade)
-        icon.Shade:SetAllPoints(slot)
-        icon.Glass = host:CreateTexture(nil, layer, nil, 6)
-        icon.Glass:SetTexture(crt.glass)
-        icon.Glass:SetAllPoints(slot)
-        for _, t in ipairs({ icon.Screen, icon.Lines, icon.Shade, icon.Glass }) do masked[#masked + 1] = t end
-    end
     if opts.round ~= false and host.CreateMaskTexture then
         local mask = host:CreateMaskTexture()
         if mask then
@@ -212,7 +176,7 @@ function Brand:AttachPortrait(frame)
     overlay:SetAllPoints()
     overlay:SetFrameLevel(frame:GetFrameLevel() + 300)
     overlay:EnableMouse(false)
-    local icon = self:Attach(overlay, 60, { "TOPLEFT", overlay, "TOPLEFT", -2, 6 }, { layer = "BACKGROUND" })
+    local icon = self:Attach(overlay, 60, { "TOPLEFT", overlay, "TOPLEFT", -5, 8 }, { layer = "BACKGROUND" })
     icon.Overlay = overlay
     return icon
 end

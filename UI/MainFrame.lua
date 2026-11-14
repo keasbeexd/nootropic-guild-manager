@@ -126,17 +126,9 @@ function UI:BuildResizeGrip(f)
     grip:SetSize(16, 16)
     grip:SetPoint("BOTTOMRIGHT", -3, 3)
     grip:SetFrameLevel(f:GetFrameLevel() + 20)
-    -- pixel steps in the corner, as a resize mark
-    for _, at in ipairs({ { 12, 0 }, { 8, 0 }, { 4, 0 }, { 12, 4 }, { 8, 4 }, { 12, 8 } }) do
-        local px = grip:CreateTexture(nil, "ARTWORK")
-        px:SetSize(2, 2)
-        px:SetPoint("BOTTOMLEFT", at[1], at[2])
-        local c = ns.Theme.C.faint
-        ns.Theme:Paint(px, c)
-    end
-    local hl = grip:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetAllPoints()
-    hl:SetColorTexture(1, 1, 1, 0.08)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
     grip:SetScript("OnMouseDown", function() f:StartSizing("BOTTOMRIGHT") end)
     grip:SetScript("OnMouseUp", function()
         f:StopMovingOrSizing()
@@ -162,11 +154,20 @@ function UI:SaveSize()
 end
 
 ------------------------------------------------------------------------
--- Tabs: icon tiles down the right side of the window, as the dashboard's
--- tabs (see CreateSideTab). Hover one for its title.
+-- Tabs: icon tabs down the right side of the window, built exactly like
+-- the character panel's (CharacterFrameModeTab1..: a 55x55 frame, the
+-- common-sidetab art at 55x60, a 50x50 icon nudged 4 left, the
+-- common-sidetab-selected art when chosen, common-sidetab-hover on hover,
+-- each tab 2 below the last). Hover one for its title. The open tab's glow
+-- takes the theme's accent. Clients without that art get the spellbook's.
 ------------------------------------------------------------------------
-local TAB_SIZE, TAB_GAP = 40, 12
-UI.TAB_OUTSIDE = 62 -- how far the tabs reach past the window's right edge
+local TAB_SIZE, TAB_GAP = 55, 2
+UI.TAB_OUTSIDE = 55 -- how far the tabs reach past the window's right edge
+
+local function HasAtlas(name)
+    return C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(name) ~= nil
+end
+
 
 -- An icon file if this client has it, else the fallback.
 local function IconIfPresent(path, fallback)
@@ -190,49 +191,131 @@ UI.DEFAULT_TAB_ICONS = {
     IconIfPresent("Interface\\Icons\\INV_Misc_PocketWatch_01", "Interface\\Icons\\INV_Misc_Note_01"), -- Upcoming Events
 }
 
+-- Flips a texture left to right (keeps an atlas's own coordinates).
+local function Mirror(tex)
+    local ulx, uly, llx, lly, urx, ury, lrx, lry = tex:GetTexCoord()
+    tex:SetTexCoord(urx, ury, lrx, lry, ulx, uly, llx, lly)
+end
+
 -- The tabs always run down the window's right side.
 function UI:TabSide()
     return "right"
 end
 
 local function CreateSideTab(f, i)
-    -- as the dashboard's tabs: a dark tile with a notched edge; the open one
-    -- yellow-edged with a hard red shadow; hovered, the edge lights up
-    local T = ns.Theme
     local tab = CreateFrame("CheckButton", "NootropicGMFrameTab" .. i, f)
-    tab._ngmTab, tab._ngmSkinned = true, true
-    tab:SetSize(TAB_SIZE, TAB_SIZE)
-    tab.Shadow = tab:CreateTexture(nil, "BACKGROUND", nil, -8)
-    T:Paint(tab.Shadow, T.C.shade)
-    tab.Shadow:SetPoint("TOPLEFT", 5, -6)
-    tab.Shadow:SetPoint("BOTTOMRIGHT", 5, -6)
-    tab.Shadow:Hide()
-    tab.Bg = tab:CreateTexture(nil, "BACKGROUND", nil, -6)
-    tab.Bg:SetAllPoints()
-    T:Paint(tab.Bg, T.C.bg1)
-    tab.Edge = T:Edge(tab, tab, 3, T.C.edge, "BACKGROUND", -5)
-    tab.Icon = tab:CreateTexture(nil, "ARTWORK")
-    tab.Icon:SetPoint("TOPLEFT", 4, -4)
-    tab.Icon:SetPoint("BOTTOMRIGHT", -4, 4)
-    tab.iconCoords = { 0.08, 0.92, 0.08, 0.92 }
-    tab.gap = TAB_GAP
-    tab:SetID(i)
-    local function Paint(self)
-        -- the open tab: the guild's accent, as the buttons
-        local c = self.selected and T.A.face or self.hover and T.C.fg or T.C.edge
-        self.Edge:SetColor(c)
-        T:Paint(self.Shadow, T.A.shade)
-        self.Shadow:SetShown(self.selected and true or false)
-        self.Icon:SetDesaturated(not self.selected and not self.hover)
-        self.Icon:SetAlpha((self.selected or self.hover) and 1 or 0.75)
+    if HasAtlas("common-sidetab") then
+        -- the character panel's tabs
+        tab:SetSize(TAB_SIZE, TAB_SIZE)
+        tab.Bg = tab:CreateTexture(nil, "BACKGROUND")
+        tab.Bg:SetAtlas("common-sidetab")
+        tab.Bg:SetSize(55, 60)
+        tab.Bg:SetPoint("CENTER")
+        tab.Icon = tab:CreateTexture(nil, "ARTWORK")
+        tab.Icon:SetSize(50, 50)
+        tab.Icon:SetPoint("CENTER", -4, 0)
+        tab.iconCoords = { 0.031, 0.969, 0.031, 0.969 }
+        -- trims the icon to the tab's beveled shape (the same mask Blizzard uses)
+        if HasAtlas("common-sidetab-mask") and tab.CreateMaskTexture then
+            local mask = tab:CreateMaskTexture()
+            mask:SetAtlas("common-sidetab-mask", false)
+            mask:SetSize(55, 60)
+            mask:SetPoint("CENTER")
+            tab.Icon:AddMaskTexture(mask)
+            tab.Mask = mask
+        end
+        tab.Selected = tab:CreateTexture(nil, "OVERLAY")
+        tab.Selected:SetAtlas("common-sidetab-selected")
+        tab.Selected:SetSize(55, 60)
+        tab.Selected:SetPoint("CENTER")
+        tab.Selected:Hide()
+        local hl = tab:CreateTexture(nil, "HIGHLIGHT")
+        hl:SetAtlas("common-sidetab-hover")
+        hl:SetSize(55, 60)
+        hl:SetPoint("CENTER")
+        tab.Hl = hl
+        tab.atlases = { Bg = "common-sidetab", Selected = "common-sidetab-selected", Hl = "common-sidetab-hover", Mask = "common-sidetab-mask" }
+        tab.iconX = 4
+        tab.gap = TAB_GAP
+    else
+        -- older clients: the spellbook's skill line tab
+        tab:SetSize(32, 32)
+        tab.Bg = tab:CreateTexture(nil, "BACKGROUND")
+        tab.Bg:SetTexture("Interface\\SpellBook\\SpellBook-SkillLineTab")
+        tab.Bg:SetSize(64, 64)
+        tab.Bg:SetPoint("TOPLEFT", -3, 11)
+        tab.Icon = tab:CreateTexture(nil, "ARTWORK")
+        tab.Icon:SetAllPoints()
+        tab:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+        tab.Selected = tab:CreateTexture(nil, "OVERLAY")
+        tab.Selected:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+        tab.Selected:SetBlendMode("ADD")
+        tab.Selected:SetAllPoints()
+        tab.Selected:Hide()
+        tab.gap = 17
     end
-    function tab:SetSelected(on) self.selected = on and true or false; Paint(self) end
-    -- the tile is the same on any side
-    function tab:SetSide(side) self.side = side end
-    tab:HookScript("OnEnter", function(self) self.hover = true; Paint(self) end)
-    tab:HookScript("OnLeave", function(self) self.hover = false; Paint(self) end)
-    Paint(tab)
-    T:OnAccent(function() Paint(tab) end)
+    tab:SetID(i)
+    -- shows or hides the selected art (instead of a checked texture)
+    function tab:SetSelected(on) self.Selected:SetShown(on and true or false) end
+    -- Puts the tab's art the right way round for where it is ("right",
+    -- "left" or "bottom"): the art opens toward the window. On the left it's
+    -- mirrored; at the bottom it's turned a quarter so it opens upward. The
+    -- icon itself is never flipped or turned.
+    function tab:SetSide(side)
+        if self.side == side then return end
+        self.side = side
+        local left, bottom = side == "left", side == "bottom"
+        if self.atlases then
+            -- frame, selected border, hover glow
+            for key, atlas in pairs(self.atlases) do
+                local tex = self[key]
+                if tex and key ~= "Mask" then
+                    tex:SetAtlas(atlas)
+                    if tex.SetRotation then pcall(tex.SetRotation, tex, bottom and -math.pi / 2 or 0) end
+                    if left then pcall(Mirror, tex) end
+                end
+            end
+            -- The shaped trim can't be mirrored (the game then hides the whole
+            -- icon), but it can be turned: the tab is the same shape top and
+            -- bottom, so half a turn gives the left-side shape, and a quarter
+            -- turn the bottom one. Where turning isn't possible, the icon goes
+            -- untrimmed and a little smaller.
+            if self.Mask then
+                self.Mask:SetAtlas(self.atlases.Mask, false)
+                local angle = left and math.pi or bottom and -math.pi / 2 or 0
+                local turned = angle == 0
+                if self.Mask.SetRotation then
+                    local ok = pcall(self.Mask.SetRotation, self.Mask, angle)
+                    turned = turned or ok
+                end
+                self.Icon:RemoveMaskTexture(self.Mask)
+                if turned then
+                    self.Icon:AddMaskTexture(self.Mask)
+                    self.Icon:SetSize(50, 50)
+                else
+                    self.Icon:SetSize(44, 44)
+                end
+            end
+            -- the icon sits a little toward the window
+            self.Icon:ClearAllPoints()
+            if bottom then
+                self.Icon:SetPoint("CENTER", 0, self.iconX)
+            else
+                self.Icon:SetPoint("CENTER", left and self.iconX or -self.iconX, 0)
+            end
+        else
+            self.Bg:SetTexCoord(left and 1 or 0, left and 0 or 1, 0, 1)
+            if self.Bg.SetRotation then self.Bg:SetRotation(bottom and -math.pi / 2 or 0) end
+            self.Bg:ClearAllPoints()
+            if left then self.Bg:SetPoint("TOPRIGHT", 3, 11) else self.Bg:SetPoint("TOPLEFT", -3, 11) end
+        end
+    end
+    -- the open tab's glow in the theme's accent (gold, or the guild's)
+    if tab.Selected and ns.Theme then
+        local function Tint() tab.Selected:SetVertexColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3]) end
+        Tint()
+        ns.Theme:OnAccent(Tint)
+    end
     tab:SetScript("OnClick", function(self)
         UI:SelectTab(self:GetID())
         ns.PlaySound("IG_CHARACTER_INFO_TAB")
@@ -298,7 +381,7 @@ function UI:LayoutTabs()
                 elseif left then
                     tab:SetPoint("TOPRIGHT", prev, "BOTTOMRIGHT", 0, -tab.gap)
                 else
-                    tab:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -(GROUP_START[i] and tab.gap * 2.5 or tab.gap))
+                    tab:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -(GROUP_START[i] and tab.gap + 10 or tab.gap))
                 end
             elseif bottom then
                 -- under the window, starting near its left corner
@@ -307,7 +390,7 @@ function UI:LayoutTabs()
                 -- below the round portrait in the top-left corner
                 tab:SetPoint("TOPRIGHT", f, "TOPLEFT", 2, -72)
             else
-                tab:SetPoint("TOPLEFT", f, "TOPRIGHT", 12, -48)
+                tab:SetPoint("TOPLEFT", f, "TOPRIGHT", -2, -48)
             end
             tab:SetSelected(i == self.tab)
             tab:Show()

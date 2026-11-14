@@ -170,7 +170,7 @@ NGM Peon is NGM's Discord bot and website (ngmpeon.app), coming in 3.0. Its serv
 
 ## Look
 
-Since 3.0 the addon matches NGM Peon's dashboard (ngm-hub `docs/DESIGN.md`): `UI/Theme.lua` holds the Gruvbox colours and the font objects (`NGMFont*`: JetBrains Mono for titles, labels, buttons and numbers; Rubik for text; the game's own fonts for alphabets they don't cover, and as a fallback if a file can't load). Windows are skinned with `ns.Theme:Skin(frame)` (the template's art hidden, a dark box with a square edge) and buttons with `ns.Theme:SkinButton(b)` (yellow, dark text, a hard shadow). New UI uses the `NGMFont*` objects and `ns.Theme.HEX` colours, never `GameFont*` or Blizzard gold. The fonts are in `Media/Fonts`, with their licences (SIL OFL 1.1).
+The addon looks like the game's own windows: Blizzard's frames, buttons, tick boxes, scroll bars and side tabs, and the game's own fonts (so every alphabet shows, and no fonts are shipped). `UI/Theme.lua` only colours the accents: headings, labels, highlighted words (`ns.GOLD`), the open tab's glow and the bars. The **Theme** setting (Options > Appearance): *Guild* (the default) takes the guild tabard's colours (`Core/Accent.lua`, the same as NGM Peon's dashboard); *Nootropic* is Blizzard's own gold. New UI uses the `NGMFont*` objects (they wrap the game's `GameFont*`), `ns.Theme.C`/`HEX` for accent colours, and `ns.Theme:Paint`/`Ink`/... for anything drawn in a theme colour, so a theme change repaints it.
 
 ## Releasing
 

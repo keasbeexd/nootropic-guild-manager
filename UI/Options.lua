@@ -125,8 +125,6 @@ local function NewPage(key, name, subtitle)
     outer:SetScript("OnSizeChanged", function(_, w) panel:SetWidth(math.max(400, (w or 600) - 30)) end)
     outer:SetScript("OnShow", function(f)
         O:Refresh()
-        -- tick boxes, fields, scroll bars and panels as the dashboard's
-        C_Timer.After(0, function() ns.Theme:SkinTree(f) end)
     end)
     O.pages[key] = outer
 
