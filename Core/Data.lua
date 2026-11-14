@@ -140,13 +140,10 @@ end
 D.MAX_LOG_LENGTH = 140 -- fits one addon message
 
 -- Options > About. Links are shown to copy (the game can't open web pages).
+-- One link: ngmpeon.app carries the rest (downloads, help, bug reports).
 D.LINKS = {
-    { label = "Keasbeexd's site", url = "https://keasbeexd.github.io/", icon = "Interface\\Icons\\INV_Misc_Book_09",
-      hint = "Other projects by the maintainer." },
-    { label = "Nootropic on Discord", url = "https://discord.gg/BCnPbyBSyb", icon = D.LOGO,
-      hint = "The guild's Discord: raids, events, LFG and help." },
-    { label = "Addon on GitHub", url = "https://github.com/keasbeexd/nootropic-guild-manager", icon = "Interface\\Icons\\INV_Gizmo_02",
-      hint = "Downloads, the full guide (README), release notes and the source." },
+    { label = "ngmpeon.app", url = "https://ngmpeon.app", icon = D.LOGO,
+      hint = "Downloads, help, bug reports and NGM Peon for your guild's Discord." },
 }
 
 ------------------------------------------------------------------------

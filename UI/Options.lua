@@ -579,18 +579,19 @@ function O:BuildAbout()
         .. (ns.GOLD .. "Hall of Fame|r  guild leaderboards from everyone's statistics: quests, kills, bosses, deaths and more.\n")
         .. (ns.GOLD .. "Who Can Craft?|r  every recipe your guildmates know, searchable, with online crafters first.\n")
         .. (ns.GOLD .. "Profiles|r  specs, roles, professions, Discord, usual play hours, raid readiness and your private notes.\n")
+        .. (ns.GOLD .. "Upcoming Events|r  the guild's dungeons, raids and nights from NGM Peon: when, who's coming and where to sign up.\n")
         .. (ns.GOLD .. "Recruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n")
         .. (ns.GOLD .. "For officers|r  an audit of every change (joins, leaves, promotions, level-ups), an officer log, and Guild Master permissions."))
-    L:Text("Everything is shared with guildmates running the addon, so the more of the guild uses it, the more it knows.", "NGMFontDimSmall")
+    L:Text("Everything is shared with guildmates running the addon, so the more of the guild uses it, the more it knows. NGM Peon (optional) carries it to your guild's Discord and back.", "NGMFontDimSmall")
 
-    L:Header("Links")
-    L:Text("Click a link, press |cffffffffCtrl+C|r, and paste it into your browser.", "NGMFontDimSmall", 4)
+    L:Header("Website")
+    L:Text("Click the link, press |cffffffffCtrl+C|r, and paste it into your browser.", "NGMFontDimSmall", 4)
     for _, link in ipairs(D.LINKS) do LinkRow(L, link) end
 
     L:Header("Credits")
     L:Text(("Maintained by " .. ns.GOLD .. "Keasbeexd|r for " .. ns.GOLD .. "<Nootropic>|r.\n")
         .. ("Built on the original Nootropic Guild Manager by " .. ns.GOLD .. "aigoodandy|r, with permission.\n")
-        .. "Bug reports and ideas are welcome on the GitHub page or in the guild Discord.")
+        .. "Bug reports and ideas are welcome: see ngmpeon.app.")
     L:Finish()
     return outer
 end
