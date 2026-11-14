@@ -63,5 +63,9 @@ do
     assert(S.ValidValue("EV", E.Value(ev)) and S.ValidValue("EV", ""))
     assert(not S.ValidValue("EV", "party;1;1;0;x;y;z;"), "an unknown kind")
     assert(not S.ValidValue("EV", "raid;1;1;0;x\ty;y;z;"), "no tabs")
+    -- their own sync lane: a 2.12 copy ignores lanes it doesn't know, so
+    -- events never make its fingerprints differ from a 3.0 officer's
+    assert(S.LaneOf("EV:16") == "events" and S.LaneOf("M:Marc") == "guild")
+    assert(S.LANE_STORE.events == "guild" and S.LANE_CHANNEL.events == "GUILD")
 end
 print("OK")

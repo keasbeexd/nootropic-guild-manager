@@ -196,7 +196,7 @@ function S:Candidates(lane, seed, filter)
     local me = Me()
     if self:InLane(lane) and (not filter or filter(me)) then list[#list + 1] = me end
     local function score(name)
-        local officer = (lane == "guild" and self:KnownOfficer(name)) and 0 or 1
+        local officer = ((lane == "guild" or lane == "events") and self:KnownOfficer(name)) and 0 or 1
         return officer * P32 + Spread(seed:lower() .. "|" .. name:lower())
     end
     table.sort(list, function(a, b) return score(a) < score(b) end)

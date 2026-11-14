@@ -354,14 +354,18 @@ S.Same, S.RosterEntry, S.IsGuildMaster = Same, RosterEntry, IsGuildMaster
 --   recruit  recruitment statuses (RS), only between members who may
 --            recruit (nobody else keeps them)                GUILD
 --   officer  officer records                                 OFFICER
+--   events   Upcoming Events (EV, 3.0): their own lane, so a 2.12 copy
+--            (which ignores lanes it doesn't know) never sees them in a
+--            fingerprint and never keeps re-checking over them      GUILD
 ------------------------------------------------------------------------
-S.LANES = { "guild", "recruit", "officer" }
-S.LANE_STORE = { guild = "guild", recruit = "guild", officer = "officer" }
-S.LANE_CHANNEL = { guild = "GUILD", recruit = "GUILD", officer = "OFFICER" }
+S.LANES = { "guild", "recruit", "officer", "events" }
+S.LANE_STORE = { guild = "guild", recruit = "guild", officer = "officer", events = "guild" }
+S.LANE_CHANNEL = { guild = "GUILD", recruit = "GUILD", officer = "OFFICER", events = "GUILD" }
 
 function S.LaneOf(key)
     local typ = key:match("^(%u+):")
     if typ == "RS" then return "recruit" end
+    if typ == "EV" then return "events" end
     local def = typ and S.TYPES[typ]
     return def and def.scope
 end
@@ -374,7 +378,7 @@ end
 function S:InLane(lane)
     if lane == "officer" then return ns.IsOfficer() end
     if lane == "recruit" then return self:MayRecruit() end
-    return lane == "guild"
+    return lane == "guild" or lane == "events"
 end
 
 -- Will guildmates accept other people's records of this lane from `name`?
