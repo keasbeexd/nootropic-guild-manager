@@ -14,6 +14,9 @@
 
       ns.Brand:AttachPortrait(frame)                 -- window portrait
       ns.Brand:Attach(host, size, point, opts)       -- anywhere else
+
+    Large icons (the window portrait) wear the arcade look over either
+    style: scanlines across the disc and a hard drop shadow under it.
 ]]
 local _, ns = ...
 local D = ns.Data
@@ -140,12 +143,24 @@ function Brand:Attach(host, size, point, opts)
     icon.Border:SetSize(size, 59 * s)
     icon.Border:SetPoint("TOPLEFT", slot, "TOPLEFT", 0, -1 * s)
 
+    local masked = { icon.Icon, icon.Bg, icon.Emblem, icon.Border }
+    if size >= SMALL and ns.Theme and ns.Theme.Scanlines then
+        -- arcade: a hard shadow (the disc's own shape, offset) and scanlines
+        local round = opts.round ~= false
+        icon.Shadow = host:CreateTexture(nil, layer, nil, 0)
+        icon.Shadow:SetSize(size, size)
+        icon.Shadow:SetPoint("TOPLEFT", slot, "TOPLEFT", 4 * s, -4 * s)
+        if round then icon.Shadow:SetTexture(MASK) else icon.Shadow:SetColorTexture(1, 1, 1, 1) end
+        icon.Shadow:SetVertexColor(0, 0, 0, 0.6)
+        icon.Lines = ns.Theme:Scanlines(host, 0.35, layer, 4, slot)
+        masked[#masked + 1] = icon.Lines
+    end
     if opts.round ~= false and host.CreateMaskTexture then
         local mask = host:CreateMaskTexture()
         if mask then
             mask:SetTexture(MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
             mask:SetAllPoints(slot)
-            for _, t in ipairs({ icon.Icon, icon.Bg, icon.Emblem, icon.Border }) do
+            for _, t in ipairs(masked) do
                 if t.AddMaskTexture then t:AddMaskTexture(mask) end
             end
         end

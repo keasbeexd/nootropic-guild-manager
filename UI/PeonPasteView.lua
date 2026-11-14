@@ -74,12 +74,14 @@ function V:BringIn()
     lines[#lines + 1] = got.characters > 0 and ("Tank / Healer / DPS: " .. n(got.characters, "character", "characters") .. " changed") or "Tank / Healer / DPS: nothing new"
     lines[#lines + 1] = got.names > 0 and ("Discord names: " .. n(got.names, "member", "members") .. " added or changed") or "Discord names: nothing new"
     if got.months > 0 then lines[#lines + 1] = "Hall of Fame champions: " .. n(got.months, "month", "months") .. " crowned by NGM Peon" end
-    if got.had > 0 then lines[#lines + 1] = "|cffa89984" .. got.had .. " already up to date|r" end
+    if got.had > 0 then lines[#lines + 1] = "|cffa89984Already had: " .. got.had .. " (no change needed)|r" end
     if got.refused > 0 then
         lines[#lines + 1] = ("|cfffe8019%d not taken|r: your rank can only bring in your own. An officer can bring in the rest."):format(got.refused)
     end
     lines[#lines + 1] = "Shared with the guild."
     self.result:SetText(table.concat(lines, "\n"))
+    local changed = got.players + got.characters + got.names + got.months
+    ns.Theme:Toast(changed > 0 and "Level up!" or "All clear!", changed > 0 and "NGM Peon's code is in, and shared with the guild." or "Nothing new from NGM Peon.")
     self.box:SetText("")
     self.box:ClearFocus()
 end

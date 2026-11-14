@@ -11,6 +11,8 @@
     ns.Theme.HEX.yellow        "fabd2f" (for |cff...|r)
     ns.Theme:Skin(frame)       a window in the theme's colours (template art hidden)
     ns.Theme:SkinButton(b)     a button in the theme's colours
+    ns.Theme:Scanlines(region, alpha)   faint CRT lines over a frame (tiled)
+    ns.Theme:Toast(title, text)        an arcade banner ("LEVEL UP!") that drops in
 ]]
 local _, ns = ...
 local T = {}
@@ -28,7 +30,9 @@ for k, h in pairs(T.HEX) do
     T.C[k] = { tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 }
 end
 
-local DIR = "Interface\\AddOns\\NootropicGuildManager\\Media\\Fonts\\"
+local MEDIA = "Interface\\AddOns\\NootropicGuildManager\\Media\\"
+T.SCANLINES = MEDIA .. "Scanlines"
+local DIR = MEDIA .. "Fonts\\"
 T.FONTS = {
     mono = DIR .. "JetBrainsMono-Regular.ttf",
     monoBold = DIR .. "JetBrainsMono-Bold.ttf",
@@ -95,6 +99,30 @@ function T.Upper(s)
 end
 
 ------------------------------------------------------------------------
+-- Scanlines: a dark line every 4 units, tiled across `host` (a frame) or
+-- `anchor` (a texture on it), drawn in `layer`. Returns the texture so a
+-- caller can mask it (the round icons).
+------------------------------------------------------------------------
+function T:Scanlines(host, alpha, layer, sublevel, anchor)
+    local tex = host:CreateTexture(nil, layer or "ARTWORK", nil, sublevel or 7)
+    local ok = pcall(tex.SetTexture, tex, T.SCANLINES, "REPEAT", "REPEAT", "NEAREST")
+    if not ok then tex:SetTexture(T.SCANLINES) end
+    if tex.SetHorizTile then tex:SetHorizTile(true); tex:SetVertTile(true) end
+    tex:SetAllPoints(anchor or host)
+    tex:SetAlpha(alpha or 0.08)
+    local function Fit()
+        local w, h = tex:GetSize()
+        if w and h and w > 0 and h > 0 then tex:SetTexCoord(0, w / 8, 0, h / 8) end
+    end
+    Fit()
+    if host.HookScript then
+        host:HookScript("OnSizeChanged", Fit)
+        host:HookScript("OnShow", Fit)
+    end
+    return tex
+end
+
+------------------------------------------------------------------------
 -- Windows: the template's art (stone borders, gold title bar) hidden, a
 -- dark box with a square edge instead, as the dashboard's boxes.
 ------------------------------------------------------------------------
@@ -128,6 +156,21 @@ function T:Skin(frame, opts)
     box:SetBackdropColor(T.C.bg[1], T.C.bg[2], T.C.bg[3], 0.97)
     box:SetBackdropBorderColor(T.C.edge[1], T.C.edge[2], T.C.edge[3], 1)
     frame._ngmBox = box
+    -- arcade: a hard drop shadow (no blur) and faint scanlines
+    local shadow = CreateFrame("Frame", nil, frame)
+    shadow:SetPoint("TOPLEFT", 6, -6)
+    shadow:SetPoint("BOTTOMRIGHT", 6, -6)
+    shadow:SetFrameLevel(math.max(box:GetFrameLevel() - 1, 0))
+    local dark = shadow:CreateTexture(nil, "BACKGROUND")
+    dark:SetAllPoints()
+    dark:SetColorTexture(0, 0, 0, 0.55)
+    T:Scanlines(box, 0.10, "ARTWORK")
+    -- a yellow HUD line under the title bar
+    local hud = box:CreateTexture(nil, "ARTWORK", nil, 6)
+    hud:SetColorTexture(T.C.yellow[1], T.C.yellow[2], T.C.yellow[3], 0.9)
+    hud:SetHeight(2)
+    hud:SetPoint("TOPLEFT", 2, -(opts and opts.hud or 24))
+    hud:SetPoint("TOPRIGHT", -2, -(opts and opts.hud or 24))
     -- the title: mono, upper case, yellow
     local title = frame.TitleText or (frame.TitleContainer and frame.TitleContainer.TitleText) or frame._title
     if title then
@@ -194,6 +237,7 @@ function T:SkinButton(b, style)
     b._ngmFace, b._ngmShadow = face, shadow
     local fs = b:GetFontString()
     if fs then fs:SetFontObject(NGMFontButton) end
+    T:Scanlines(b, 0.10, "BACKGROUND", 0, face)
     if b.SetNormalFontObject then
         b:SetNormalFontObject(NGMFontButton)
         b:SetHighlightFontObject(NGMFontButton)
@@ -225,4 +269,61 @@ function T:SkinButton(b, style)
     if b.SetEnabled then hooksecurefunc(b, "SetEnabled", State) end
     State()
     return b
+end
+
+------------------------------------------------------------------------
+-- Toast: an arcade banner at the top of the screen. The title drops in
+-- in steps, blinks three times, then the banner goes after a few seconds.
+------------------------------------------------------------------------
+local toast
+function T:Toast(title, text)
+    if not toast then
+        toast = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+        toast:SetSize(360, 64)
+        toast:SetPoint("TOP", 0, -140)
+        toast:SetFrameStrata("DIALOG")
+        toast:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 2 })
+        toast:SetBackdropColor(T.C.bg[1], T.C.bg[2], T.C.bg[3], 0.97)
+        toast:SetBackdropBorderColor(T.C.yellow[1], T.C.yellow[2], T.C.yellow[3], 1)
+        local sh = toast:CreateTexture(nil, "BACKGROUND", nil, -8)
+        sh:SetColorTexture(T.C.shade[1], T.C.shade[2], T.C.shade[3], 1)
+        sh:SetPoint("TOPLEFT", 5, -5)
+        sh:SetPoint("BOTTOMRIGHT", 5, -5)
+        T:Scanlines(toast, 0.12, "ARTWORK")
+        toast.title = toast:CreateFontString(nil, "OVERLAY", "NGMFontHuge")
+        toast.title:SetPoint("TOP", 0, -10)
+        toast.text = toast:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
+        toast.text:SetPoint("TOP", toast.title, "BOTTOM", 0, -4)
+        toast.text:SetWidth(330)
+        -- drop in: four 6-unit steps
+        local drop = toast:CreateAnimationGroup()
+        for i = 1, 4 do
+            local m = drop:CreateAnimation("Translation")
+            m:SetOffset(0, i == 1 and 24 or -6)
+            m:SetDuration(0.001)
+            m:SetStartDelay(i == 1 and 0 or 0.06)
+            m:SetOrder(i)
+        end
+        -- blink: hidden and shown, three times
+        local blink = toast.title:CreateAnimationGroup()
+        for i = 1, 6 do
+            local a = blink:CreateAnimation("Alpha")
+            a:SetFromAlpha(i % 2 == 1 and 1 or 0)
+            a:SetToAlpha(i % 2 == 1 and 0 or 1)
+            a:SetDuration(0.001)
+            a:SetStartDelay(0.18)
+            a:SetOrder(i)
+        end
+        toast.drop, toast.blink = drop, blink
+        toast:SetScript("OnHide", function(self) self.blink:Stop() end)
+    end
+    toast.title:SetText(T.Upper(title or ""))
+    toast.text:SetText(text or "")
+    toast:SetHeight(text and text ~= "" and 70 or 48)
+    toast:Show()
+    toast.drop:Stop(); toast.drop:Play()
+    toast.blink:Stop(); toast.blink:Play()
+    toast.shown = (toast.shown or 0) + 1
+    local mine = toast.shown
+    C_Timer.After(3.5, function() if toast.shown == mine then toast:Hide() end end)
 end
