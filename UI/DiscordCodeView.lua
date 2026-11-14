@@ -92,15 +92,15 @@ function V:Open(mode)
     local n = #ns.DB:GuildRanks()
     if mode == "setup" then
         W.SetTitle(self.frame, "NGM Peon Setup")
-        self.steps:SetText("|cfffabd2f1.|r Invite NGM Peon to your guild's Discord (|cffebdbb2ngmpeon.app|r).\n"
-            .. "|cfffabd2f2.|r In Discord, run |cffebdbb2/ngm-guild setup|r and paste this code.\n"
-            .. "|cfffabd2f3.|r Sign in with Battle.net when NGM Peon asks.")
+        self.steps:SetText((ns.GOLD .. "1.|r Invite NGM Peon to your guild's Discord (|cffebdbb2ngmpeon.app|r).\n")
+            .. (ns.GOLD .. "2.|r In Discord, run |cffebdbb2/ngm-guild setup|r and paste this code.\n")
+            .. (ns.GOLD .. "3.|r Sign in with Battle.net when NGM Peon asks."))
         self.what:SetText(("The code holds your guild's name, region, %d rank names and which ranks are Officer and Invite Member."):format(n))
     else
         W.SetTitle(self.frame, "Update NGM Peon")
-        self.steps:SetText("|cfffabd2f1.|r Copy this code.\n"
-            .. "|cfffabd2f2.|r On |cffebdbb2ngmpeon.app|r, open the |cffebdbb2Sync|r tab: step 2.\n"
-            .. "|cfffabd2f3.|r Paste it, then sign in with Battle.net.")
+        self.steps:SetText((ns.GOLD .. "1.|r Copy this code.\n")
+            .. (ns.GOLD .. "2.|r On |cffebdbb2ngmpeon.app|r, open the |cffebdbb2Sync|r tab: step 2.\n")
+            .. (ns.GOLD .. "3.|r Paste it, then sign in with Battle.net."))
         local changes = ("%d main / alt and Tank / Healer / DPS record%s"):format(count or 0, count == 1 and "" or "s")
         if everything then
             self.what:SetText("Everything: your ranks, When we play, and " .. changes .. ".")

@@ -123,7 +123,7 @@ function RV:ShowRowTooltip(row, r)
         GameTooltip:AddLine(r.name)
     end
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine(("Known by %d guildmate%s (%s):"):format(#r.crafters, #r.crafters == 1 and "" or "s", r.prof), 0.98, 0.74, 0.18)
+    GameTooltip:AddLine(("Known by %d guildmate%s (%s):"):format(#r.crafters, #r.crafters == 1 and "" or "s", r.prof), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
     for i, full in ipairs(r.crafters) do
         if i > 15 then GameTooltip:AddLine(("...and %d more"):format(#r.crafters - 15), 0.6, 0.6, 0.6) break end
         GameTooltip:AddLine(ns.ShortName(full) .. (Online(full) and "  |cffb8bb26online|r" or ""), 1, 1, 1)

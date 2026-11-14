@@ -96,7 +96,29 @@ function CM:Diagnose()
         tostring(loaded), tostring(CommunitiesFrame ~= nil), tostring(GuildFrame ~= nil), tostring(self:IsEnabled())))
     for name, b in pairs(self.buttons) do
         local _, rel = b:GetPoint(1)
-        ns:Print(("  tab on %s: shown=%s visible=%s level=%d"):format(name, tostring(b:IsShown()), tostring(b:IsVisible()), b:GetFrameLevel() or 0))
+        local relName = rel and rel.GetName and rel:GetName() or (rel and tostring(rel)) or "?"
+        ns:Print(("  tab on %s: shown=%s visible=%s level=%d, under %s"):format(name, tostring(b:IsShown()), tostring(b:IsVisible()), b:GetFrameLevel() or 0, relName))
+        -- what the button draws (the "map" hunt): each picture, shown or not, and its file
+        local i = b.Icon
+        if i then
+            for _, key in ipairs({ "Icon", "Bg", "Emblem", "Border" }) do
+                local t = i[key]
+                if t then ns:Print(("    %s: shown=%s file=%s"):format(key, tostring(t:IsShown()), tostring(t:GetTexture()))) end
+            end
+            ns:Print(("    style=%s emblem ready=%s"):format(tostring(ns.Brand:Style()), tostring(ns.Brand:CanShowEmblem())))
+        end
+        -- anything of the game's drawn at the same spot, above it
+        if b.GetCenter and b:GetParent() then
+            local bx, by = b:GetCenter()
+            for _, c in ipairs({ b:GetParent():GetChildren() }) do
+                if c ~= b and c:IsVisible() and c.GetCenter then
+                    local cx, cy = c:GetCenter()
+                    if cx and bx and math.abs(cx - bx) < 16 and math.abs(cy - by) < 16 then
+                        ns:Print(("    also here: %s level=%d"):format(c:GetName() or tostring(c), c:GetFrameLevel() or 0))
+                    end
+                end
+            end
+        end
     end
     if next(self.buttons) == nil then ns:Print("  no tab yet - open the Guild & Communities window once, then run /ngm diag again.") end
 end

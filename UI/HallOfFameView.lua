@@ -12,7 +12,6 @@ local HV = {}
 ns.HallOfFameView = HV
 
 local GRAY = "|cffa89984"
-local GOLD = "|cfffabd2f"
 local PERIODS = { { "all", "All time" }, { "month", "This month" }, { "last", "Last month" } }
 local TOP = 5
 local ROW_H = 16
@@ -152,7 +151,7 @@ function HV:FillCard(c, stat, data)
             if i > 2 then names[#names + 1] = ("+%d"):format(#champ.winners - 2) break end
             names[#names + 1] = p.e.short
         end
-        c.Champ:SetText(GOLD .. "Last month: " .. table.concat(names, ", ") .. "|r" .. GRAY .. " (" .. ns.HallOfFame.Format(stat, champ.n) .. ")|r")
+        c.Champ:SetText(ns.GOLD .. "Last month: " .. table.concat(names, ", ") .. "|r" .. GRAY .. " (" .. ns.HallOfFame.Format(stat, champ.n) .. ")|r")
     elseif data.crown and (data.crown.state == "tallying" or data.crown.state == "due") then
         c.Champ:SetText(GRAY .. "Last month: tallying...|r")
     else
@@ -181,15 +180,15 @@ function HV.CrownText(c)
     if not c then return "" end
     local won, nextWon = HF.MonthName(c.won), HF.MonthName(c.nextWon)
     if c.state == "tallying" then
-        return ("|cfffabd2f%s is over!|r Points are being tallied: champions will be crowned %s (%s)."):format(won, HV.When(c.at), HV.In(c.at))
+        return ((ns.GOLD .. "%s is over!|r Points are being tallied: champions will be crowned %s (%s).")):format(won, HV.When(c.at), HV.In(c.at))
     elseif c.state == "due" and HF:PeonCrowns() then
-        return ("|cfffabd2f%s's champions are crowned by NGM Peon.|r They show here once an officer brings them in (|cffebdbb2/ngm peon|r)."):format(won)
+        return ((ns.GOLD .. "%s's champions are crowned by NGM Peon.|r They show here once an officer brings them in (|cffebdbb2/ngm peon|r).")):format(won)
     elseif c.state == "due" then
-        return ("|cfffabd2f%s's points are tallied.|r Champions will be crowned as soon as an officer logs in."):format(won)
+        return ((ns.GOLD .. "%s's points are tallied.|r Champions will be crowned as soon as an officer logs in.")):format(won)
     elseif c.state == "crowned" then
         local recount = HF:PeonCrowns() and " Crowned by NGM Peon."
             or HF:InRecount() and (" Late numbers can still change them until %s."):format(HV.When(c.at + HF.RECOUNT)) or ""
-        return ("|cfffabd2f%s's champions have been crowned!|r%s Next: %s's, %s (%s)."):format(won, recount, nextWon, HV.When(c.nextAt), HV.In(c.nextAt))
+        return ((ns.GOLD .. "%s's champions have been crowned!|r%s Next: %s's, %s (%s).")):format(won, recount, nextWon, HV.When(c.nextAt), HV.In(c.nextAt))
     end
     return ("Next champions (%s's) crowned %s (%s)."):format(nextWon, HV.When(c.nextAt), HV.In(c.nextAt))
 end
@@ -211,7 +210,7 @@ function HV:ShowCardTip(c)
         local names = {}
         for i, p in ipairs(c.champ.winners) do names[i] = p.e.short end
         GameTooltip:AddLine(" ")
-        GameTooltip:AddLine((#names > 1 and "Last month's champions (tied): " or "Last month's champion: ") .. table.concat(names, ", "), 0.98, 0.74, 0.18, true)
+        GameTooltip:AddLine((#names > 1 and "Last month's champions (tied): " or "Last month's champion: ") .. table.concat(names, ", "), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], true)
     end
     GameTooltip:Show()
 end
@@ -326,7 +325,7 @@ function HV:Refresh()
     local parts = {}
     for _, k in ipairs(TOTALS) do
         local s = ns.HallOfFame.BY_KEY[k]
-        parts[#parts + 1] = GOLD .. HV.Number(data.totals[k] or 0) .. "|r " .. s.label:lower()
+        parts[#parts + 1] = ns.GOLD .. HV.Number(data.totals[k] or 0) .. "|r " .. s.label:lower()
     end
     self.totals:SetWidth(width)
     self.totals:SetText("Together: " .. table.concat(parts, GRAY .. "  ·  |r"))

@@ -36,30 +36,30 @@ local function Pages()
               .. "This short tour shows what's where and lets you choose what you share. It takes about a minute." },
         { key = "find", icon = TAB_ICONS[1], title = "Find",
           text = "Search the whole guild by name, class, spec, profession, Discord or notes. Every main is grouped with their alts.\n\n"
-              .. "Type words to search, or use fields like |cfffabd2fprof:alchemy|r, |cfffabd2fspec:holy|r or |cfffabd2fis:online|r. Right-click a column header to choose columns. Click anyone to open their profile.\n\n"
+              .. ("Type words to search, or use fields like " .. ns.GOLD .. "prof:alchemy|r, " .. ns.GOLD .. "spec:holy|r or " .. ns.GOLD .. "is:online|r. Right-click a column header to choose columns. Click anyone to open their profile.\n\n")
               .. GRAY .. "On the game's own Guild roster you'll also see alt markers, richer tooltips and Profile on the right-click menu.|r" },
         { key = "together", icon = TAB_ICONS[2], title = "Play Together",
           text = "Who to play with right now: guildmates online within a few levels of you (people in your zone first), and guildmates who usually play at this hour.\n\n"
               .. "Usual hours are learned from when people actually play, so this list grows over the first few days." },
         { key = "overview", icon = TAB_ICONS[5], title = "Overview",
           text = "The guild at a glance: how many of each class, level and profession, counting the people who've played lately.\n\n"
-              .. "|cfffabd2fWhen we play|r is a week heatmap from the hours guildmates share: hover a block to see who usually plays then. Click any bar to list those members on the Find tab." },
+              .. (ns.GOLD .. "When we play|r is a week heatmap from the hours guildmates share: hover a block to see who usually plays then. Click any bar to list those members on the Find tab.") },
         { key = "hof", icon = TAB_ICONS[6], title = "Hall of Fame",
-          text = "Guild leaderboards from everyone's character statistics: quests, kills, dungeon bosses, honorable kills, deaths, flights, fish, hugs and more, plus |cfffabd2fSocial Butterfly|r, the time spent chatting with guildmates.\n\n"
-              .. "Each card's leader for the month is its |cfffabd2fchampion|r, shown on the card all next month; titles add up on |cfffabd2fMost Champion Wins|r. Each member's own addon shares their numbers (never gold); turn it off in Options > Sharing." },
+          text = ("Guild leaderboards from everyone's character statistics: quests, kills, dungeon bosses, honorable kills, deaths, flights, fish, hugs and more, plus " .. ns.GOLD .. "Social Butterfly|r, the time spent chatting with guildmates.\n\n")
+              .. ("Each card's leader for the month is its " .. ns.GOLD .. "champion|r, shown on the card all next month; titles add up on " .. ns.GOLD .. "Most Champion Wins|r. Each member's own addon shares their numbers (never gold); turn it off in Options > Sharing.") },
         { key = "craft", icon = "Interface\\Icons\\Trade_Alchemy", title = "Who Can Craft It?",
           text = "Every recipe your guildmates know, in one search, with crafters who are online first.\n\n"
-              .. "Open it from the |cfffabd2fWho Can Craft?|r button on the Find tab, or type |cfffabd2f/ngm craft flask|r.\n\n"
+              .. ("Open it from the " .. ns.GOLD .. "Who Can Craft?|r button on the Find tab, or type " .. ns.GOLD .. "/ngm craft flask|r.\n\n")
               .. "Your own recipes are shared when you open one of your profession windows, so open each of yours once." },
         { key = "profiles", icon = "Interface\\Icons\\INV_Misc_Head_Dragon_01", title = "Profiles and Raids",
           text = "Every profile shows spec, roles, professions (and their recipes), Discord, when they usually play, and your own private notes about them, which never leave your computer.\n\n"
-              .. "The |cfffabd2fRaids|r tab shows raid readiness: the Onyxia attunement and the Barrow Deeps key, worked out by each member's own addon." },
+              .. ("The " .. ns.GOLD .. "Raids|r tab shows raid readiness: the Onyxia attunement and the Barrow Deeps key, worked out by each member's own addon.") },
     }
     if ns.Recruit:MayRecruit() then
         list[#list + 1] = { key = "recruit", icon = TAB_ICONS[3], title = "Recruitment",
-            text = "Search |cfffabd2f/who|r for players without a guild, tick the ones you like, and send friendly whispers one at a time.\n\n"
+            text = ("Search " .. ns.GOLD .. "/who|r for players without a guild, tick the ones you like, and send friendly whispers one at a time.\n\n")
                 .. "Anyone whispered by the guild is locked for 14 days, and anyone who says no goes on the shared Do Not Whisper list, so nobody gets pestered twice.\n\n"
-                .. "When someone replies yes, an Invite prompt shows the |cfffabd2f/ginvite|r line to copy and paste: WoW: Forever only accepts invites you type yourself." }
+                .. ("When someone replies yes, an Invite prompt shows the " .. ns.GOLD .. "/ginvite|r line to copy and paste: WoW: Forever only accepts invites you type yourself.") }
     end
     if ns.IsOfficer() then
         list[#list + 1] = { key = "audit", icon = TAB_ICONS[4], title = "Audit (officers)",
@@ -75,9 +75,9 @@ local function Pages()
             text = "Choose which ranks may do each of these. \"Officers\" means the ranks the game marks Officer (Guild Control). You can change this any time in Options > Officers." }
     end
     list[#list + 1] = { key = "done", icon = D.LOGO, full = true, title = "You're All Set",
-        text = "Open the window any time with |cfffabd2f/ngm|r or the minimap button.\n\n"
-            .. "Options has everything from this tour, plus an |cfffabd2fAbout|r page with links to the Nootropic Discord and the addon's page.\n\n"
-            .. "Want this tour again? |cfffabd2f/ngm welcome|r." }
+        text = ("Open the window any time with " .. ns.GOLD .. "/ngm|r or the minimap button.\n\n")
+            .. ("Options has everything from this tour, plus an " .. ns.GOLD .. "About|r page with links to the Nootropic Discord and the addon's page.\n\n")
+            .. ("Want this tour again? " .. ns.GOLD .. "/ngm welcome|r.") }
     return list
 end
 

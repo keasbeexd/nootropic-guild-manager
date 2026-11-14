@@ -6,6 +6,7 @@
 local ROOT = arg[1]
 local NOW = 1800000000
 local ns = { Widgets = {} }
+ns.GOLD, ns.ORANGE, ns.BLUE = "|cfffabd2f", "|cfffe8019", "|cff83a598" -- Core.lua sets these
 local guild = { members = {}, sync = { guild = {}, officer = {} } }
 local settings = {}
 function ns:Fire() end function ns:On() end function ns:RegisterEvent() end function ns:Print() end

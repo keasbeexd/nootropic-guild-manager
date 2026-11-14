@@ -206,7 +206,7 @@ function MV:InitRow(row, item)
         row.Selected:SetAllPoints()
         row.Selected:SetTexture("Interface\\QuestFrame\\UI-QuestLogTitleHighlight")
         row.Selected:SetBlendMode("ADD")
-        row.Selected:SetVertexColor(0.98, 0.74, 0.18, 0.5)
+        row.Selected:SetVertexColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.5)
         row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
         row:GetHighlightTexture():SetAlpha(0.35)
         row.Num = row:CreateFontString(nil, "OVERLAY", "NGMFontTitle")
@@ -369,7 +369,7 @@ function MV:BuildEditor(f)
 
     local tokens = e:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     tokens:SetPoint("TOPLEFT", 0, y)
-    tokens:SetText("|cfffabd2f$first  $name  $class  $level  $race  $zone  $guild|r are filled in for each player")
+    tokens:SetText((ns.GOLD .. "$first  $name  $class  $level  $race  $zone  $guild|r are filled in for each player"))
     y = y - 18
 
     self.preview = e:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
@@ -441,7 +441,7 @@ function MV:Refresh(loadTexts)
         local on = rule.classes[b.key] and true or false
         b.Icon:SetDesaturated(not on and next(rule.classes) ~= nil)
         b.Icon:SetAlpha((on or not next(rule.classes)) and 1 or 0.35)
-        if on then b:SetBackdropBorderColor(0.98, 0.74, 0.18, 1) else b:SetBackdropBorderColor(0.25, 0.25, 0.25, 1) end
+        if on then b:SetBackdropBorderColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1) else b:SetBackdropBorderColor(0.25, 0.25, 0.25, 1) end
     end
     local anyRace = not next(rule.races)
     for _, b in ipairs(self.raceButtons) do
@@ -450,7 +450,7 @@ function MV:Refresh(loadTexts)
             tex:SetDesaturated(not on and not anyRace)
             tex:SetAlpha((on or anyRace) and 1 or 0.35)
         end
-        if on then b:SetBackdropBorderColor(0.98, 0.74, 0.18, 1) else b:SetBackdropBorderColor(0.25, 0.25, 0.25, 1) end
+        if on then b:SetBackdropBorderColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1) else b:SetBackdropBorderColor(0.25, 0.25, 0.25, 1) end
     end
     self:RefreshEditorInfo()
 end
@@ -477,7 +477,7 @@ function MV:RefreshEditorInfo()
     local sample = example or { short = "Thrall", full = "Thrall", classFile = "WARRIOR", className = "Warrior", level = 42,
         race = "Orc", zone = "Durotar" }
     local out = ns.Recruit:Format(text, sample)
-    self.preview:SetText(("|cfffabd2fPreview%s:|r "):format(example and (" for " .. example.short) or "")
+    self.preview:SetText(((ns.GOLD .. "Preview%s:|r ")):format(example and (" for " .. example.short) or "")
         .. (out ~= "" and ("|cffd3869b" .. out .. "|r") or "|cffa89984(write the message above)|r"))
     local r = ns.Recruit:Settings()
     local note = ""
@@ -515,7 +515,7 @@ function MV:BuildTransfer()
     t:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
         insets = { left = 3, right = 3, top = 3, bottom = 3 } })
     t:SetBackdropColor(0.04, 0.04, 0.04, 0.97)
-    t:SetBackdropBorderColor(0.98, 0.74, 0.18, 0.9)
+    t:SetBackdropBorderColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.9)
     t:Hide()
     self.transfer = t
 

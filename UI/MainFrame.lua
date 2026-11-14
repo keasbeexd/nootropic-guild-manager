@@ -357,7 +357,7 @@ function UI:BuildAddonCount(f)
     b.Text:SetPoint("LEFT", 0, 0)
     b.Underline = b:CreateTexture(nil, "OVERLAY")
     b.Underline:SetHeight(1)
-    b.Underline:SetColorTexture(0.98, 0.74, 0.18, 0.8)
+    b.Underline:SetColorTexture(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.8)
     b.Underline:Hide()
     b:SetScript("OnEnter", function(self)
         self.Underline:ClearAllPoints()
@@ -429,7 +429,7 @@ function UI:RefreshStatus()
     end
     local guild = GetGuildInfo("player") or "Guild"
     local total, online, withAddon = ns.Roster:Stats()
-    self.status:SetText(("|cfffabd2f%s|r   %d members  -  |cffb8bb26%d online|r"):format(guild, total, online))
+    self.status:SetText(((ns.GOLD .. "%s|r   %d members  -  |cffb8bb26%d online|r")):format(guild, total, online))
     if ns.DB:Settings().showAddonCount == false then
         count:Hide()
         return

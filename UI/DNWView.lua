@@ -18,7 +18,7 @@ local DV = {}
 ns.DNWView = DV
 
 local ROW_H = 22
-local RED, GOLD, GRAY = "|cfffb4934", "|cfffabd2f", "|cffa89984"
+local RED, GRAY = "|cfffb4934", "|cffa89984"
 
 ------------------------------------------------------------------------
 -- Window
@@ -128,7 +128,7 @@ function DV:InitRow(row, e)
         row.State:SetText(RED .. "Do not whisper|r")
         row.By:SetText(When(e.at) .. ", " .. ns.ShortName(e.by or "?"))
     else
-        row.State:SetText(GOLD .. ns.FormatWait(e.untilT - ns.DB:Now()) .. " left|r")
+        row.State:SetText(ns.GOLD .. ns.FormatWait(e.untilT - ns.DB:Now()) .. " left|r")
         row.By:SetText("whispered " .. When(e.whispered) .. (e.by and (", " .. ns.ShortName(e.by)) or ""))
     end
 end
@@ -139,16 +139,16 @@ function DV:ShowRowTooltip(row, e)
     GameTooltip:AddLine(ns.ShortName(e.full))
     if e.kind == "dnw" then
         GameTooltip:AddLine("On the Do Not Whisper list for good.", 1, 0.4, 0.4, true)
-        GameTooltip:AddDoubleLine("Added", date("%b %d, %Y", e.at or 0), 0.98, 0.74, 0.18, 1, 1, 1)
-        GameTooltip:AddDoubleLine("By", ns.ShortName(e.by or "?"), 0.98, 0.74, 0.18, 1, 1, 1)
+        GameTooltip:AddDoubleLine("Added", date("%b %d, %Y", e.at or 0), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1)
+        GameTooltip:AddDoubleLine("By", ns.ShortName(e.by or "?"), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1)
         if e.reply and e.reply ~= "" then GameTooltip:AddLine("\"" .. e.reply .. "\"", 0.8, 0.8, 0.8, true) end
     else
         GameTooltip:AddLine(("Whispered recently: nobody in the guild can whisper them again for %s."):format(
-            ns.FormatWait(e.untilT - ns.DB:Now())), 0.98, 0.74, 0.18, true)
-        GameTooltip:AddDoubleLine("Whispered", date("%b %d, %Y", e.whispered), 0.98, 0.74, 0.18, 1, 1, 1)
-        if e.by then GameTooltip:AddDoubleLine("Last update by", ns.ShortName(e.by), 0.98, 0.74, 0.18, 1, 1, 1) end
-        if e.replied then GameTooltip:AddDoubleLine("Replied", date("%b %d", e.replied), 0.98, 0.74, 0.18, 1, 1, 1) end
-        if e.invited then GameTooltip:AddDoubleLine("Invited", date("%b %d", e.invited), 0.98, 0.74, 0.18, 1, 1, 1) end
+            ns.FormatWait(e.untilT - ns.DB:Now())), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], true)
+        GameTooltip:AddDoubleLine("Whispered", date("%b %d, %Y", e.whispered), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1)
+        if e.by then GameTooltip:AddDoubleLine("Last update by", ns.ShortName(e.by), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1) end
+        if e.replied then GameTooltip:AddDoubleLine("Replied", date("%b %d", e.replied), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1) end
+        if e.invited then GameTooltip:AddDoubleLine("Invited", date("%b %d", e.invited), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1) end
         if e.reply then GameTooltip:AddLine("\"" .. e.reply .. "\"", 0.8, 0.8, 0.8, true) end
     end
     GameTooltip:AddLine("Click for options.", 0.5, 0.5, 0.5)
@@ -206,7 +206,7 @@ function DV:Refresh()
         self.empty:SetText(#list == 0 and "Nobody here." or "")
     end
     self.summary:SetText(("%s%d|r do not whisper  -  %s%d|r whispered in the last %d days  %s(shared with the guild)|r"):format(
-        RED, nDNW, GOLD, nLocked, ns.Recruit.RECONTACT_DAYS, GRAY))
+        RED, nDNW, ns.GOLD, nLocked, ns.Recruit.RECONTACT_DAYS, GRAY))
 end
 
 function DV:Open()

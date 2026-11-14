@@ -201,8 +201,8 @@ function O:BuildMain()
     self.panel = outer
 
     L:Header("How It Works")
-    L:Text("Open the window with |cffebdbb2/ngm|r or the minimap button. Its tabs: |cfffabd2fFind|r (search the guild), |cfffabd2fPlay Together|r (who's around near your level), |cfffabd2fRecruitment|r and, for officers, |cfffabd2fAudit|r. Click anyone for their profile: spec, professions and recipes, raid readiness, contact info and your private notes.")
-    L:Text("Everyone running the addon shares what their own copy knows: spec, professions, recipes (when they open a profession window), raid attunements and when they usually play. The more of the guild uses it, the more it knows. Private notes never leave your computer. The |cfffabd2fAbout|r page below has links and credits.", "NGMFontDimSmall")
+    L:Text(("Open the window with |cffebdbb2/ngm|r or the minimap button. Its tabs: " .. ns.GOLD .. "Find|r (search the guild), " .. ns.GOLD .. "Play Together|r (who's around near your level), " .. ns.GOLD .. "Recruitment|r and, for officers, " .. ns.GOLD .. "Audit|r. Click anyone for their profile: spec, professions and recipes, raid readiness, contact info and your private notes."))
+    L:Text(("Everyone running the addon shares what their own copy knows: spec, professions, recipes (when they open a profession window), raid attunements and when they usually play. The more of the guild uses it, the more it knows. Private notes never leave your computer. The " .. ns.GOLD .. "About|r page below has links and credits."), "NGMFontDimSmall")
     L:Space(4)
 
     L:Header("Appearance")
@@ -232,6 +232,25 @@ function O:BuildMain()
     end)
     W.Tooltip(iconBtn, "Addon icon", "Shown on the window, the minimap button and the Guild & Communities shortcut.")
     self.iconButton = iconBtn
+
+    -- the theme, beside the icon: Nootropic's own colors or the guild tabard's
+    y = L:Row(34)
+    local themeLabel = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
+    themeLabel:SetPoint("TOPLEFT", 18, y - 8)
+    themeLabel:SetText("Theme")
+    local themeBtn = W.Button(L.panel, "", 160, 22)
+    themeBtn:SetPoint("TOPLEFT", 148, y - 4)
+    themeBtn:SetScript("OnClick", function(btn)
+        W.ShowMenu(btn, {
+            { text = "Theme", isTitle = true },
+            { text = "Nootropic", radio = true, checked = function() return not ns.Theme:UseGuild() end,
+              func = function() ns.Theme:SetUseGuild(false); O:Refresh() end },
+            { text = "Guild", radio = true, checked = function() return ns.Theme:UseGuild() end,
+              func = function() ns.Theme:SetUseGuild(true); O:Refresh() end },
+        })
+    end)
+    W.Tooltip(themeBtn, "Theme", "Guild: buttons, headings and the window in your guild tabard's colors. Nootropic: the addon's own colors. NGM Peon's dashboard has the same choice.")
+    self.themeButton = themeBtn
 
     self.addonCountCheck = L:Check("Show how many guildmates use the addon",
         "The \"x using ... Guild Manager\" text at the bottom of the window.", function(on)
@@ -271,8 +290,8 @@ function O:BuildMain()
 
     -- Install reminder: the whisper "Remind to install the addon" sends
     L:Header("Install Reminder")
-    L:Text("What guildmates without the addon get when you click |cfffabd2fRemind to install the addon|r on their profile or right-click menu. "
-        .. "|cfffabd2f$first|r, |cfffabd2f$name|r and |cfffabd2f$guild|r are filled in. Add your Discord invite if you'd like it to cover that too. Saved as you type.")
+    L:Text(("What guildmates without the addon get when you click " .. ns.GOLD .. "Remind to install the addon|r on their profile or right-click menu. ")
+        .. (ns.GOLD .. "$first|r, " .. ns.GOLD .. "$name|r and " .. ns.GOLD .. "$guild|r are filled in. Add your Discord invite if you'd like it to cover that too. Saved as you type."))
     local ry = L:Row(84)
     local ef, box = W.ScrollEditor(L.panel, 255)
     ef:SetPoint("TOPLEFT", 22, ry)
@@ -348,7 +367,7 @@ function O:BuildMain()
     local open = W.Button(L.panel, "Open Guild Manager", 170, 24)
     open:SetPoint("LEFT", syncNow, "RIGHT", 8, 0)
     open:SetScript("OnClick", function() ns.UI:OpenTab(ns.UI.TAB_ROSTER) end)
-    L:Text("|cfffabd2fCommands|r\n"
+    L:Text((ns.GOLD .. "Commands|r\n")
         .. "|cffebdbb2/ngm|r open or close     |cffebdbb2/ngm find <text>|r search the roster     |cffebdbb2/ngm recruit|r recruiting\n"
         .. "|cffebdbb2/ngm sync|r sync now     |cffebdbb2/ngm diag|r troubleshooting     |cffebdbb2/ngm help|r every command", "NGMFontTextSmall")
     L:Finish()
@@ -397,7 +416,7 @@ function O:BuildRecruiting()
             if r then r.autoInvite = on end
             RecruitChanged()
         end)
-    L:Text("|cfffabd2fKeywords|r  |cffa89984(whole words, any case)|r", "NGMFontTextSmall", 4)
+    L:Text((ns.GOLD .. "Keywords|r  |cffa89984(whole words, any case)|r"), "NGMFontTextSmall", 4)
     self.keywordBoxes = WordBoxes(L, 24, function(i, text)
         local r = ns.Recruit:Settings()
         if r then r.keywords[i] = text end
@@ -413,7 +432,7 @@ function O:BuildRecruiting()
             if r then r.dnwEnabled = on end
             RecruitChanged()
         end)
-    L:Text("|cfffabd2fWords|r  |cffa89984(whole words, any case)|r", "NGMFontTextSmall", 4)
+    L:Text((ns.GOLD .. "Words|r  |cffa89984(whole words, any case)|r"), "NGMFontTextSmall", 4)
     self.dnwBoxes = WordBoxes(L, 32, function(i, text)
         local r = ns.Recruit:Settings()
         if r then r.dnwWords[i] = text end
@@ -592,7 +611,7 @@ function O:BuildAbout()
     O.logos[#O.logos + 1] = logo
     local name = banner:CreateFontString(nil, "OVERLAY", "NGMFontHuge")
     name:SetPoint("TOPLEFT", logo.Slot, "TOPRIGHT", 14, -6)
-    name:SetText("|cfffabd2fNootropic|r Guild Manager")
+    name:SetText((ns.GOLD .. "Nootropic|r Guild Manager"))
     local tag = banner:CreateFontString(nil, "OVERLAY", "NGMFontText")
     tag:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -6)
     tag:SetText("Your whole guild, in one window. Built for WoW: Forever.")
@@ -602,14 +621,14 @@ function O:BuildAbout()
 
     L:Space(6)
     L:Header("What's Inside")
-    L:Text("|cfffabd2fFind|r  search the whole guild by name, class, spec, profession or Discord, with mains and alts grouped together.\n"
-        .. "|cfffabd2fPlay Together|r  who's online near your level right now, and who usually plays at this hour.\n"
-        .. "|cfffabd2fOverview|r  how many of each class, level and profession, and a heatmap of when the guild plays.\n"
-        .. "|cfffabd2fHall of Fame|r  guild leaderboards from everyone's statistics: quests, kills, bosses, deaths and more.\n"
-        .. "|cfffabd2fWho Can Craft?|r  every recipe your guildmates know, searchable, with online crafters first.\n"
-        .. "|cfffabd2fProfiles|r  specs, roles, professions, Discord, usual play hours, raid readiness and your private notes.\n"
-        .. "|cfffabd2fRecruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n"
-        .. "|cfffabd2fFor officers|r  an audit of every change (joins, leaves, promotions, level-ups), an officer log, and Guild Master permissions.")
+    L:Text((ns.GOLD .. "Find|r  search the whole guild by name, class, spec, profession or Discord, with mains and alts grouped together.\n")
+        .. (ns.GOLD .. "Play Together|r  who's online near your level right now, and who usually plays at this hour.\n")
+        .. (ns.GOLD .. "Overview|r  how many of each class, level and profession, and a heatmap of when the guild plays.\n")
+        .. (ns.GOLD .. "Hall of Fame|r  guild leaderboards from everyone's statistics: quests, kills, bosses, deaths and more.\n")
+        .. (ns.GOLD .. "Who Can Craft?|r  every recipe your guildmates know, searchable, with online crafters first.\n")
+        .. (ns.GOLD .. "Profiles|r  specs, roles, professions, Discord, usual play hours, raid readiness and your private notes.\n")
+        .. (ns.GOLD .. "Recruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n")
+        .. (ns.GOLD .. "For officers|r  an audit of every change (joins, leaves, promotions, level-ups), an officer log, and Guild Master permissions."))
     L:Text("Everything is shared with guildmates running the addon, so the more of the guild uses it, the more it knows.", "NGMFontDimSmall")
 
     L:Header("Links")
@@ -617,8 +636,8 @@ function O:BuildAbout()
     for _, link in ipairs(D.LINKS) do LinkRow(L, link) end
 
     L:Header("Credits")
-    L:Text("Maintained by |cfffabd2fKeasbeexd|r for |cfffabd2f<Nootropic>|r.\n"
-        .. "Built on the original Nootropic Guild Manager by |cfffabd2faigoodandy|r, with permission.\n"
+    L:Text(("Maintained by " .. ns.GOLD .. "Keasbeexd|r for " .. ns.GOLD .. "<Nootropic>|r.\n")
+        .. ("Built on the original Nootropic Guild Manager by " .. ns.GOLD .. "aigoodandy|r, with permission.\n")
         .. "Bug reports and ideas are welcome on the GitHub page or in the guild Discord.")
     L:Finish()
     return outer
@@ -670,8 +689,9 @@ function O:Refresh()
     self.statsCheck:SetChecked(ns.Sharing:Get("stats"))
     if not self.reminderBox:HasFocus() then self.reminderBox:SetText(ns.InstallReminder:Text()) end
     self.minimapCheck:SetChecked(not s.minimap.hide)
+    if self.themeButton then self.themeButton:SetText(ns.Theme:UseGuild() and "Guild" or "Nootropic") end
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end
-    self.syncStatus:SetText("|cfffabd2fSync:|r " .. select(2, ns.Sync:Health()))
+    self.syncStatus:SetText((ns.GOLD .. "Sync:|r ") .. select(2, ns.Sync:Health()))
 
     self:RefreshRecruiting()
 

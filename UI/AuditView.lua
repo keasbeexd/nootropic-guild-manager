@@ -167,8 +167,8 @@ function AV:InitRow(row, e)
                 local who = (g.memberCount > 1 and en.member) and (ns.ShortName(en.member) .. ": ") or ""
                 GameTooltip:AddLine(who .. en.desc, 1, 1, 1, true)
             end
-            GameTooltip:AddDoubleLine("Changed by", ns.Audit.Who(g.author), 0.98, 0.74, 0.18, 1, 1, 1)
-            GameTooltip:AddDoubleLine("When", ns.FormatDate(g.t), 0.98, 0.74, 0.18, 1, 1, 1)
+            GameTooltip:AddDoubleLine("Changed by", ns.Audit.Who(g.author), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1)
+            GameTooltip:AddDoubleLine("When", ns.FormatDate(g.t), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1)
             if g.memberCount == 1 then GameTooltip:AddLine("Click to open " .. ns.ShortName(g.member) .. "'s profile.", 0.5, 0.5, 0.5) end
             GameTooltip:Show()
         end)

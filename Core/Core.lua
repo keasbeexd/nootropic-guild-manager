@@ -6,7 +6,9 @@ local ADDON_NAME, ns = ...
 _G.NootropicGuildManager = ns -- exposed for /dump debugging
 
 ns.name = ADDON_NAME
-ns.GOLD = "|cfffabd2f"
+ns.GOLD = "|cfffabd2f"   -- the accent (the guild theme changes these: UI/Theme.lua ApplyPalette)
+ns.ORANGE = "|cfffe8019"
+ns.BLUE = "|cff83a598"
 ns.GRAY = "|cffa89984"
 
 local function Meta(field)
@@ -314,6 +316,7 @@ ns:RegisterEvent("GUILD_ROSTER_UPDATE", function() ns.Debounce("officercheck", 0
 ns:RegisterEvent("PLAYER_GUILD_UPDATE", function() ns.Debounce("officercheck", 0.5, CheckOfficer) end)
 
 ns:RegisterEvent("PLAYER_LOGIN", function()
+    ns.Theme:LoadTheme() -- the guild's colours, before any window is built
     ns.Roster:Init()
     ns.Sync:Init()
     ns.RosterLog:Init()

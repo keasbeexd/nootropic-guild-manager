@@ -284,7 +284,7 @@ function RV:StartColumnMove(c)
     h:SetAlpha(0.5)
     if not self.dropMarker then
         local m = self.header:CreateTexture(nil, "OVERLAY")
-        m:SetColorTexture(0.98, 0.74, 0.18, 1)
+        m:SetColorTexture(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1)
         m:SetWidth(3)
         self.dropMarker = m
     end
@@ -416,10 +416,10 @@ function RV:BuildToolbar(page, frame)
     end)
     W.Tooltip(search, "Searching the roster",
         "Words match names, classes, specs and professions. Every word must match.",
-        "|cfffabd2fprof:|r |cfffabd2fspec:|r |cfffabd2fclass:|r |cfffabd2frace:|r |cfffabd2frole:|r |cfffabd2fname:|r |cfffabd2frank:|r |cfffabd2fzone:|r |cfffabd2fnote:|r |cfffabd2fdiscord:|r limit a word to one field.",
-        "|cfffabd2fmain:markpri|r  a main and their alts    |cfffabd2fis:alt|r  |cfffabd2fis:main|r  |cfffabd2fis:addon|r  |cfffabd2fis:online|r",
-        "|cfffabd2flevel>=50|r  level filter",
-        "|cfffabd2f-alchemy|r excludes, |cfffabd2fzone:\"elwynn forest\"|r matches a phrase.",
+        (ns.GOLD .. "prof:|r " .. ns.GOLD .. "spec:|r " .. ns.GOLD .. "class:|r " .. ns.GOLD .. "race:|r " .. ns.GOLD .. "role:|r " .. ns.GOLD .. "name:|r " .. ns.GOLD .. "rank:|r " .. ns.GOLD .. "zone:|r " .. ns.GOLD .. "note:|r " .. ns.GOLD .. "discord:|r limit a word to one field."),
+        (ns.GOLD .. "main:markpri|r  a main and their alts    " .. ns.GOLD .. "is:alt|r  " .. ns.GOLD .. "is:main|r  " .. ns.GOLD .. "is:addon|r  " .. ns.GOLD .. "is:online|r"),
+        (ns.GOLD .. "level>=50|r  level filter"),
+        (ns.GOLD .. "-alchemy|r excludes, " .. ns.GOLD .. "zone:\"elwynn forest\"|r matches a phrase."),
         "Right-click a column header to choose columns.")
     self.searchBox = search
 
@@ -444,7 +444,7 @@ function RV:BuildToolbar(page, frame)
     clear:SetWidth(math.ceil(clear.Text:GetStringWidth()) + 4)
     clear:SetScript("OnClick", function() RV:ClearFilters() end)
     clear:SetScript("OnEnter", function(self) self.Text:SetTextColor(1, 1, 1) end)
-    clear:SetScript("OnLeave", function(self) self.Text:SetTextColor(0.98, 0.74, 0.18) end)
+    clear:SetScript("OnLeave", function(self) self.Text:SetTextColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3]) end)
     self.clearBtn = clear
 
     local filters = page:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
@@ -677,7 +677,7 @@ function RV:BuildList(page, inset)
         grip:SetPoint("BOTTOMRIGHT", 4, 0)
         grip:SetFrameLevel(h:GetFrameLevel() + 5)
         grip.Line = grip:CreateTexture(nil, "OVERLAY")
-        grip.Line:SetColorTexture(0.98, 0.74, 0.18, 0.9)
+        grip.Line:SetColorTexture(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.9)
         grip.Line:SetWidth(2)
         grip.Line:SetPoint("TOP", 0, -2)
         grip.Line:SetPoint("BOTTOM", 0, 2)
@@ -742,7 +742,7 @@ local function BuildRow(row)
     row.Selected:SetAllPoints()
     row.Selected:SetTexture("Interface\\QuestFrame\\UI-QuestLogTitleHighlight")
     row.Selected:SetBlendMode("ADD")
-    row.Selected:SetVertexColor(0.98, 0.74, 0.18, 0.5)
+    row.Selected:SetVertexColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.5)
 
     row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
     row:GetHighlightTexture():SetAlpha(0.45)
@@ -1034,7 +1034,7 @@ function RV:ShowRowTooltip(row, e, hint)
     GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
     -- the same header as the game's own guild roster tooltip
     GameTooltip:AddLine(e.full, ns.ClassColor(e.classFile))
-    if e.rank and e.rank ~= "" then GameTooltip:AddLine(e.rank, 0.98, 0.74, 0.18) end
+    if e.rank and e.rank ~= "" then GameTooltip:AddLine(e.rank, ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3]) end
     GameTooltip:AddLine(("Level %d %s%s"):format(e.level or 0, e.race and e.race ~= "" and (e.race .. " ") or "", e.className or ""), 1, 1, 1)
     if e.zone and e.zone ~= "" then GameTooltip:AddLine(e.zone, 1, 1, 1) end
     GameTooltip:AddLine(" ")
@@ -1147,7 +1147,7 @@ function RV:Refresh()
     local summary = (total == 1 and "1 member" or (total .. " members")) .. SEP
         .. ("|cffb8bb26%d online|r"):format(online) .. SEP
         .. (withAddon == 1 and "1 using the addon" or (withAddon .. " using the addon"))
-    if #list ~= total then summary = summary .. SEP .. ("|cfffabd2fshowing %d|r"):format(#list) end
+    if #list ~= total then summary = summary .. SEP .. ((ns.GOLD .. "showing %d|r")):format(#list) end
     self.countText:SetText(summary)
 
     if not IsInGuild() then

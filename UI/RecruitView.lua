@@ -520,9 +520,9 @@ local function StatusLabel(p)
     if st == "dnw" then return "|cfffb4934Do not whisper|r" end
     local c = ns.Recruit:Contact(p)
     local by = c.by and ("|cffa89984 by|r |cffebdbb2" .. ns.ShortName(c.by) .. "|r") or ""
-    if st == "invited" then return "|cfffabd2fInvited|r" .. by end
+    if st == "invited" then return (ns.GOLD .. "Invited|r") .. by end
     if st == "replied" then return "|cffb8bb26Replied|r |cffa89984" .. ns.FormatAgo(c.replied) .. "|r" .. by end
-    if st == "whispered" then return "|cff83a598Whispered|r |cffa89984" .. ns.FormatAgo(c.whispered) .. "|r" .. by end
+    if st == "whispered" then return (ns.BLUE .. "Whispered|r |cffa89984") .. ns.FormatAgo(c.whispered) .. "|r" .. by end
     return "|cffa89984New|r"
 end
 RCV.StatusLabel = StatusLabel
@@ -548,7 +548,7 @@ function RCV:InitRow(row, p)
     for _, f in ipairs(ns.Recruit.queue) do if f == p.full then queued = true break end end
     row.Pick:SetChecked((ns.Recruit.selected[p.full] or queued) and true or false)
     row.Pick:SetEnabled(canPick and not queued)
-    if queued then row.Status:SetText("|cfffabd2fQueued|r") end
+    if queued then row.Status:SetText((ns.GOLD .. "Queued|r")) end
 end
 
 
@@ -563,18 +563,18 @@ function RCV:ShowRowTooltip(row, p)
     if p.race then GameTooltip:AddLine(p.race, 0.8, 0.8, 0.8) end
     local text, rule = ns.Recruit:TemplateFor(p)
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("Message: " .. (rule and rule.name or "Default"), 0.98, 0.74, 0.18)
+    GameTooltip:AddLine("Message: " .. (rule and rule.name or "Default"), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
     local msg = ns.Recruit:Format(text, p)
     GameTooltip:AddLine(msg ~= "" and ("|cffd3869b" .. msg .. "|r") or "|cffa89984(empty - write a message first)|r", 1, 1, 1, true)
     GameTooltip:AddLine(" ")
     local c = ns.Recruit:Contact(p)
-    GameTooltip:AddDoubleLine("Found", ns.FormatAgo(p.found), 0.98, 0.74, 0.18, 1, 1, 1)
-    if c.whispered then GameTooltip:AddDoubleLine("Whispered", ns.FormatAgo(c.whispered), 0.98, 0.74, 0.18, 1, 1, 1) end
+    GameTooltip:AddDoubleLine("Found", ns.FormatAgo(p.found), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1)
+    if c.whispered then GameTooltip:AddDoubleLine("Whispered", ns.FormatAgo(c.whispered), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1) end
     if c.reply then
-        GameTooltip:AddLine("Their reply:", 0.98, 0.74, 0.18)
+        GameTooltip:AddLine("Their reply:", ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
         GameTooltip:AddLine("\"" .. c.reply .. "\"", 0.4, 1, 0.4, true)
     end
-    if c.invited then GameTooltip:AddDoubleLine("Invited", ns.FormatAgo(c.invited), 0.98, 0.74, 0.18, 1, 1, 1) end
+    if c.invited then GameTooltip:AddDoubleLine("Invited", ns.FormatAgo(c.invited), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 1, 1, 1) end
     local locked = ns.Recruit:LockedUntil(p)
     if locked then
         GameTooltip:AddLine(("%s whispered them, so nobody in the guild can whisper them again for %s."):format(
@@ -582,7 +582,7 @@ function RCV:ShowRowTooltip(row, p)
     elseif c.by and c.invited then
         GameTooltip:AddLine(("Already invited by %s."):format(ns.ShortName(c.by)), 1, 0.5, 0.5, true)
     end
-    if p.joined then GameTooltip:AddDoubleLine("Joined", ns.FormatAgo(p.joined), 0.98, 0.74, 0.18, 0.4, 1, 0.4) end
+    if p.joined then GameTooltip:AddDoubleLine("Joined", ns.FormatAgo(p.joined), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], 0.4, 1, 0.4) end
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Click to tick or untick. Right-click for more options.", 0.5, 0.5, 0.5)
     GameTooltip:Show()
@@ -658,7 +658,7 @@ function RCV:BuildPanel(page, inset)
     self.tokens:SetPoint("TOPLEFT", editorFrame, "BOTTOMLEFT", -2, -6)
     self.tokens:SetWidth(IW)
     self.tokens:SetJustifyH("LEFT")
-    self.tokens:SetText("|cfffabd2f$first $name $class $level $race $zone $guild|r are filled in")
+    self.tokens:SetText((ns.GOLD .. "$first $name $class $level $race $zone $guild|r are filled in"))
 
     self.preview = panel:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     self.preview:SetPoint("TOPLEFT", self.tokens, "BOTTOMLEFT", 0, -6)
@@ -714,7 +714,7 @@ function RCV:RefreshReplyInfo()
     local ON, OFF = "|cffb8bb26on|r", "|cffa89984off|r"
     local invite = r.autoInvite and (ON .. ", Invite popup") or OFF
     local n = #ns.Recruit:DNWList()
-    self.replyInfo:SetText(("|cfffabd2fAuto-invite:|r %s%s\n|cfffabd2fDo Not Whisper:|r %s, %s on the list"):format(
+    self.replyInfo:SetText(((ns.GOLD .. "Auto-invite:|r %s%s\n" .. ns.GOLD .. "Do Not Whisper:|r %s, %s on the list")):format(
         invite, (r.autoInvite and #words > 0) and ("  |cffa89984(" .. table.concat(words, ", ") .. ")|r") or "",
         r.dnwEnabled and ON or OFF, n == 1 and "1 person" or (n .. " people")))
     self:FitPanel()
@@ -733,7 +733,7 @@ function RCV:RefreshPreview()
     local sample = { short = "Thrall", full = "Thrall", classFile = "WARRIOR", className = "Warrior", level = 42,
         race = "Orc", zone = "Durotar" }
     local text = ns.Recruit:Format(r and r.default or "", sample)
-    self.preview:SetText("|cfffabd2fPreview:|r " .. (text ~= "" and ("|cffd3869b" .. text .. "|r") or "|cffa89984(empty)|r")
+    self.preview:SetText((ns.GOLD .. "Preview:|r ") .. (text ~= "" and ("|cffd3869b" .. text .. "|r") or "|cffa89984(empty)|r")
         .. "  |cff7c6f64" .. ns.Recruit:LengthText(r and r.default or "") .. "|r")
     self:FitPanel()
 end
@@ -845,7 +845,7 @@ end
 function RCV:SummaryText()
     local RC = ns.Recruit
     if not RC:Settings() then return "" end
-    if RC.searching then return "|cfffabd2fSearching:|r " .. (RC.pendingQuery or "") end
+    if RC.searching then return (ns.GOLD .. "Searching:|r ") .. (RC.pendingQuery or "") end
     local last = RC.last
     if last and last.timedOut then
         return "|cfffb4934No reply from /who. The server limits how often you can search - wait a few seconds.|r"
@@ -861,7 +861,7 @@ function RCV:SummaryText()
     if last then
         parts[#parts + 1] = ("|cffb8bb26%d new|r from last search"):format(last.new or 0)
     end
-    parts[#parts + 1] = ("|cff83a598%d whispered|r"):format(whispered)
+    parts[#parts + 1] = ((ns.BLUE .. "%d whispered|r")):format(whispered)
     parts[#parts + 1] = ("|cffb8bb26%d replied|r"):format(replied)
     local text = table.concat(parts, SEP)
     if last and (last.skipped or 0) > 0 then

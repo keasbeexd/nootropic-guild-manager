@@ -128,21 +128,80 @@ function T:Scanlines(host, alpha, layer, sublevel, anchor)
 end
 
 ------------------------------------------------------------------------
--- The guild's accent (Core/Accent.lua): everyday buttons and the open tab
--- wear it. Things that do register a repaint; it changes when the tabard
--- loads (after login) or the guild changes it.
+-- The guild's theme (Core/Accent.lua Palette): its tabard's colours take
+-- the house colours' roles (yellow: the accent; orange: its neighbour;
+-- blue and the deep shadow: the ring's; the window's dark tones tinted
+-- toward the guild's hue). T.C and T.HEX change in place, so whatever is
+-- drawn after uses them; buttons and tabs already drawn repaint (OnAccent).
+-- Saved per guild, so it's in place at login before any window is built.
 ------------------------------------------------------------------------
-T.A = { face = T.C.yellow, shade = T.C.shade }
+local HOUSE = {}
+for k, h in pairs(T.HEX) do HOUSE[k] = h end
+T.A = { face = T.C.yellow, shade = T.C.shade } -- the same tables, changed in place
 local accentUsers = {}
 function T:OnAccent(fn) accentUsers[#accentUsers + 1] = fn end
+
+local ROLES = { yellow = "accent", orange = "accent2", shade = "shade", blue = "mgr", bg = "bg", bg1 = "bg1", line = "line", edge = "edge" }
+
+function T:ApplyPalette(p)
+    for key, role in pairs(ROLES) do
+        local h = (p and p[role]) or HOUSE[key]
+        T.HEX[key] = h
+        local c = T.C[key]
+        c[1], c[2], c[3] = tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255
+    end
+    ns.GOLD, ns.ORANGE, ns.BLUE = "|cff" .. T.HEX.yellow, "|cff" .. T.HEX.orange, "|cff" .. T.HEX.blue
+    for name, spec in pairs(OBJECTS) do
+        local font, c = _G[name], T.C[spec[4]]
+        if font and font.SetTextColor and c then font:SetTextColor(c[1], c[2], c[3]) end
+    end
+    for _, fn in ipairs(accentUsers) do pcall(fn) end
+end
+
+local function Colours(bg, border, emblem)
+    return { bg = bg, border = border, emblem = emblem }
+end
+
+-- Options > Appearance > Theme: Guild (the default) or Nootropic (the house one).
+function T:UseGuild()
+    local s = ns.DB and ns.DB.Settings and ns.DB:Settings()
+    return not (s and s.theme == "default")
+end
+
+function T:SetUseGuild(on)
+    ns.DB:Settings().theme = (not on) and "default" or nil
+    self:LoadTheme()
+    ns:Print("Theme changed. Type " .. ns.GOLD .. "/reload|r to see them everywhere.")
+end
+
+-- At login (Core.lua, after the saved data loads): the guild's saved theme.
+function T:LoadTheme()
+    local g = ns.DB and ns.DB.Guild and ns.DB:Guild()
+    local saved = g and g.theme
+    if saved and ns.Accent and self:UseGuild() then
+        self:ApplyPalette(ns.Accent.Palette(saved.bg, saved.border, saved.emblem))
+    else
+        self:ApplyPalette(nil)
+    end
+end
+
+-- When the tabard is known (after login) or changes: save and apply it.
+-- Windows already open keep some old colours until /reload, said once.
 function T:RefreshAccent()
     if not ns.Accent then return end
-    local ok, face, shade = pcall(function() return ns.Accent.For(ns.Accent:Tabard()) end) -- bg, border, emblem
-    if not ok then return end
-    local function C3(h) return { tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 } end
-    if self.A.hex == face .. shade then return end
-    self.A = { face = C3(face), shade = C3(shade), hex = face .. shade }
-    for _, fn in ipairs(accentUsers) do pcall(fn) end
+    local ok, bg, border, emblem = pcall(ns.Accent.Tabard, ns.Accent)
+    if not ok or not bg then return end -- not known yet: keep what's saved
+    local g = ns.DB and ns.DB.Guild and ns.DB:Guild()
+    if not g then return end
+    local saved = g.theme
+    if saved and saved.bg == bg and saved.border == border and saved.emblem == emblem then return end
+    g.theme = Colours(bg, border, emblem)
+    if not self:UseGuild() then return end
+    self:ApplyPalette(ns.Accent.Palette(bg, border, emblem))
+    if self.built and not self.toldReload then
+        self.toldReload = true
+        ns:Print("Your guild's theme is in. Type " .. ns.GOLD .. "/reload|r to see them everywhere.")
+    end
 end
 
 ------------------------------------------------------------------------
@@ -231,6 +290,7 @@ end
 function T:Skin(frame)
     if not frame or frame._ngmSkinned then return frame end
     frame._ngmSkinned = true
+    T.built = true
     pcall(function()
         HideArt(frame)
         for _, key in ipairs(ART) do

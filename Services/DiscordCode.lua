@@ -359,10 +359,10 @@ function DC:ReminderText(now)
     local late = self.REMIND_AFTER / 86400
     local lines = {}
     if not sent or sent >= late then
-        lines[#lines + 1] = "  |cfffabd2fGame to Discord|r: " .. (sent and ("last done %d days ago. "):format(sent) or "not done yet. ") .. toDiscord
+        lines[#lines + 1] = ("  " .. ns.GOLD .. "Game to Discord|r: ") .. (sent and ("last done %d days ago. "):format(sent) or "not done yet. ") .. toDiscord
     end
     if not got or got >= late then
-        lines[#lines + 1] = "  |cfffabd2fDiscord to the game|r: " .. (got and ("last done %d days ago. "):format(got) or "not done yet. ")
+        lines[#lines + 1] = ("  " .. ns.GOLD .. "Discord to the game|r: ") .. (got and ("last done %d days ago. "):format(got) or "not done yet. ")
             .. "Copy the Sync tab's step 3 code, type |cffebdbb2/ngm peon|r and press Bring In."
     end
     if #lines == 0 then return nil end

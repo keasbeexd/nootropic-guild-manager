@@ -111,7 +111,7 @@ end
 -- /ngm diag: what the game says about the tabard, for troubleshooting.
 function A:Diagnose()
     local api = C_GuildInfo and C_GuildInfo.GetGuildTabardInfo
-    local line = ("Guild colours: tabard info %s"):format(api and "available" or "|cfffb4934not given by this client|r")
+    local line = ("Guild theme: tabard info %s"):format(api and "available" or "|cfffb4934not given by this client|r")
     if api then
         local ok, info = pcall(api, "player")
         if not ok then
@@ -129,4 +129,31 @@ function A:Diagnose()
     local bg, border, emblem = self:Tabard()
     local face, shade = A.For(bg, border, emblem)
     ns:Print(line .. (". Read as %s/%s/%s, accent %s/%s."):format(tostring(bg), tostring(border), tostring(emblem), face, shade))
+end
+
+-- The guild's whole theme (dark, as the addon is), from the same three
+-- colours: the accent where the house theme is yellow, its neighbour where
+-- it's orange, the ring's colour where it's blue (and as the shadow, deep),
+-- and the window itself tinted toward the guild's hue (the ring's, else
+-- the accent's). nil: no hue anywhere, the house theme. NGM Peon has the
+-- same (ngm-hub src/accent.ts paletteFor; same test vectors).
+function A.Palette(bg, border, emblem)
+    local face, shade = A.For(bg, border, emblem)
+    if face == A.HOUSE.face and shade == A.HOUSE.shade then return nil end
+    bg, border, emblem = Valid(bg), Valid(border), Valid(emblem)
+    local function Lit(x) return x and Flare(x, true) or nil end
+    local fromBorder = not Lit(emblem) and not Lit(bg)
+    local mgr = (not fromBorder) and Lit(border) or nil
+    local h
+    if border then
+        local bh, bl, bs = ToHls(Rgb(border))
+        if bs >= 0.15 and bl >= 0.06 and bl <= 0.94 then h = bh end
+    end
+    h = h or (ToHls(Rgb(face)))
+    local function Tone(l, s) return Hex(FromHls(h, l, s)) end
+    local fh, fl, fs = ToHls(Rgb(face))
+    return {
+        accent = face, accent2 = Hex(FromHls(fh - 0.035, Clamp(fl - 0.04, 0, 1), fs)), shade = shade, mgr = mgr,
+        bg = Tone(0.11, 0.16), bg1 = Tone(0.15, 0.14), line = Tone(0.22, 0.12), edge = Tone(0.3, 0.12),
+    }
 end

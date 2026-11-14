@@ -210,7 +210,7 @@ local function CreateButton(row)
         GameTooltip:AddLine("Send recruitment whisper")
         GameTooltip:AddLine(ns.ShortName(info.name), ns.ClassColor(info.classFile))
         if self.state == "queued" then
-            GameTooltip:AddLine("Waiting in the whisper queue (whispers are spaced out).", 0.98, 0.74, 0.18, true)
+            GameTooltip:AddLine("Waiting in the whisper queue (whispers are spaced out).", ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3], true)
         elseif self.state == "sent" then
             GameTooltip:AddLine("Whispered.", 0.4, 1, 0.4, true)
         elseif self.reason then
@@ -223,7 +223,7 @@ local function CreateButton(row)
                 guild = info.guild ~= "" and info.guild or nil }
             local text, rule = RC:TemplateFor(p)
             local msg = RC:Format(text, p)
-            GameTooltip:AddLine("Message: " .. (rule and rule.name or "Default"), 0.98, 0.74, 0.18)
+            GameTooltip:AddLine("Message: " .. (rule and rule.name or "Default"), ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
             local tab = ns.TabName("recruit")
             GameTooltip:AddLine(msg ~= "" and ("|cffd3869b" .. msg .. "|r") or ("|cffa89984(empty - write a message on the %s tab)|r"):format(tab), 1, 1, 1, true)
             GameTooltip:AddLine(("Click to whisper. Whispers are spaced out like on the %s tab."):format(tab), 0.7, 0.7, 0.7, true)

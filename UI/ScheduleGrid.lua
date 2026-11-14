@@ -55,7 +55,7 @@ function SG.New(parent, opts)
         if opts.editable then
             day:SetScript("OnClick", function() self:CopyDay(d) end)
             day:SetScript("OnEnter", function(b)
-                b.Text:SetTextColor(0.98, 0.74, 0.18)
+                b.Text:SetTextColor(ns.Theme.C.yellow[1], ns.Theme.C.yellow[2], ns.Theme.C.yellow[3])
                 GameTooltip:SetOwner(b, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(("Copy %s"):format(DAYS[d + 1]))
                 GameTooltip:AddLine(d < 5 and "Copies this day to every weekday." or "Copies this day to the other weekend day.", 1, 1, 1, true)

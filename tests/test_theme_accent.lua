@@ -20,4 +20,9 @@ local function check3(bg, border, emblem, face, shade)
 end
 check3("111111", "6a2c91", "3fae4a", "72bd68", "77225f") -- black field, green crest, purple ring
 check3("111111", "6a2c91", "c0c0c0", "c961ac", "77225f") -- only the ring has a hue
+-- the whole theme (ngm-hub test/accent.test.ts: the same vectors)
+local p = A.Palette("111111", "6a2c91", "3fae4a")
+local want = { accent = "72bd68", accent2 = "78b75a", shade = "77225f", mgr = "c961ac", bg = "1d1821", bg1 = "27212c", line = "3a313f", edge = "4f4356" }
+for k, v in pairs(want) do assert(p[k] == v, ("%s: got %s, want %s"):format(k, tostring(p[k]), v)) end
+assert(A.Palette("f0f0f0", "111111", nil) == nil and A.Palette(nil, nil) == nil, "no hue: the house theme")
 print("OK")

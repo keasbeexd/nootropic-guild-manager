@@ -131,9 +131,9 @@ end
 function IP:Render()
     local name = ns.ShortName(self.full)
     if self.reply and self.reply ~= "" then
-        self.text:SetText(("|cfffabd2f%s|r replied:\n\"%s\"\n\nInvite them to the guild?"):format(name, self.reply))
+        self.text:SetText(((ns.GOLD .. "%s|r replied:\n\"%s\"\n\nInvite them to the guild?")):format(name, self.reply))
     else
-        self.text:SetText(("Invite |cfffabd2f%s|r to the guild?"):format(name))
+        self.text:SetText((("Invite " .. ns.GOLD .. "%s|r to the guild?")):format(name))
     end
     local n = #self.queue
     self.more:SetText(n > 0 and (n == 1 and "1 more waiting" or (n .. " more waiting")) or "")

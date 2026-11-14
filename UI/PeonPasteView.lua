@@ -36,9 +36,9 @@ function V:Build()
     steps:SetPoint("TOPRIGHT", -20, -36)
     steps:SetJustifyH("LEFT")
     steps:SetSpacing(4)
-    steps:SetText("|cfffabd2f1.|r On |cffebdbb2ngmpeon.app|r, open the |cffebdbb2Sync|r tab: step 3.\n"
-        .. "|cfffabd2f2.|r Copy it and paste it below (Ctrl+V).\n"
-        .. "|cfffabd2f3.|r Press Bring In.")
+    steps:SetText((ns.GOLD .. "1.|r On |cffebdbb2ngmpeon.app|r, open the |cffebdbb2Sync|r tab: step 3.\n")
+        .. (ns.GOLD .. "2.|r Copy it and paste it below (Ctrl+V).\n")
+        .. (ns.GOLD .. "3.|r Press Bring In."))
 
     local box = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
     box:SetSize(410, 22)
@@ -76,11 +76,11 @@ function V:BringIn()
     if got.months > 0 then lines[#lines + 1] = "Hall of Fame champions: " .. n(got.months, "month", "months") .. " crowned by NGM Peon" end
     if got.had > 0 then lines[#lines + 1] = "|cffa89984Already had: " .. got.had .. " (no change needed)|r" end
     if got.refused > 0 then
-        lines[#lines + 1] = ("|cfffe8019%d not taken|r: your rank can only bring in your own. An officer can bring in the rest."):format(got.refused)
+        lines[#lines + 1] = ((ns.ORANGE .. "%d not taken|r: your rank can only bring in your own. An officer can bring in the rest.")):format(got.refused)
     end
     lines[#lines + 1] = "Shared with the guild."
     if (got.events or 0) > 0 then
-        lines[#lines + 1] = ("|cfffabd2f%d %s|r to add to the calendar."):format(got.events, got.events == 1 and "event" or "events")
+        lines[#lines + 1] = ((ns.GOLD .. "%d %s|r to add to the calendar.")):format(got.events, got.events == 1 and "event" or "events")
     end
     self.result:SetText(table.concat(lines, "\n"))
     local changed = got.players + got.characters + got.names + got.months
