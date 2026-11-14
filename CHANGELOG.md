@@ -15,6 +15,7 @@ NGM meets your guild's Discord, and looks like it belongs in the game. **3.0 syn
 - **The Guild & Communities tab** sits under Blizzard's own side tabs, spaced and sized like them, wherever they are.
 - **Leaner:** the /who and recruiting watchers stop whenever nothing they follow is on screen.
 - **Options > About** links to **ngmpeon.app** only: downloads, help, bug reports and NGM Peon.
+- **Sharing switches only for what's yours alone:** your recipes and when you usually play. Your spec, professions, statistics and guild chat time are always shared, since they're public anyway (Blizzard's API, inspecting you, guild chat), and everyone online near your level shows in Play Together.
 
 ## 2.12.0
 

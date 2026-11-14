@@ -217,22 +217,14 @@ function O:BuildMain()
 
     L:Space(4)
 
-    L:Header("Sharing  |cff9d9d9d(what your copy shares with the guild)|r")
-    self.shareReportCheck = L:Check("Share my spec and professions",
-        "What the game reports about your talents and professions, for your profile and searches. Off: it's cleared, and guildmates only see what's set by hand.",
-        function(on) ns.Sharing:Set("report", on) end)
+    L:Header("Sharing  |cff9d9d9d(what only your copy knows)|r")
     self.shareRecipesCheck = L:Check("Share my recipes",
         "Recipes you've learned, so guildmates can find you in Who Can Craft?. Shared when you open a profession window. Off: your recipes are cleared.",
         function(on) ns.Sharing:Set("recipes", on) end)
     self.learnCheck = L:Check("Learn when I usually play",
         "Notes the hour every 10 minutes while you play (last 4 weeks, this computer only) and shares just the summary, shown as \"Usually online\" on your profile. Off: nothing is noted or shared. (This character.)",
         function(on) ns.Profile:SetLearn(on) end)
-    self.togetherCheck = L:Check("Show me in Play Together",
-        "Guildmates near your level see you when you're online, or when you usually play. Off: you're left out of everyone's lists.",
-        function(on) ns.Sharing:Set("together", on) end)
-    self.statsCheck = L:Check("Share my statistics",
-        "Your character's numbers from the game's Statistics page (quests, kills, bosses, deaths and more) and how long you've spent in guild chat conversations (Social Butterfly: only the time, never what was said), for the Hall of Fame. Never gold. Off: your numbers are cleared.",
-        function(on) ns.Sharing:Set("stats", on) end)
+    L:Text("Only what comes from your own copy of the addon has a switch. Your spec, professions, statistics (never gold) and guild chat time (never the words) are always shared: they're public anyway, from Blizzard and the game.", "NGMFontDimSmall")
     local wy = L:Row(30)
     local tour = W.Button(L.panel, "Show the Welcome Tour", 190, 24, "alt")
     tour:SetPoint("TOPLEFT", 18, wy)
@@ -634,10 +626,7 @@ function O:Refresh()
     self.communitiesCheck:SetChecked(s.communitiesButton ~= false)
     self.blizzRosterCheck:SetChecked(s.blizzRoster ~= false)
     self.learnCheck:SetChecked(ns.Profile:LearnEnabled())
-    self.shareReportCheck:SetChecked(ns.Sharing:Get("report"))
     self.shareRecipesCheck:SetChecked(ns.Sharing:Get("recipes"))
-    self.togetherCheck:SetChecked(ns.Sharing:Get("together"))
-    self.statsCheck:SetChecked(ns.Sharing:Get("stats"))
     if not self.reminderBox:HasFocus() then self.reminderBox:SetText(ns.InstallReminder:Text()) end
     self.minimapCheck:SetChecked(not s.minimap.hide)
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end

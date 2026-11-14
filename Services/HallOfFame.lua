@@ -261,7 +261,6 @@ end
 
 function HF:Publish()
     if not (IsInGuild() and ns.DB:Guild() and ns.Sync.readyFor) then return end
-    if not ns.Sharing:Get("stats") then return end
     local cur = self:ReadMine()
     if not cur then return end
     self.dirty = false

@@ -108,16 +108,13 @@ function OV:Census(days, alts)
         for name in pairs(has) do profs[name] = (profs[name] or 0) + 1 end
         if hours then
             sharing = sharing + 1
-            local hidden = ns.Sharing:HiddenFromTogether(e.full)
             for d = 0, 6 do
                 for b = 0, 11 do
                     if hours[d * 24 + b * 2] or hours[d * 24 + b * 2 + 1] then
                         local k = d * 12 + b
                         heat[k] = (heat[k] or 0) + 1
-                        if not hidden then
-                            heatNames[k] = heatNames[k] or {}
-                            table.insert(heatNames[k], e)
-                        end
+                        heatNames[k] = heatNames[k] or {}
+                        table.insert(heatNames[k], e)
                     end
                 end
             end
