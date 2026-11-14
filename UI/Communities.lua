@@ -19,7 +19,7 @@ ns.Communities = CM
 -- a named one left ours on top of another (their Preferred Play Settings
 -- map, or their Guild Benefits tabard), sometimes drawn under it.
 local TAB_LEVEL = 510
-local GAP = 12
+local GAP = 20 -- their tab art reaches below the tab itself
 
 local function SideTabs(host, mine)
     local list = {}
