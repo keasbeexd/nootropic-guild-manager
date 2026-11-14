@@ -64,17 +64,17 @@ end
 function V:BringIn()
     local got, why = ns.DiscordCode:ApplyPeon(self.box:GetText())
     if not got then
-        self.result:SetText("|cfffb4934" .. why .. "|r")
+        self.result:SetText("|cff" .. ns.Theme.HEX.red .. why .. "|r")
         return
     end
     -- counts, not names: a first code can carry the whole guild
     local function n(k, one, many) return ("%d %s"):format(k, k == 1 and one or many) end
-    local lines = { "|cffb8bb26Done.|r" }
+    local lines = { "|cff" .. ns.Theme.HEX.green .. "Done.|r" }
     lines[#lines + 1] = got.players > 0 and ("Mains and alts: " .. n(got.players, "player", "players") .. " changed") or "Mains and alts: nothing new"
     lines[#lines + 1] = got.characters > 0 and ("Tank / Healer / DPS: " .. n(got.characters, "character", "characters") .. " changed") or "Tank / Healer / DPS: nothing new"
     lines[#lines + 1] = got.names > 0 and ("Discord names: " .. n(got.names, "member", "members") .. " added or changed") or "Discord names: nothing new"
     if got.months > 0 then lines[#lines + 1] = "Hall of Fame champions: " .. n(got.months, "month", "months") .. " crowned by NGM Peon" end
-    if got.had > 0 then lines[#lines + 1] = "|cffa89984Already had: " .. got.had .. " (no change needed)|r" end
+    if got.had > 0 then lines[#lines + 1] = "|cff" .. ns.Theme.HEX.dim .. "Already had: " .. got.had .. " (no change needed)|r" end
     if got.refused > 0 then
         lines[#lines + 1] = ((ns.ORANGE .. "%d not taken|r: your rank can only bring in your own. An officer can bring in the rest.")):format(got.refused)
     end
@@ -89,7 +89,9 @@ function V:BringIn()
     end
     self.result:SetText(table.concat(lines, "\n"))
     local changed = got.players + got.characters + got.names + got.months
-    ns.Theme:Toast(changed > 0 and "Level up!" or "All clear!", changed > 0 and "NGM Peon's code is in, and shared with the guild." or "Nothing new from NGM Peon.")
+    -- the herald's moment: word from Discord
+    local news = (got.eventsNew or 0) > 0 and (n(got.eventsNew, "new event", "new events") .. ". ") or ""
+    ns.Theme:Toast("Word from Discord", (changed > 0 or news ~= "") and (news .. "Shared with the guild.") or "Nothing new from NGM Peon.")
 
     self.box:SetText("")
     self.box:ClearFocus()

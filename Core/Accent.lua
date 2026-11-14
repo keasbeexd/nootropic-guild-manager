@@ -1,22 +1,30 @@
 --[[
-    Nootropic Guild Manager - the guild's accent
-    The guild tabard's colours given a Gruvbox flare, for buttons and the
-    open tab: the face is the emblem's colour (else the background's, else
-    the border's), keeping the guild's hue pulled 60% toward the nearest
-    Gruvbox colour, at Gruvbox's saturation and brightness; the shadow is
-    the border's hue at Gruvbox's deep shade. A tabard with no real hue
-    anywhere (white, black, grey), or none, keeps the house yellow and red.
-    NGM Peon works out the same (ngm-hub src/accent.ts; same test vectors).
+    Nootropic Guild Manager - the guild's colors
+    From the guild tabard: the background (the cloth), the border (the band)
+    and the emblem. Any mix has to read, so text never sits on a raw tabard
+    color; it sits on tones made from the guild's own hues:
 
-      ns.Accent.For(bg, border, emblem) -> faceHex, shadeHex
-      ns.Accent:Tabard()                -> bg, border, emblem as hex (or nil)
+      accent  the emblem's hue (else the cloth's, else the band's), brightened
+              until it reads on a dark window (5:1): headings, labels, tabs
+      accent2 its neighbour on the color wheel, the same way
+      bar     the cloth's hue (else the band's, else the accent's), darkened
+              until light text reads on it (7:1)
+      mgr     the band's hue as an accent, when it differs from the accent's
+      cloth, band  the tabard itself
+
+    No hue anywhere (white, black, grey) or no tabard: herald blue.
+    NGM Peon works out exactly the same (ngm-hub src/accent.ts; the same test
+    vectors), so the game and the web always match.
+
+      ns.Accent.Palette(bg, border, emblem) -> { accent, accent2, bar, mgr, cloth, band, herald }
+      ns.Accent:Tabard()                    -> bg, border, emblem as hex (or nil)
 ]]
 local _, ns = ...
 local A = {}
 ns.Accent = A
 
-local GRUVBOX = { "fb4934", "b8bb26", "fabd2f", "83a598", "d3869b", "8ec07c", "fe8019" }
-A.HOUSE = { face = "fabd2f", shade = "9d0006" }
+local PAGE, TEXT = "121110", "f2ecd9"
+A.HERALD = { cloth = "2a4f86", band = "12264a" }
 
 local function Rgb(h)
     return tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255
@@ -26,6 +34,8 @@ local function Hex(r, g, b)
     return ("%02x%02x%02x"):format(c(r), c(g), c(b))
 end
 local function Clamp(x, a, b) return math.max(a, math.min(b, x)) end
+-- 0..1 exactly as NGM Peon's ((x % 1) + 1) % 1 (JavaScript's % is C's fmod)
+local function Wrap(x) return math.fmod(math.fmod(x, 1) + 1, 1) end
 
 -- HLS as Python's colorsys (hue 0..1)
 local function ToHls(r, g, b)
@@ -37,14 +47,14 @@ local function ToHls(r, g, b)
     local rc, gc, bc = (max - r) / d, (max - g) / d, (max - b) / d
     local h
     if r == max then h = bc - gc elseif g == max then h = 2 + rc - bc else h = 4 + gc - rc end
-    return (h / 6) % 1, l, s
+    return Wrap(h / 6), l, s
 end
 local function FromHls(h, l, s)
     if s == 0 then return l, l, l end
     local m2 = l <= 0.5 and l * (1 + s) or l + s - l * s
     local m1 = 2 * l - m2
     local function v(hue)
-        hue = hue % 1
+        hue = Wrap(hue)
         if hue < 1 / 6 then return m1 + (m2 - m1) * hue * 6 end
         if hue < 0.5 then return m2 end
         if hue < 2 / 3 then return m1 + (m2 - m1) * (2 / 3 - hue) * 6 end
@@ -52,37 +62,58 @@ local function FromHls(h, l, s)
     end
     return v(h + 1 / 3), v(h), v(h - 1 / 3)
 end
-local function HueDelta(a, b)
-    local d = (b - a) % 1
-    return d > 0.5 and d - 1 or d
+
+-- WCAG contrast between two hex colors
+local function Lum(h)
+    local r, g, b = Rgb(h)
+    local function c(v) return v <= 0.03928 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4 end
+    return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b)
+end
+function A.Contrast(a, b)
+    local x, y = Lum(a), Lum(b)
+    return (math.max(x, y) + 0.05) / (math.min(x, y) + 0.05)
 end
 
-local function Flare(hex, light)
-    local h, l, s = ToHls(Rgb(hex))
-    if s < 0.15 or l < 0.06 or l > 0.94 then return nil end
-    local best
-    for _, g in ipairs(GRUVBOX) do
-        local gh, gl, gs = ToHls(Rgb(g))
-        if not best or math.abs(HueDelta(h, gh)) < math.abs(HueDelta(h, best[1])) then best = { gh, gl, gs } end
-    end
-    local h2 = (h + 0.6 * HueDelta(h, best[1])) % 1
-    local s2 = light and Clamp(0.35 * s + 0.65 * best[3], 0.35, 0.9) or Clamp(0.5 * s + 0.5 * best[3], 0.55, 0.85)
-    local l2 = light and Clamp(0.3 * l + 0.7 * best[2], 0.5, 0.68) or 0.3
-    return Hex(FromHls(h2, l2, s2))
+local function Valid(x) return type(x) == "string" and x:match("^%x%x%x%x%x%x$") and x:lower() or nil end
+-- hue, saturation when the color has a real hue
+local function Hued(x)
+    x = Valid(x)
+    if not x then return nil end
+    local h, l, s = ToHls(Rgb(x))
+    if s >= 0.15 and l > 0.06 and l < 0.94 then return { h, s } end
+    return nil
 end
-
-local function Valid(x) return type(x) == "string" and x:match("^%x%x%x%x%x%x$") and x:lower() end
-
-function A.For(bg, border, emblem)
-    bg, border, emblem = Valid(bg), Valid(border), Valid(emblem)
-    local face = (emblem and Flare(emblem, true)) or (bg and Flare(bg, true)) or (border and Flare(border, true))
-    if not face then return A.HOUSE.face, A.HOUSE.shade end
-    local shade = border and Flare(border, false)
-    if not shade then
-        local h, _, s = ToHls(Rgb(face))
-        shade = Hex(FromHls(h, 0.3, Clamp(s, 0.6, 0.9)))
+-- brightened (in whole steps, as NGM Peon) until it reads on the window
+local function Lift(h, s)
+    local c
+    for i = 50, 90 do
+        c = Hex(FromHls(h, i / 100, s))
+        if A.Contrast(c, PAGE) >= 5 then break end
     end
-    return face, shade
+    return c
+end
+-- darkened until light text reads on it
+local function Sink(h, s)
+    local c
+    for i = 34, 5, -1 do
+        c = Hex(FromHls(h, i / 100, s))
+        if A.Contrast(TEXT, c) >= 7 then break end
+    end
+    return c
+end
+local function Far(x, y) return math.abs(math.fmod(x - y + 1.5, 1) - 0.5) > 0.05 end
+
+function A.Palette(bg, border, emblem)
+    local hBg, hBorder, hEmblem = Hued(bg), Hued(border), Hued(emblem)
+    local src = hEmblem or hBg or hBorder
+    local a = src or Hued(A.HERALD.cloth)
+    local as = Clamp(a[2], 0.45, 0.68)
+    local c = hBg or hBorder or a
+    local mgr = (hBorder and Far(hBorder[1], a[1])) and Lift(hBorder[1], Clamp(hBorder[2], 0.45, 0.68)) or nil
+    return {
+        accent = Lift(a[1], as), accent2 = Lift(Wrap(a[1] - 0.035), as), bar = Sink(c[1], Clamp(c[2], 0.35, 0.55)), mgr = mgr,
+        cloth = Valid(bg) or A.HERALD.cloth, band = Valid(border) or A.HERALD.band, herald = not src,
+    }
 end
 
 -- Your guild's tabard colours as hex, or nil (no guild, no tabard yet).
@@ -127,33 +158,6 @@ function A:Diagnose()
         end
     end
     local bg, border, emblem = self:Tabard()
-    local face, shade = A.For(bg, border, emblem)
-    ns:Print(line .. (". Read as %s/%s/%s, accent %s/%s."):format(tostring(bg), tostring(border), tostring(emblem), face, shade))
-end
-
--- The guild's whole theme (dark, as the addon is), from the same three
--- colours: the accent where the house theme is yellow, its neighbour where
--- it's orange, the ring's colour where it's blue (and as the shadow, deep),
--- and the window itself tinted toward the guild's hue (the ring's, else
--- the accent's). nil: no hue anywhere, the house theme. NGM Peon has the
--- same (ngm-hub src/accent.ts paletteFor; same test vectors).
-function A.Palette(bg, border, emblem)
-    local face, shade = A.For(bg, border, emblem)
-    if face == A.HOUSE.face and shade == A.HOUSE.shade then return nil end
-    bg, border, emblem = Valid(bg), Valid(border), Valid(emblem)
-    local function Lit(x) return x and Flare(x, true) or nil end
-    local fromBorder = not Lit(emblem) and not Lit(bg)
-    local mgr = (not fromBorder) and Lit(border) or nil
-    local h
-    if border then
-        local bh, bl, bs = ToHls(Rgb(border))
-        if bs >= 0.15 and bl >= 0.06 and bl <= 0.94 then h = bh end
-    end
-    h = h or (ToHls(Rgb(face)))
-    local function Tone(l, s) return Hex(FromHls(h, l, s)) end
-    local fh, fl, fs = ToHls(Rgb(face))
-    return {
-        accent = face, accent2 = Hex(FromHls(fh - 0.035, Clamp(fl - 0.04, 0, 1), fs)), shade = shade, mgr = mgr,
-        bg = Tone(0.11, 0.16), bg1 = Tone(0.15, 0.14), line = Tone(0.22, 0.12), edge = Tone(0.3, 0.12),
-    }
+    local p = A.Palette(bg, border, emblem)
+    ns:Print(line .. (". Read as %s/%s/%s, accent %s, bar %s%s."):format(tostring(bg), tostring(border), tostring(emblem), p.accent, p.bar, p.herald and " (herald blue)" or ""))
 end

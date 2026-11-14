@@ -2,10 +2,10 @@
     Nootropic Guild Manager - Theme (3.0)
     The addon looks like the game's own windows: Blizzard's frames, buttons,
     tick boxes and scroll bars, and the game's own fonts (so every alphabet
-    shows, and nothing extra is shipped). The theme only colours the accents:
-    headings, labels, highlighted words, the open tab and the bars. "Nootropic"
-    (the default look) is Blizzard's own gold; "Guild" takes the guild tabard's
-    colours (Core/Accent.lua), as NGM Peon's dashboard does.
+    shows, and nothing extra is shipped). The theme only colors the accents:
+    headings, labels, highlighted words, the open tab and the bars, always in
+    the guild tabard's colors (Core/Accent.lua), exactly as NGM Peon's
+    dashboard and Discord posts; herald blue without a tabard.
 
     ns.Theme.C.yellow          {r, g, b}: the accent (gold, or the guild's)
     ns.Theme.HEX.yellow        "ffd100" (for |cff...|r)
@@ -62,8 +62,9 @@ end
 function T.Upper(s) return s end
 
 ------------------------------------------------------------------------
--- The theme: the accent ("yellow", and its neighbour "orange") is gold, or
--- the guild tabard's. T.C and T.HEX change in place, so whatever is drawn
+-- The theme: the accent ("yellow", and its neighbour "orange") is the guild
+-- tabard's (herald blue without one; Blizzard's gold only if Core/Accent.lua
+-- is missing). T.C and T.HEX change in place, so whatever is drawn
 -- after uses them; what's already drawn repaints (Paint and friends, OnAccent).
 -- Saved per guild, so it's in place at login before any window is built.
 ------------------------------------------------------------------------
@@ -113,19 +114,16 @@ function T:ApplyPalette(p)
     for _, fn in ipairs(accentUsers) do pcall(fn) end
 end
 
--- Always the guild's colours; Blizzard's gold only for a guild without a
--- tabard (no choice: the look barely changes, and it's the guild's).
+-- Always the guild's colors (no choice to make); herald blue without a tabard.
 function T:UseGuild() return true end
 
--- At login (Core.lua, after the saved data loads): the guild's saved theme.
+-- At login (Core.lua, after the saved data loads): the guild's saved colors,
+-- or herald blue until the tabard is known.
 function T:LoadTheme()
     local g = ns.DB and ns.DB.Guild and ns.DB:Guild()
     local saved = g and g.theme
-    if saved and ns.Accent and self:UseGuild() then
-        self:ApplyPalette(ns.Accent.Palette(saved.bg, saved.border, saved.emblem))
-    else
-        self:ApplyPalette(nil)
-    end
+    if not ns.Accent then return self:ApplyPalette(nil) end
+    self:ApplyPalette(ns.Accent.Palette(saved and saved.bg, saved and saved.border, saved and saved.emblem))
 end
 
 -- When the tabard is known (after login) or changes: save and apply it.

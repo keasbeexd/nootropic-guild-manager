@@ -4,7 +4,7 @@ Your whole guild in one window, for **World of Warcraft: Forever**. Profiles,
 crafters, raid readiness, who to play with tonight, a guild census, a Hall
 of Fame and friendly recruiting, shared between everyone in the guild who runs it.
 
-<img src="docs/logo.svg" width="96" alt="Nootropic Guild Manager's gold-ringed medallion with a foaming ale tankard">
+<img src="docs/logo.svg" width="96" alt="NGM's herald banner: blue, on a gilt rod, sealed in red wax with an N">
 
 ![The Find tab: every guildmate with level, class, spec, main or alt, location, professions, rank and addon version](docs/screenshots/1-find.png)
 
@@ -231,7 +231,7 @@ Open from **Options > AddOns > Nootropic Guild Manager**, `/ngm options`, right-
 Options has four pages in the game's AddOns list:
 
 - **Nootropic Guild Manager** (main page)
-  - **Appearance**: the **addon icon** (your **Guild Tabard** by default, or the **Nootropic Medallion**; shown on the window, the minimap button and the Guild & Communities shortcut; the tabard falls back to the medallion outside a guild or without one), **show how many guildmates use the addon** (on by default), the **shortcut on the Guild & Communities window**, and **Show alts and profiles on the Guild roster** (on by default).
+  - **Appearance**: always in your guild's colors: the addon's icon is your **Guild Tabard** (NGM's herald banner outside a guild or without one) and the accents take your tabard's colors, the same as on ngmpeon.app (herald blue without a tabard). Also: **show how many guildmates use the addon** (on by default), the **shortcut on the Guild & Communities window**, and **Show alts and profiles on the Guild roster** (on by default).
   - **Sharing** (what your copy shares with the guild; all on by default): **Share my spec and professions**, **Share my recipes**, **Learn when I usually play** (this character), **Show me in Play Together** and **Share my statistics** (Hall of Fame). Turning one off stops sharing it and clears what was already shared. A **Show the Welcome Tour** button reopens the walkthrough.
   - **Minimap Button**: show/hide it (also `/ngm minimap`), and choose what left-click, right-click and shift-click do (Find, Play Together, Recruitment, Audit, Options, show/hide window, or nothing). Drag the button to move it around the edge of the minimap; the spot is saved. The game's own AddOns menu button on the minimap (where this addon is also listed) is Blizzard's and can't be moved.
   - **Reset**: window size and position, and list columns (roster and recruitment list).

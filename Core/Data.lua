@@ -60,14 +60,14 @@ end
 ------------------------------------------------------------------------
 -- Addon icon choices (window portrait, minimap button, shortcuts)
 ------------------------------------------------------------------------
--- Your guild's tabard (the default), or the addon's own medallion
+-- Your guild's tabard (the default), or the addon's own herald banner
 -- (Media/Logo.tga, drawn from docs/logo.svg, the same art as the README),
 -- which is also what the tabard falls back to outside a guild or without
 -- one. fullArt: it's round already, so it isn't cropped.
 D.LOGO = "Interface\\AddOns\\NootropicGuildManager\\Media\\Logo"
 D.ICON_STYLES = {
     { key = "emblem",    label = "Guild Tabard",        menuLabel = "Guild Tabard (default)", icon = D.LOGO, fullArt = true },
-    { key = "nootropic", label = "Nootropic Medallion", icon = D.LOGO, fullArt = true },
+    { key = "nootropic", label = "NGM Banner", icon = D.LOGO, fullArt = true },
 }
 D.DEFAULT_ICON = D.LOGO
 

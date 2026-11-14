@@ -2,7 +2,7 @@
     Nootropic Guild Manager - Brand icon
     One renderer for the addon's icon wherever it appears (window portrait,
     minimap button, Guild & Communities shortcut, options previews).
-    Styles: your guild's tabard (the default) or the Nootropic medallion
+    Styles: your guild's tabard (the default) or NGM's herald banner
     (Media/Logo.tga), which the tabard falls back to outside a guild or
     without one.
 
