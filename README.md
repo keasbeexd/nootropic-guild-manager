@@ -22,6 +22,11 @@ dashboard at [ngmpeon.app](https://ngmpeon.app) with rank, class and
 Tank / Healer / DPS roles, events with sign-ups (listed in game too), a
 guild feed and the Hall of Fame. The NGM Addon works fine without it.
 
+**NGM Desktop** (optional, free) is the desktop app for both, on Windows,
+macOS and Linux: it carries NGM Peon's codes by itself whenever WoW saves
+(logout or `/reload`), so nobody copies and pastes. [Download it](https://github.com/keasbeexd/ngm-desktop/releases/latest)
+and connect it on NGM Peon's dashboard.
+
 ## Features
 
 - **Find** — search the whole guild by name, class, spec, profession,
