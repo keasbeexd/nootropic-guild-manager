@@ -34,7 +34,7 @@ HF.PUBLISH_EVERY = 600 -- shared again at most every 10 minutes (and at login)
 -- key, statistic id(s), label, icon. A list of ids is added up.
 HF.STATS = {
     { key = "champs",   label = "Most Champion Wins", icon = "Interface\\Icons\\INV_Crown_01", computed = true, noChampion = true,
-      tip = "Champion titles: each card's leader for a month (all of them, on a tie) wins its title. Recorded by officers' copies of the NGM Addon a few days into the next month, so nobody can award themselves one." },
+      tip = "Champion titles: each card's leader for a month (all of them, on a tie) wins its title. Crowned on the 2nd of the next month (UTC) by NGM Peon, or without it by an officer's NGM Addon, so nobody can award themselves one." },
     { key = "social",   label = "Social Butterfly", icon = "Interface\\Icons\\Spell_Holy_MindVision", rate = 8, since = 1793491200,
       format = function(n) return ("%.1f h"):format(n / 4) end,
       tip = "Hours spent in guild chat conversations: 15-minute blocks where you and at least one guildmate both spoke (8 blocks a day at most). Only the count is shared, never what was said." },
@@ -829,7 +829,7 @@ function HF:Announce()
     local won = HF.PrevMonth(HF.Month())
     if not self:CanAnnounce() then return false, "Officers only." end
     local lines = self:AnnounceLines(won)
-    if not lines then return false, "Last month's champions aren't recorded yet (an officer's addon does it on the 2nd)." end
+    if not lines then return false, self:PeonCrowns() and "Last month's champions aren't here yet (NGM Peon crowns them on the 2nd; they come in with /ngm peon or NGM Desktop)." or "Last month's champions aren't recorded yet (an officer's NGM Addon does it on the 2nd)." end
     local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
     for _, line in ipairs(lines) do send(line, "GUILD") end
     ns.Sync:Set("HA:" .. won, tostring(ns.DB:Now()))

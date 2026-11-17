@@ -182,7 +182,7 @@ function HV.CrownText(c)
     if c.state == "tallying" then
         return ((ns.GOLD .. "%s is over!|r Points are being tallied: champions will be crowned %s (%s).")):format(won, HV.When(c.at), HV.In(c.at))
     elseif c.state == "due" and HF:PeonCrowns() then
-        return ((ns.GOLD .. "%s's champions are crowned by NGM Peon.|r They show here once an officer brings them in (|cffffffff/ngm peon|r).")):format(won)
+        return ((ns.GOLD .. "%s's champions are crowned by NGM Peon.|r They show here once NGM Peon's news comes in (|cffffffff/ngm peon|r or NGM Desktop).")):format(won)
     elseif c.state == "due" then
         return ((ns.GOLD .. "%s's points are tallied.|r Champions will be crowned as soon as an officer logs in.")):format(won)
     elseif c.state == "crowned" then
@@ -257,7 +257,7 @@ function HV:Build(frame)
             GameTooltip:AddLine("Posts to guild chat:", 1, 1, 1)
             for _, l in ipairs(lines) do GameTooltip:AddLine(l, 0.25, 1, 0.25, true) end
         else
-            GameTooltip:AddLine("Not recorded yet: an officer's addon writes down last month's champions on the 2nd.", 1, 1, 1, true)
+            GameTooltip:AddLine(HF:PeonCrowns() and "Not here yet: NGM Peon crowns last month's champions on the 2nd; they come in with /ngm peon or NGM Desktop." or "Not recorded yet: an officer's NGM Addon writes down last month's champions on the 2nd.", 1, 1, 1, true)
         end
         -- shared by every officer: who announced last, and whether the
         -- recount changed the champions after that (by anyone)
