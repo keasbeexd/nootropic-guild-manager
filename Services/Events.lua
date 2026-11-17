@@ -80,7 +80,13 @@ function E:Take(events)
     local l = Local()
     if l then
         wipe(l)
-        for _, ev in ipairs(events) do l[#l + 1] = ev end
+        -- kept as sent, so tidied like a shared record: no "|" (the game's
+        -- escape character), since titles come from members on Discord
+        for _, ev in ipairs(events) do
+            local c = {}
+            for k, v in pairs(ev) do c[k] = type(v) == "string" and (v:gsub("|", "/")) or v end
+            l[#l + 1] = c
+        end
     end
     local list = self:List()
     local added, after = 0, {}
