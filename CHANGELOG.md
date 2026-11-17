@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.0.9
+
+- **Event text from Discord is shown as plain text.** Events you bring in for yourself (not an officer) had any `|` codes in their titles kept, so a title could show as a fake link, color or icon. They're now tidied like everything else the guild shares. (NGM Peon also stops sending them, so this only matters for older copies of its code.)
+
 ## 3.0.8
 
 - **Ready for [NGM Desktop](https://github.com/keasbeexd/ngm-desktop/releases/latest)**, the desktop app for NGM Peon and the NGM Addon (Windows, macOS and Linux). With the app installed, the NGM Addon leaves its update for NGM Peon in its saved data at every logout and `/reload`, and the app sends it by itself: the same as `/ngm discord`, without the copy and paste. A member's carries only their own characters' mains and roles. Without the app, nothing changes.

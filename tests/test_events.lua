@@ -42,6 +42,17 @@ local up, new, removed = E:Take(c.events)
 assert(up == 1 and new == 1 and removed == 0 and next(store) == nil, "not shared")
 assert(E:List()[1].title == "Molten Core")
 
+-- kept for themselves, tidied: no "|" (WoW's escape character) from a title
+do
+    local saved = guild.upcoming
+    guild.upcoming = nil
+    local ev2 = { id = 99, kind = "raid", starts = now + 3600, minutes = 60, title = "MC |cffff0000now|r", description = "|TInterface\\X:999|t", channel = "", server = "", coming = 0 }
+    E:Take({ ev2 })
+    assert(guild.upcoming[1].title == "MC /cffff0000now/r" and not guild.upcoming[1].description:find("|", 1, true), guild.upcoming[1].title)
+    assert(ev2.title:find("|", 1, true), "the code's own copy is left alone")
+    guild.upcoming = saved
+end
+
 -- an officer: shared with the guild; one NGM Peon no longer has is cleared
 officer = true
 store["EV:z"] = { v = E.Value({ kind = "event", starts = now + 3600, minutes = 60, coming = 0, channel = "", server = "", title = "Old", description = "" }) }
