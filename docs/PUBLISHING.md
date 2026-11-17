@@ -7,8 +7,8 @@ Releases are automatic: push a version tag and the [Release workflow](../.github
 | **GitHub** releases | WowUp's "Install from URL", or by hand | Works now: nothing to set up |
 | **CurseForge** | the CurseForge app, WowUp (CurseForge source) | Set up: [project 1793021](https://www.curseforge.com/wow/addons/nootropic-guild-manager), `CURSEFORGE` secret |
 | **Wago Addons** | the Wago app, WowUp (Wago source) | Set up: [project 4N2baaNL](https://addons.wago.io/addons/nootropic-guild-manager), `WAGO` secret |
-| **WowUp** | installs from GitHub, CurseForge and Wago | Nothing extra: it reads the other three |
-| WoWInterface | — | Has no WoW: Forever category, so the packager skips it |
+| **WowUp** | installs from GitHub, CurseForge, Wago and WoWInterface | Nothing extra: it reads the others |
+| **WoWInterface** | the Minion app, WowUp (WoWInterface source) | `X-WoWI-ID` in the TOC, `WOWI` secret (see below) |
 
 The zip is named `NootropicGuildManager-v1.2.3-forever.zip` and comes with a `release.json` saying it's for WoW: Forever. WowUp uses either one to pick the right file. Only the addon goes in the zip; `.pkgmeta` leaves out the docs, tests, preview and changelog.
 
@@ -49,6 +49,20 @@ Nothing is published to a site until both of its pieces are in place, so these c
 3. Create an API token at [Wago > API keys](https://addons.wago.io/account/apikeys).
 4. Add it as a repository secret named `WAGO`.
 
+### WoWInterface
+
+The packager uploads to WoWInterface for other game types but skips WoW: Forever, though WoWInterface has a Forever category (and game version 1.60.1). So the workflow tells the packager to leave WoWInterface out (`-w 0`) and `.github/scripts/wowi_upload.py` uploads the same zip through the same API.
+
+1. The first upload is by hand: [Upload AddOn](https://www.wowinterface.com/downloads/upload-update.php), category **Forever**. Its API can only update an addon that's already there.
+2. Copy the addon's id (the number in its page's address, `info12345-...`) into the TOC:
+   ```toc
+   ## X-WoWI-ID: 12345
+   ```
+3. Create an API token in WoWInterface's [API Token manager](https://www.wowinterface.com/downloads/filecpl.php?action=apitokens).
+4. Add it as a repository secret named `WOWI`.
+
+Test it without sending anything: `GITHUB_REF_NAME=v1.2.3 python3 .github/scripts/wowi_upload.py --dry-run` (needs the packager's zip in `.release/`). If the upload fails, the Discord post still goes out and the run is marked failed, so you see it.
+
 The workflow passes these to the packager as `CF_API_KEY` and `WAGO_API_TOKEN`. If a project ID is in the TOC but its secret is empty, the release stops at **Check upload tokens** instead of quietly skipping that site.
 
 ### Discord announcements (optional)
@@ -79,7 +93,7 @@ Missing secrets just skip their post. If Discord is down, the step fails but the
 ## Security of the workflow
 
 - It runs only when you push a tag, never for pull requests, so code from forks can't reach the tokens.
-- Actions are pinned to exact commits (`actions/checkout` v7.0.1, `BigWigsMods/packager` v2.6.1). To update one, check the new release's notes, wait until it's been out a couple of weeks, and pin its commit.
+- Actions are pinned to exact commits (`actions/checkout` v7.0.1, `BigWigsMods/packager` v2.6.1). The `WOWI` token is given only to the two steps that use it. To update one, check the new release's notes, wait until it's been out a couple of weeks, and pin its commit.
 - The job can only write releases (`permissions: contents: write`), and the checkout doesn't keep the GitHub token.
 - Tokens are repository secrets: GitHub hides them in logs. If one leaks, revoke it on its site and add a new one.
 
