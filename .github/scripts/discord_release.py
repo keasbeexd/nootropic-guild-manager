@@ -11,8 +11,8 @@ Reads (environment):
                              (repository variable; not secret). No ping without it.
   GITHUB_REF_NAME            the tag, e.g. v2.9.1
   GITHUB_REPOSITORY          owner/repo
-Posts: the version, its CHANGELOG.md section, and links to CurseForge, Wago
-and the GitHub release. With --dry-run it prints the messages instead of
+Posts: the version, its CHANGELOG.md section, and links to CurseForge, Wago,
+WoWInterface (once ## X-WoWI-ID is in the TOC) and the GitHub release. With --dry-run it prints the messages instead of
 sending them.
 """
 import json
@@ -49,6 +49,16 @@ def is_feature_release(version: str) -> bool:
     return len(parts) == 2 or (len(parts) == 3 and parts[2] == "0")
 
 
+def wowi_link() -> str:
+    """ · [WoWInterface](...) when the TOC has its id, else nothing."""
+    try:
+        with open("NootropicGuildManager.toc", encoding="utf-8") as f:
+            m = re.search(r"^## X-WoWI-ID:\s*(\d{1,8})\s*$", f.read(), re.M)
+    except OSError:
+        return ""
+    return f" · [WoWInterface](https://www.wowinterface.com/downloads/info{m.group(1)})" if m else ""
+
+
 def payload(version: str, notes: str, repo: str, tag: str, ping_role: str | None = None) -> dict:
     release = f"https://github.com/{repo}/releases/tag/{tag}"
     body = {
@@ -62,7 +72,7 @@ def payload(version: str, notes: str, repo: str, tag: str, ping_role: str | None
             "color": 0xC79C3E,
             "fields": [{
                 "name": "Get it",
-                "value": f"[CurseForge]({CURSEFORGE}) · [Wago]({WAGO}) · [GitHub]({release})\n"
+                "value": f"[CurseForge]({CURSEFORGE}) · [Wago]({WAGO}){wowi_link()} · [GitHub]({release})\n"
                          "WowUp and the CurseForge app pick it up automatically.",
             }],
         }],
