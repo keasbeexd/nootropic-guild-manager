@@ -143,7 +143,11 @@ D.MAX_LOG_LENGTH = 140 -- fits one addon message
 -- One link: ngmpeon.app carries the rest (downloads, help, bug reports).
 D.LINKS = {
     { label = "ngmpeon.app", url = "https://ngmpeon.app", icon = D.LOGO,
-      hint = "Downloads, help and NGM Peon for your guild's Discord." },
+      hint = "Downloads, help, NGM Peon and NGM Desktop." },
+    { label = "What's new", url = "https://ngmpeon.app/changelog", icon = "Interface\\Icons\\INV_Misc_Book_09",
+      hint = "Every change to the NGM Addon, NGM Peon and NGM Desktop." },
+    { label = "Privacy", url = "https://ngmpeon.app/privacy", icon = "Interface\\Icons\\INV_Misc_Key_14",
+      hint = "What NGM Peon and NGM Desktop keep, and how to remove it." },
     { label = "Bugs and ideas", url = "https://github.com/keasbeexd/nootropic-guild-manager/issues/new/choose", icon = "Interface\\Icons\\INV_Misc_Note_01",
       hint = "Report a bug or suggest a feature (include your version: /ngm diag)." },
 }

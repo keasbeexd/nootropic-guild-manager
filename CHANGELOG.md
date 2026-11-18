@@ -2,6 +2,11 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.0.12
+
+- **About says what's shared.** A new What's Shared section (Options, About) lists what your copy shares with guildmates, what only officers see, what never leaves your computer (your private notes), and what goes to NGM Peon and when.
+- **More links on About:** What's new and Privacy (both on ngmpeon.app), next to ngmpeon.app and Bugs and ideas. About also mentions NGM Desktop now, and that the NGM Addon isn't affiliated with Blizzard Entertainment or Discord.
+
 ## 3.0.11
 
 - **Auto-ranks know when people really joined.** NGM Peon's "days in the guild" counted from when it first saw someone, since Blizzard's roster has no join dates, so members who joined before your guild was linked looked newer than they are. The Guild Master's and officers' codes for NGM Peon (`/ngm discord`, or NGM Desktop by itself) now carry the join dates their game read from the guild log: all of them once, then only new joins.
