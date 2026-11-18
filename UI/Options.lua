@@ -589,7 +589,13 @@ function O:BuildAbout()
         .. (ns.GOLD .. "Upcoming Events|r  the guild's dungeons, raids and nights from NGM Peon: when, who's coming and where to sign up.\n")
         .. (ns.GOLD .. "Recruitment|r  friendly whispers to players without a guild, a guild-wide 14-day lockout and a shared Do Not Whisper list.\n")
         .. (ns.GOLD .. "For officers|r  an audit of every change (joins, leaves, promotions, level-ups), an officer log, and Guild Master permissions."))
-    L:Text("Everything is shared with guildmates running the NGM Addon, so the more of the guild uses it, the more it knows. NGM Peon (optional) carries it to your guild's Discord and back.", "NGMFontDimSmall")
+    L:Text("Everything is shared with guildmates running the NGM Addon, so the more of the guild uses it, the more it knows. NGM Peon (optional) carries it to your guild's Discord and back, and NGM Desktop (optional) does that by itself.", "NGMFontDimSmall")
+
+    L:Header("What's Shared")
+    L:Text((ns.GOLD .. "With guildmates running the NGM Addon|r  your characters' spec and roles, professions and recipes, raid readiness, when you usually play, your Discord name if you set one, your NGM Addon version, your Hall of Fame statistics (never gold, and never what anyone writes), and, if you recruit, who you whispered and the Do Not Whisper list.\n")
+        .. (ns.GOLD .. "Officers only|r  the officer log, the audit, join dates and rank history.\n")
+        .. (ns.GOLD .. "Never leaves your computer|r  your private notes.\n")
+        .. (ns.GOLD .. "With NGM Peon|r  only if your guild uses it, and only what a code carries: the Guild Master's or an officer's (mains and alts, roles, when the guild plays, join dates), or a member's own through NGM Desktop (their own characters' mains and roles)."))
 
     L:Header("Links")
     L:Text("Click the link, press |cffffffffCtrl+C|r, and paste it into your browser.", "NGMFontDimSmall", 4)
@@ -598,6 +604,7 @@ function O:BuildAbout()
     L:Header("Credits")
     L:Text(("Maintained by " .. ns.GOLD .. "Keasbeexd|r for " .. ns.GOLD .. "<Nootropic>|r.\n")
         .. "Built on the original Nootropic Guild Manager by " .. ns.GOLD .. "aigoodandy|r, with permission.")
+    L:Text("Not affiliated with Blizzard Entertainment or Discord.", "NGMFontDimSmall")
     L:Finish()
     return outer
 end
