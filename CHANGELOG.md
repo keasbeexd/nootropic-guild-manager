@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.0.10
+
+- **Profile dates fixed.** 3.0.9's "Joined" and "since" line showed a wrong number of days, with "ago" twice. Each now has its own line with the real time since: "Joined Nov 9, 2026 (9 days ago)" and "Trial since Nov 10, 2026 (8 days ago)".
+
 ## 3.0.9
 
 - **Join date and rank on the profile.** Officers see, right under the online status, when a member joined and since when they've held their rank, with how long ago: "Joined Oct 12, 2026 (5 weeks ago) - Officer since Nov 3, 2026 (2 weeks ago)". It used to be only in the Officer tab's Change History.
