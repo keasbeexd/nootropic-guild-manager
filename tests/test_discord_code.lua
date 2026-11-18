@@ -90,6 +90,30 @@ local first, _, everything = DC:ForMyGuild()
 assert(first:find("^NGM2%.") and everything == true, "first code: everything")
 assert(guildData.peon.made == now)
 assert(#DC:Changes(0) == 3 and #DC:Changes(now - 8) == 1)
+-- join dates (officer records) for NGM Peon's auto-ranks: officers only;
+-- all of them while NGM Peon has fewer, then only new ones
+do
+    local officerStore = {
+        ["JN:New"] = { v = (now - 9 * 86400) .. ";Off", t = now - 9 * 86400, a = "Off" },
+        ["JN:Old"] = { v = (now - 20 * 86400) .. ";Off", t = now - 20 * 86400, a = "Off" },
+        ["JN:Gone"] = { v = (now - 5 * 86400) .. ";Off", t = now - 5 * 86400, a = "Off" }, -- left the guild: not sent
+    }
+    local realStore = ns.Sync.Store
+    ns.Sync.Store = function(_, scope) return scope == "officer" and officerStore or store end
+    ns.Roster = { byName = { New = {}, Old = {} } }
+    assert(#DC:Joins(now - 8) == 0, "not an officer: none")
+    ns.IsOfficer = function() return true end
+    local function joins(since) local n = 0 for _, r in ipairs(DC:Changes(since)) do if r.key:find("^JN:") then n = n + 1 end end return n end
+    assert(joins(now - 8) == 2, "NGM Peon hasn't said how many it has: all of them")
+    guildData.peon = guildData.peon or {}
+    guildData.peon.joins = 1
+    assert(joins(now - 8) == 2, "NGM Peon has fewer: all again")
+    guildData.peon.joins = 2
+    assert(joins(now - 10 * 86400) == 1 and joins(now - 8) == 0, "it has them: only new ones")
+    assert(joins(0) == 2, "everything again (/ngm discord all)")
+    ns.IsOfficer, ns.Roster, ns.Sync.Store = nil, nil, realStore
+    guildData.peon.joins = nil
+end
 now = now + 30 * 86400
 local _, _, all2 = DC:ForMyGuild()
 assert(all2 == false, "later codes: changes only")
@@ -175,6 +199,10 @@ do
     local p4 = "us\nNootropic\nhas\t" .. DC.B36(1794540000) .. "\t3.0.9\nhours\t" .. DC.B36(pc.hoursHash)
     assert(DC:ParsePeon("NGMP1." .. DC.Base64Url(p4) .. "." .. DC.Adler32(p4)).release == "3.0.9")
     assert(DC:ParsePeon(code).release == nil)
+    -- NGM Peon's code says how many join dates it has (5th field of "has")
+    local pj = "us\nG\nhas\t1\t\t\t2a\n"
+    assert(DC:ParsePeon("NGMP1." .. DC.Base64Url(pj) .. "." .. DC.Adler32(pj)).joins == tonumber("2a", 36))
+    assert(DC:ParsePeon(code).joins == nil, "older NGM Peon: not said")
     local checked = 0
     ns.Roster = { IsRelease = function(v) return v:match("^%d+%.%d+[%.%d]*$") ~= nil end, CheckVersion = function() checked = checked + 1 end }
     assert(DC:ApplyPeon("NGMP1." .. DC.Base64Url(p4) .. "." .. DC.Adler32(p4)))
