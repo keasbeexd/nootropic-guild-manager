@@ -141,7 +141,32 @@ function DC:Changes(since)
             out[#out + 1] = { key = key, v = rec.v or "", t = rec.t, a = rec.a }
         end
     end
+    for _, r in ipairs(self:Joins(since)) do out[#out + 1] = r end
     table.sort(out, function(x, y) if x.t ~= y.t then return x.t < y.t end return x.key < y.key end)
+    return out
+end
+
+-- Join dates (JN, officer records read from the guild log) for NGM Peon's
+-- auto-ranks ("days in the guild"): Blizzard's roster has none. Officers and
+-- the Guild Master only. All of them for members still in the guild when NGM
+-- Peon has fewer than this copy knows (its code says how many it has:
+-- g.peon.joins), so they go once; after that only new ones.
+function DC:Joins(since)
+    if not (ns.IsOfficer and ns.IsOfficer()) then return {} end
+    local byName = ns.Roster and ns.Roster.byName or {}
+    local store = ns.Sync:Store("officer") or {}
+    local all = {}
+    for key, rec in pairs(store) do
+        local member = key:match("^JN:(.+)$")
+        if member and byName[member] and rec.a and rec.a ~= ""
+            and (rec.v or ""):match("^%d+;") and ns.Sync.ValidValue("JN", rec.v) then
+            all[#all + 1] = { key = key, v = rec.v, t = rec.t or 0, a = rec.a }
+        end
+    end
+    local peon = (ns.DB:Guild() or {}).peon or {}
+    if since == 0 or not peon.joins or peon.joins < #all then return all end
+    local out = {}
+    for _, r in ipairs(all) do if r.t > since then out[#out + 1] = r end end
     return out
 end
 
@@ -271,6 +296,8 @@ function DC:ParsePeon(code)
             out.has = tonumber(f[2] or "", 36)
             -- the newest NGM on GitHub, as NGM Peon last checked (NGM Peon adds it)
             out.release = f[3] ~= "" and f[3] or nil
+            -- how many members NGM Peon has a join date for (DC:Joins)
+            out.joins = tonumber(f[5] or "", 36)
             -- NGM Peon's Hall of Fame: "all=<v>|month=<v>|last=<v>" (Services/HallOfFame.lua)
             if f[4] and f[4] ~= "" and #f[4] <= 12000 then
                 out.fame = {}
@@ -342,6 +369,7 @@ function DC:ApplyPeon(code)
     g.peon = g.peon or {}
     if not g.peon.has or c.has > g.peon.has then g.peon.has = c.has end
     g.peon.hoursHash = c.hoursHash
+    g.peon.joins = c.joins
     -- NGM Peon's Hall of Fame: an officer shares it with the guild (HB:<period>);
     -- anyone else keeps it for themselves
     if c.fame then
