@@ -7,7 +7,8 @@ Reads (environment):
   DISCORD_ANNOUNCE_WEBHOOK   webhook for #announcements: feature releases only
                              (versions ending in .0), with a role ping
                              (repository secret; never printed)
-  DISCORD_ANNOUNCE_ROLE_ID   the role to ping there, e.g. Announcements
+  DISCORD_ANNOUNCE_ROLE_ID   the role(s) to ping there, e.g. Announcements;
+                             several role IDs separated by commas ping each
                              (repository variable; not secret). No ping without it.
   GITHUB_REF_NAME            the tag, e.g. v2.9.1
   GITHUB_REPOSITORY          owner/repo
@@ -59,12 +60,12 @@ def wowi_link() -> str:
     return f" · [WoWInterface](https://www.wowinterface.com/downloads/info{m.group(1)})" if m else ""
 
 
-def payload(version: str, notes: str, repo: str, tag: str, ping_role: str | None = None) -> dict:
+def payload(version: str, notes: str, repo: str, tag: str, ping_roles: list[str] | None = None) -> dict:
     release = f"https://github.com/{repo}/releases/tag/{tag}"
     body = {
         "username": "Nootropic Guild Manager",
-        # only the one role, and only when asked; never @everyone
-        "allowed_mentions": {"parse": [], "roles": [ping_role] if ping_role else []},
+        # only the roles named, and only when asked; never @everyone
+        "allowed_mentions": {"parse": [], "roles": ping_roles or []},
         "embeds": [{
             "title": f"Nootropic Guild Manager {version} is out",
             "url": release,
@@ -77,8 +78,8 @@ def payload(version: str, notes: str, repo: str, tag: str, ping_role: str | None
             }],
         }],
     }
-    if ping_role:
-        body["content"] = f"<@&{ping_role}>"
+    if ping_roles:
+        body["content"] = " ".join(f"<@&{r}>" for r in ping_roles)
     return body
 
 
@@ -101,14 +102,16 @@ def main() -> int:
     version = tag[1:]
     with open("CHANGELOG.md", encoding="utf-8") as f:
         notes = changelog_section(f.read(), version)
-    role = os.environ.get("DISCORD_ANNOUNCE_ROLE_ID", "").strip()
-    if role and not re.fullmatch(r"\d{17,20}", role):
-        print("::warning::DISCORD_ANNOUNCE_ROLE_ID isn't a role ID; posting without a ping")
-        role = ""
+    # one role ID, or several separated by commas: each is pinged
+    roles = [r.strip() for r in os.environ.get("DISCORD_ANNOUNCE_ROLE_ID", "").split(",") if r.strip()]
+    if any(not re.fullmatch(r"\d{17,20}", r) for r in roles):
+        print("::warning::DISCORD_ANNOUNCE_ROLE_ID isn't a role ID (or comma-separated role IDs); posting without a ping")
+        roles = []
+    roles = list(dict.fromkeys(roles))[:5]
     feature = is_feature_release(version)
     posts = [("DISCORD_RELEASE_WEBHOOK", payload(version, notes, repo, tag))]
     if feature:
-        posts.append(("DISCORD_ANNOUNCE_WEBHOOK", payload(version, notes, repo, tag, role or None)))
+        posts.append(("DISCORD_ANNOUNCE_WEBHOOK", payload(version, notes, repo, tag, roles or None)))
     for env_name, body in posts:
         if dry:
             print(f"--- {env_name} ---")
