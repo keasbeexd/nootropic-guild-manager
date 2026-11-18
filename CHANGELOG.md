@@ -4,6 +4,9 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 
 ## 3.0.9
 
+- **Join date and rank on the profile.** Officers see, right under the online status, when a member joined and since when they've held their rank, with how long ago: "Joined Oct 12, 2026 (5 weeks ago) - Officer since Nov 3, 2026 (2 weeks ago)". It used to be only in the Officer tab's Change History.
+- **Badges on a line of their own.** On Discord and champion titles now sit together under the status line, and wrap instead of being cut off after a long zone name.
+- **View all in Audit opens the Audit tab.** From a profile shown outside the main window (like the game's Guild window), it ran the search but left the Audit tab closed.
 - **Event text from Discord is shown as plain text.** Events you bring in for yourself (not an officer) had any `|` codes in their titles kept, so a title could show as a fake link, color or icon. They're now tidied like everything else the guild shares. (NGM Peon also stops sending them, so this only matters for older copies of its code.)
 
 ## 3.0.8

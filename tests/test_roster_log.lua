@@ -64,6 +64,24 @@ assert(#ns.Audit:Entries({}) == n1, "cross-officer duplicate not merged")
 print("join record:", guild.sync.officer["JN:Bob-Realm"].v, "rank record:", guild.sync.officer["RK:Bob-Realm"].v)
 ns.Sync:RebuildAll()
 print("profile lines:", table.concat(ns.RosterLog:Lines("Bob-Realm"), " / "))
+-- the profile header's line: dates and how long ago (officers only)
+do -- ns.FormatAgo, from Core.lua
+    local core = assert(io.open(ROOT .. "/Core/Core.lua")):read("*a")
+    local src = assert(core:match("(function ns%.FormatAgo.-\nend\n)"), "FormatAgo in Core.lua")
+    assert(loadstring("local ns = ...\n" .. src))(ns)
+end
+assert(ns.FormatAgo(3600) == "today" and ns.FormatAgo(86400) == "1 day" and ns.FormatAgo(13 * 86400) == "13 days")
+assert(ns.FormatAgo(20 * 86400) == "2 weeks" and ns.FormatAgo(90 * 86400) == "3 months" and ns.FormatAgo(800 * 86400) == "2 years")
+do
+    local since = ns.RosterLog:SinceLine("Bob-Realm", NOW)
+    print("header line:", since)
+    assert(since and since:find("Joined", 1, true) and since:find(" since", 1, true) and since:find("ago)", 1, true), since)
+    assert(ns.RosterLog:SinceLine("Nobody-Realm", NOW) == nil)
+    local real = ns.IsOfficer
+    ns.IsOfficer = function() return false end
+    assert(ns.RosterLog:SinceLine("Bob-Realm", NOW) == nil, "officers only")
+    ns.IsOfficer = real
+end
 
 -- Bob leaves and rejoins 2 days later
 LOG = { { "quit", "Bob", nil, nil, 0, 0, 0, 30 }, { "join", "Bob", nil, nil, 0, 0, 0, 2 } }
