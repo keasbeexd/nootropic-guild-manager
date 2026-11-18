@@ -221,6 +221,23 @@ function RL:Lines(full)
     return #lines > 0 and lines or nil
 end
 
+-- The profile header's line (officers): "Joined Oct 12, 2026 (5 weeks ago)
+-- - Officer since Nov 3, 2026 (2 weeks ago)", or nil when neither is known.
+function RL:SinceLine(full, now)
+    if not ns.IsOfficer() then return nil end
+    now = now or Now()
+    local function when(t)
+        local ago = ns.FormatAgo(now - t)
+        return date("%b %d, %Y", t) .. " |cff9d9d9d(" .. (ago == "today" and "today" or (ago .. " ago")) .. ")|r"
+    end
+    local parts = {}
+    local j = self:Joined(full)
+    if j then parts[#parts + 1] = "|cff9d9d9dJoined|r " .. when(j.t) end
+    local r = self:RankSince(full)
+    if r and r.rank then parts[#parts + 1] = "|cff9d9d9d" .. r.rank .. " since|r " .. when(r.t) end
+    return #parts > 0 and table.concat(parts, "  |cff9d9d9d-|r  ") or nil
+end
+
 ------------------------------------------------------------------------
 -- Init
 ------------------------------------------------------------------------

@@ -273,12 +273,17 @@ function DP:BuildHeader(parent)
     h.Status:SetJustifyH("LEFT")
     h.Status:SetWordWrap(false)
 
-    -- champion titles held this month (Hall of Fame), when there are any
-    h.Champion = h:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
-    h.Champion:SetPoint("TOPLEFT", 0, -49)
-    h.Champion:SetPoint("RIGHT", 0, 0)
-    h.Champion:SetJustifyH("LEFT")
-    h.Champion:SetWordWrap(false)
+    -- officers: when they joined and got their rank, and how long ago
+    h.Since = h:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
+    h.Since:SetPoint("TOPLEFT", 0, -50)
+    h.Since:SetWidth(INNER)
+    h.Since:SetJustifyH("LEFT")
+
+    -- badges, on a line of their own: On Discord, champion titles held
+    -- this month (Hall of Fame)
+    h.Badges = h:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
+    h.Badges:SetWidth(INNER)
+    h.Badges:SetJustifyH("LEFT")
 
     self.header = h
 end
@@ -292,19 +297,27 @@ function DP:RefreshHeader(e)
     local spec = e.spec and ((specIcon and ("|T" .. specIcon .. ":12:12:0:0:64:64:5:59:5:59|t ") or "") .. e.spec .. " ") or ""
     local roles = (e.roleList and #e.roleList > 0) and ("  |cff9d9d9d-|r  " .. table.concat(e.roleList, ", ")) or ""
     h.Sub:SetText(("Level %d %s%s  |cff9d9d9d-|r  %s%s"):format(e.level, spec, e.className, e.rank, roles))
-    local status
     if e.online then
-        status = "|cff20ff20Online|r  " .. (e.zone ~= "" and e.zone or "")
+        h.Status:SetText("|cff20ff20Online|r" .. (e.zone ~= "" and ("  |cff9d9d9d-|r  " .. e.zone) or ""))
     else
-        status = "|cff9d9d9dOffline - last seen " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r"
+        h.Status:SetText("|cff9d9d9dOffline  -  last seen " .. ns.FormatLastSeen(e.lastOnline) .. " ago|r")
     end
+    local y = -50
+    local since = ns.RosterLog:SinceLine(e.full)
+    h.Since:SetText(since or "")
+    h.Since:SetShown(since ~= nil)
+    if since then y = y - math.ceil(h.Since:GetStringHeight()) - 3 end
     -- On Discord: a Discord name on their profile (or their main's)
-    if e.discord then status = status .. "  " .. ns.Profile.DISCORD_BADGE end
-    h.Status:SetText(status)
+    local badges = {}
+    if e.discord then badges[#badges + 1] = ns.Profile.DISCORD_BADGE end
     local title = ns.HallOfFame:TitleText(e.full)
-    h.Champion:SetText(title or "")
-    h.Champion:SetShown(title ~= nil)
-    h:SetHeight(title and 64 or 48)
+    if title then badges[#badges + 1] = title end
+    h.Badges:ClearAllPoints()
+    h.Badges:SetPoint("TOPLEFT", 0, y)
+    h.Badges:SetText(table.concat(badges, "  |cff9d9d9d-|r  "))
+    h.Badges:SetShown(#badges > 0)
+    if #badges > 0 then y = y - math.ceil(h.Badges:GetStringHeight()) - 3 end
+    h:SetHeight(-y - 2)
 end
 
 ------------------------------------------------------------------------
@@ -942,7 +955,9 @@ function DP:BuildHistorySection(parent)
     s.All:SetScript("OnClick", function()
         if not DP.entry then return end
         local full = DP.entry.full
-        ns.UI:SelectTab(ns.UI.TAB_AUDIT)
+        -- the profile can be open outside the main window (the game's Guild
+        -- window): open the window on the Audit tab, then search
+        ns.UI:OpenTab(ns.UI.TAB_AUDIT)
         ns.AuditView:SetMember(full)
     end)
     self.history = s
