@@ -76,13 +76,13 @@ Setup:
 2. In the GitHub repository, go to **Settings → Secrets and variables → Actions**:
    - secret `DISCORD_RELEASE_WEBHOOK` = the #guild-manager-addon URL
    - secret `DISCORD_ANNOUNCE_WEBHOOK` = the #announcements URL
-   - **variable** (Variables tab) `DISCORD_ANNOUNCE_ROLE_ID` = the Announcements role's ID (Discord: Server Settings → Roles → right-click the role → Copy Role ID, with Developer Mode on). Not a secret.
+   - **variable** (Variables tab) `DISCORD_ANNOUNCE_ROLE_ID` = the Announcements role's ID (Discord: Server Settings → Roles → right-click the role → Copy Role ID, with Developer Mode on). Not a secret. To ping several roles, list their IDs separated by commas (up to 5).
 3. Optional test, from the repository folder (`--dry-run` only prints):
    ```bash
    DISCORD_RELEASE_WEBHOOK='paste-url' GITHUB_REF_NAME=v2.9.1 python3 .github/scripts/discord_release.py
    ```
 
-Missing secrets just skip their post. If Discord is down, the step fails but the release (already uploaded) doesn't. Nothing but the one role is ever pinged (never @everyone).
+Missing secrets just skip their post. If Discord is down, the step fails but the release (already uploaded) doesn't. Nothing but the roles listed is ever pinged (never @everyone).
 
 ## Rules the sites share
 
