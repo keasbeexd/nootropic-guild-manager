@@ -285,8 +285,9 @@ function ns.FormatLastSeen(hours)
     return ("%dy"):format(math.floor(months / 12))
 end
 
--- how long ago, in words: "today", "3 days", "2 weeks", "5 months", "1 year"
-function ns.FormatAgo(sec)
+-- a length of time, in words: "today", "3 days", "2 weeks", "5 months", "1 year"
+-- (ns.FormatAgo, below, takes a time and says "3 days ago")
+function ns.FormatSpan(sec)
     local days = math.floor(math.max(0, sec or 0) / 86400)
     local function n(x, word) return x .. " " .. word .. (x == 1 and "" or "s") end
     if days < 1 then return "today" end

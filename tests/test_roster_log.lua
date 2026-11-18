@@ -65,17 +65,19 @@ print("join record:", guild.sync.officer["JN:Bob-Realm"].v, "rank record:", guil
 ns.Sync:RebuildAll()
 print("profile lines:", table.concat(ns.RosterLog:Lines("Bob-Realm"), " / "))
 -- the profile header's line: dates and how long ago (officers only)
-do -- ns.FormatAgo, from Core.lua
+do -- ns.FormatSpan, from Core.lua
     local core = assert(io.open(ROOT .. "/Core/Core.lua")):read("*a")
-    local src = assert(core:match("(function ns%.FormatAgo.-\nend\n)"), "FormatAgo in Core.lua")
+    local src = assert(core:match("(function ns%.FormatSpan.-\nend\n)"), "FormatSpan in Core.lua")
     assert(loadstring("local ns = ...\n" .. src))(ns)
 end
-assert(ns.FormatAgo(3600) == "today" and ns.FormatAgo(86400) == "1 day" and ns.FormatAgo(13 * 86400) == "13 days")
-assert(ns.FormatAgo(20 * 86400) == "2 weeks" and ns.FormatAgo(90 * 86400) == "3 months" and ns.FormatAgo(800 * 86400) == "2 years")
+assert(ns.FormatSpan(3600) == "today" and ns.FormatSpan(86400) == "1 day" and ns.FormatSpan(13 * 86400) == "13 days")
+assert(ns.FormatSpan(20 * 86400) == "2 weeks" and ns.FormatSpan(90 * 86400) == "3 months" and ns.FormatSpan(800 * 86400) == "2 years")
 do
     local since = ns.RosterLog:SinceLine("Bob-Realm", NOW)
     print("header line:", since)
     assert(since and since:find("Joined", 1, true) and since:find(" since", 1, true) and since:find("ago)", 1, true), since)
+    assert(since:find("\n", 1, true), "a line each")
+    assert(not since:find("ago ago", 1, true) and not since:find(" 0%d,"), "no doubled ago, no zero-padded day")
     assert(ns.RosterLog:SinceLine("Nobody-Realm", NOW) == nil)
     local real = ns.IsOfficer
     ns.IsOfficer = function() return false end
