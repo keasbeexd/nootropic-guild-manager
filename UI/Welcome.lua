@@ -79,7 +79,13 @@ local function Pages()
     end
     list[#list + 1] = { key = "done", icon = D.LOGO, full = true, title = "You're All Set",
         text = "Open the NGM Addon any time from the minimap button. Options has everything from this tour.\n\n"
-            .. ("Guild on Discord? The NGM Addon can sync with " .. ns.GOLD .. "NGM Peon|r (ngmpeon.app) to keep your guild's Discord and the NGM Addon in step: ranks, events and the Hall of Fame.") }
+            .. ("Is your guild on Discord? The NGM Addon can sync with " .. ns.GOLD .. "NGM Peon|r (ngmpeon.app) to keep your guild's Discord and the NGM Addon in step:\n")
+            .. "- Discord roles that match your guild ranks\n"
+            .. "- Events with sign-ups, listed in the NGM Addon too\n"
+            .. "- Mains and alts, and who plays Tank, Healer or DPS\n"
+            .. "- Discord names on guildmates' profiles\n"
+            .. "- Social Butterfly hours from Discord chat and voice\n"
+            .. "- The Hall of Fame for the whole guild" }
     return list
 end
 
