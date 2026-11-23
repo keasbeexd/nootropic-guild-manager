@@ -8,7 +8,7 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 - **Guildmates' level-ups in chat**, while you're online ("Pip reached level 31!"), with an optional sound. Both are in Options, Guild Feed, and appear only in your own chat: nothing is ever sent to guild chat.
 - **Fixed an error when right-clicking a boss** (for example to set focus): the Do Not Whisper menu entry read the boss's name, which the game now hides from addons. It's left out for anyone who isn't a player.
 - **Safer with the game's hidden values.** Whispers and system messages the game hides from addons in some fights are skipped instead of read. Event records no longer leave stray entries in your saved data.
-- **The welcome tour's last page points to ngmpeon.app**: NGM Peon for your guild's Discord, and NGM Desktop to keep everything in sync by itself.
+- **A simpler last page in the welcome tour:** no commands, just that the NGM Addon can sync with NGM Peon (ngmpeon.app) to keep your guild's Discord and the NGM Addon in step.
 
 ## 3.0.12
 
