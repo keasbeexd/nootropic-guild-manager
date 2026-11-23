@@ -234,13 +234,21 @@ local MENUS = {
     "MENU_UNIT_RAID_PLAYER", "MENU_UNIT_CHAT_ROSTER",
 }
 
+-- A player's name from the menu, or nil. Bosses and other NPCs are left
+-- out, and so is any name the game hands out as a secret value (it does for
+-- some units, in combat): an addon may not read or compare those.
+local function Secret(v) return issecretvalue ~= nil and issecretvalue(v) end
 local function NameFrom(contextData)
     local cd = contextData or {}
     local name = cd.name
-    if cd.unit and UnitIsPlayer and UnitIsPlayer(cd.unit) and GetUnitName then
-        name = GetUnitName(cd.unit, true) or name
+    if cd.unit then
+        if not (UnitIsPlayer and UnitIsPlayer(cd.unit)) then return nil end
+        if GetUnitName then
+            local n = GetUnitName(cd.unit, true)
+            if n ~= nil and not Secret(n) then name = n end
+        end
     end
-    if not name or name == "" then return nil end
+    if name == nil or Secret(name) or type(name) ~= "string" or name == "" then return nil end
     return ns.NormalizeName(name)
 end
 

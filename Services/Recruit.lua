@@ -1025,8 +1025,11 @@ end
 
 function RC:Init()
     ns:RegisterEvent("WHO_LIST_UPDATE", function() RC:OnWhoResults() end)
-    ns:RegisterEvent("CHAT_MSG_WHISPER", function(_, text, sender) RC:OnWhisper(text, sender) end)
-    ns:RegisterEvent("CHAT_MSG_WHISPER_INFORM", function(_, text, target) RC:OnWhisperSent(text, target) end)
+    -- the game can hand chat to addons as secret values (in some fights):
+    -- those can't be read, so they're skipped
+    local function secret(...) if not issecretvalue then return false end for i = 1, select("#", ...) do if issecretvalue((select(i, ...))) then return true end end return false end
+    ns:RegisterEvent("CHAT_MSG_WHISPER", function(_, text, sender) if not secret(text, sender) then RC:OnWhisper(text, sender) end end)
+    ns:RegisterEvent("CHAT_MSG_WHISPER_INFORM", function(_, text, target) if not secret(text, target) then RC:OnWhisperSent(text, target) end end)
     ns:RegisterEvent("ADDON_ACTION_BLOCKED", function(_, addon, func) RC:OnActionBlocked(addon, func) end)
     ns:RegisterEvent("ADDON_ACTION_FORBIDDEN", function(_, addon, func) RC:OnActionBlocked(addon, func) end)
 

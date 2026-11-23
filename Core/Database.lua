@@ -27,6 +27,9 @@ local DEFAULTS = {
         communitiesButton = true,    -- shortcut on the Guild & Communities window
         blizzRoster = true,          -- alts and tooltips on the game's guild roster
         showAddonCount = true,       -- "x using ... Guild Manager" at the bottom of the window
+        eventNotices = true,         -- Guild Feed: a chat line for each new event from NGM Peon
+        levelUps = true,             -- Guild Feed: a chat line when a guildmate levels up
+        levelUpSound = false,        -- Guild Feed: and a sound with it
         whoWhisperButton = true,     -- recruitment whisper button on the game's /who results
         shareRecipes = true,         -- share my recipes
         playRange = 5,               -- Play Together: levels either side of yours (0 = any)

@@ -2,6 +2,14 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.0.13
+
+- **New events are announced in your chat.** When a raid, dungeon or event from NGM Peon reaches the game, by NGM Desktop, `/ngm peon` or from an officer through guild sync, a line says what it is, when (your time) and where to sign up. Once per event.
+- **Guildmates' level-ups in chat**, while you're online ("Pip reached level 31!"), with an optional sound. Both are in Options, Guild Feed, and appear only in your own chat: nothing is ever sent to guild chat.
+- **Fixed an error when right-clicking a boss** (for example to set focus): the Do Not Whisper menu entry read the boss's name, which the game now hides from addons. It's left out for anyone who isn't a player.
+- **Safer with the game's hidden values.** Whispers and system messages the game hides from addons in some fights are skipped instead of read. Event records no longer leave stray entries in your saved data.
+- **A simpler last page in the welcome tour:** no commands, just that the NGM Addon can sync with NGM Peon (ngmpeon.app) to keep your guild's Discord and the NGM Addon in step.
+
 ## 3.0.12
 
 - **About says what's shared.** A new What's Shared section (Options, About) lists what your copy shares with guildmates, what only officers see, what never leaves your computer (your private notes), and what goes to NGM Peon and when.

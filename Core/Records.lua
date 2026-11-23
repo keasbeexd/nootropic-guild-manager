@@ -890,6 +890,10 @@ function S:Materialize(typ, key, member, rec)
     elseif typ == "IR" then
         ns.Debounce("reminderschanged", 0.3, function() ns:Fire("MEMBER_CHANGED") end)
         return
+    elseif typ == "EV" then
+        -- events are about the guild, not a member (Services/Events.lua)
+        ns.Debounce("eventschanged", 0.5, function() ns:Fire("EVENTS_CHANGED") end)
+        return
     elseif typ == "DN" or typ == "RS" then
         -- Do Not Whisper entries are about people outside the guild: no member record
         ns.Debounce("dnwchanged", 0.1, function() ns:Fire("RECRUITS_CHANGED") end)

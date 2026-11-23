@@ -52,7 +52,10 @@ function IP:Build()
 
     -- the game confirms a sent invite in a system message
     f:RegisterEvent("CHAT_MSG_SYSTEM")
-    f:SetScript("OnEvent", function(_, _, msg) IP:OnSystemMessage(msg) end)
+    f:SetScript("OnEvent", function(_, _, msg)
+        if issecretvalue and issecretvalue(msg) then return end -- can't be read (the game hides it in some fights)
+        IP:OnSystemMessage(msg)
+    end)
 
     -- the command to copy: read-only, selected when you click Copy
     local box = CreateFrame("EditBox", nil, f, "InputBoxTemplate")

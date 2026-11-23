@@ -78,10 +78,13 @@ local function Pages()
             text = "Choose which ranks may do each of these. \"Officers\" means the ranks the game marks Officer (Guild Control). You can change this any time in Options > Officers." }
     end
     list[#list + 1] = { key = "done", icon = D.LOGO, full = true, title = "You're All Set",
-        text = ("Open the window any time with " .. ns.GOLD .. "/ngm|r or the minimap button.\n\n")
-            .. ("Options has everything from this tour, plus an " .. ns.GOLD .. "About|r page with links (ngmpeon.app, bugs and ideas).\n\n")
-            .. ("Guild on Discord? With " .. ns.GOLD .. "NGM Peon|r, type " .. ns.GOLD .. "/ngm link|r there for your rank role" .. (ns.DB:IsGuildMaster() and ("; to set it up, start with " .. ns.GOLD .. "/ngm discord setup|r") or "") .. ".\n\n")
-            .. ("Want this tour again? " .. ns.GOLD .. "/ngm welcome|r.") }
+        text = "Open the NGM Addon any time from the minimap button. Options has everything from this tour.\n\n"
+            .. ("Is your guild on Discord? The NGM Addon can sync with " .. ns.GOLD .. "NGM Peon|r (ngmpeon.app) to keep your guild's Discord and the NGM Addon in step:\n")
+            .. "- Discord roles that match your guild ranks\n"
+            .. "- Events with sign-ups, listed in the NGM Addon too\n"
+            .. "- Mains and alts, and who plays Tank, Healer or DPS\n"
+            .. "- Discord names on guildmates' profiles\n"
+            .. "- The Hall of Fame for the whole guild" }
     return list
 end
 

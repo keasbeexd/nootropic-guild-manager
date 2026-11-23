@@ -13,6 +13,9 @@
 
       ns.Events:Take(events)   the code's events -> upcoming, new, removed (counts)
       ns.Events:List()         upcoming events, soonest first
+      ns.Events:Announce()     a chat line for each event this character
+                               hasn't heard of (Options, Guild Feed), however
+                               it arrived: NGM Desktop, /ngm peon or guild sync
 ]]
 local _, ns = ...
 local E = {}
@@ -98,6 +101,7 @@ function E:Take(events)
     local removed = 0
     -- gone from NGM Peon while still to come (one that has started isn't "removed")
     for id, starts in pairs(before) do if not after[id] and starts > now then removed = removed + 1 end end
+    ns:Fire("EVENTS_CHANGED")
     return #list, added, removed
 end
 
@@ -119,4 +123,35 @@ function E:List()
     return list
 end
 
-function E:Init() end
+local KIND = { raid = "raid", dungeon = "dungeon", event = "event" }
+
+-- One chat line per event this character hasn't been told about, once
+-- (g.eventsSeen). The first time, everything listed counts as seen.
+function E:Announce()
+    local g = ns.DB:Guild()
+    if not g then return end
+    local list = self:List()
+    local first = g.eventsSeen == nil
+    local seen = g.eventsSeen or {}
+    local now = ns.DB:Now()
+    local on = ns.DB:Settings().eventNotices ~= false
+    local told = 0
+    for _, ev in ipairs(list) do
+        local id = B36(ev.id)
+        if not seen[id] then
+            seen[id] = ev.starts
+            if on and not first and told < 5 then
+                told = told + 1
+                local where = ev.channel ~= "" and (" Sign up in " .. ns.GOLD .. "#" .. ev.channel .. "|r on Discord.") or ""
+                ns:Print(("New %s posted: " .. ns.GOLD .. "%s|r, %s (your time).%s"):format(
+                    KIND[ev.kind] or "event", ev.title ~= "" and ev.title or "untitled", date("%a %d %b, %H:%M", ev.starts), where))
+            end
+        end
+    end
+    for id, starts in pairs(seen) do if starts < now - 86400 then seen[id] = nil end end -- done with
+    g.eventsSeen = seen
+end
+
+function E:Init()
+    ns:On("EVENTS_CHANGED", function() E:Announce() end)
+end
