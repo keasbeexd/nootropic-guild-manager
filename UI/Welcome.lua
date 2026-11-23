@@ -79,8 +79,10 @@ local function Pages()
     end
     list[#list + 1] = { key = "done", icon = D.LOGO, full = true, title = "You're All Set",
         text = ("Open the window any time with " .. ns.GOLD .. "/ngm|r or the minimap button.\n\n")
-            .. ("Options has everything from this tour, plus an " .. ns.GOLD .. "About|r page with links (ngmpeon.app, bugs and ideas).\n\n")
-            .. ("Guild on Discord? With " .. ns.GOLD .. "NGM Peon|r, type " .. ns.GOLD .. "/ngm link|r there for your rank role" .. (ns.DB:IsGuildMaster() and ("; to set it up, start with " .. ns.GOLD .. "/ngm discord setup|r") or "") .. ".\n\n")
+            .. ("Options has everything from this tour, plus an " .. ns.GOLD .. "About|r page with links and what's shared.\n\n")
+            .. ("Guild on Discord? " .. ns.GOLD .. "NGM Peon|r, free at " .. ns.GOLD .. "ngmpeon.app|r, brings it along: Discord roles from your ranks, events with sign-ups (listed here too) and the Hall of Fame for the whole guild. "
+                .. (ns.DB:IsGuildMaster() and ("Set it up with " .. ns.GOLD .. "/ngm discord setup|r; members then type " .. ns.GOLD .. "/ngm link|r in Discord.") or ("Already there? Type " .. ns.GOLD .. "/ngm link|r in your guild's Discord for your rank role.")) .. "\n\n")
+            .. (ns.GOLD .. "NGM Desktop|r (from ngmpeon.app) keeps the NGM Addon and NGM Peon in sync by itself, with no codes to copy.\n\n")
             .. ("Want this tour again? " .. ns.GOLD .. "/ngm welcome|r.") }
     return list
 end

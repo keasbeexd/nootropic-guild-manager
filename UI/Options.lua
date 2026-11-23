@@ -232,6 +232,19 @@ function O:BuildMain()
 
     L:Space(4)
 
+    L:Header("Guild Feed  |cff9d9d9d(in your own chat, never sent)|r")
+    self.eventNoticesCheck = L:Check("New events in chat",
+        "A line when a new raid, dungeon or event from NGM Peon reaches the game: what, when (your time) and where to sign up.",
+        function(on) ns.DB:Settings().eventNotices = on end)
+    self.levelUpsCheck = L:Check("Guildmates' level-ups in chat",
+        "A line when someone in the guild levels up (\"Pip reached level 31!\"), while you're online.",
+        function(on) ns.DB:Settings().levelUps = on end)
+    self.levelUpSoundCheck = L:Check("Play a sound with level-ups",
+        "A short sound with each level-up line.",
+        function(on) ns.DB:Settings().levelUpSound = on end)
+
+    L:Space(4)
+
     L:Header("Sharing  |cff9d9d9d(what only your copy knows)|r")
     self.shareRecipesCheck = L:Check("Share my recipes",
         "Recipes you've learned, so guildmates can find you in Who Can Craft?. Shared when you open a profession window. Off: your recipes are cleared.",
@@ -644,6 +657,9 @@ function O:Refresh()
 
     -- main
     self.addonCountCheck:SetChecked(s.showAddonCount ~= false)
+    self.eventNoticesCheck:SetChecked(s.eventNotices ~= false)
+    self.levelUpsCheck:SetChecked(s.levelUps ~= false)
+    self.levelUpSoundCheck:SetChecked(s.levelUpSound == true)
     self.communitiesCheck:SetChecked(s.communitiesButton ~= false)
     self.blizzRosterCheck:SetChecked(s.blizzRoster ~= false)
     self.learnCheck:SetChecked(ns.Profile:LearnEnabled())

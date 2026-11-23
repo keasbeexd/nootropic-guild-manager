@@ -6,6 +6,11 @@
 local ROOT = arg[1]
 date, time = os.date, os.time
 local ns = {}
+local printed = {}
+function ns:Fire() end
+function ns:On() end
+function ns:Print(m) printed[#printed + 1] = m end
+ns.GOLD = ""
 ns.GOLD, ns.ORANGE, ns.BLUE = "|cfffabd2f", "|cfffe8019", "|cff83a598"
 ns.Split = function(s, sep)
     local out, from = {}, 1
@@ -35,7 +40,8 @@ assert(E.Parse("x", "") == nil, "cleared: gone")
 -- someone who isn't an officer: kept for themselves
 local now = 1794600000
 local guild, store, officer = {}, {}, false
-ns.DB = { Guild = function() return guild end, Now = function() return now end }
+local settings = {}
+ns.DB = { Guild = function() return guild end, Now = function() return now end, Settings = function() return settings end }
 ns.Sync = { CanWrite = function() return officer end, Get = function(_, k) return store[k] end,
   Set = function(_, k, v) store[k] = { v = v } end, Store = function() return store end }
 local up, new, removed = E:Take(c.events)
@@ -78,5 +84,36 @@ do
     -- events never make its fingerprints differ from a 3.0 officer's
     assert(S.LaneOf("EV:16") == "events" and S.LaneOf("M:Marc") == "guild")
     assert(S.LANE_STORE.events == "guild" and S.LANE_CHANNEL.events == "GUILD")
+end
+-- New events in chat: the first look only notes what's there; later ones
+-- are told once each; the Guild Feed switch turns the lines off
+do
+    guild.eventsSeen, guild.upcoming = nil, {}
+    local realSync, store2 = ns.Sync, {}
+    ns.Sync = { CanWrite = function() return false end, Store = function() return store2 end, Set = function() end }
+    E:Take({ { id = 1, kind = "raid", starts = now + 7200, minutes = 60, title = "Molten Core", channel = "raids" } })
+    printed = {}
+    E:Announce()
+    assert(#printed == 0, "first look: nothing told")
+    E:Take({ { id = 1, kind = "raid", starts = now + 7200, minutes = 60, title = "Molten Core", channel = "raids" },
+             { id = 2, kind = "dungeon", starts = now + 9000, minutes = 60, title = "Deadmines", channel = "" } })
+    E:Announce()
+    assert(#printed == 1 and printed[1]:find("New dungeon posted", 1, true) and printed[1]:find("Deadmines", 1, true), printed[1])
+    E:Announce()
+    assert(#printed == 1, "told once")
+    settings.eventNotices = false
+    E:Take({ { id = 3, kind = "event", starts = now + 9000, minutes = 60, title = "Fishing", channel = "" } })
+    E:Announce()
+    assert(#printed == 1, "switched off")
+    settings.eventNotices = nil
+    ns.Sync = realSync
+end
+
+-- Guild Feed: who levelled since the last roster (a level read as 0 is no ding)
+do
+    assert(loadfile(ROOT .. "/Services/GuildFeed.lua"))("NGM", ns)
+    local ch = ns.GuildFeed.Changes({ { full = "A", level = 31 }, { full = "B", level = 20 }, { full = "C", level = 12 }, { full = "D", level = 5 } },
+        { A = 30, B = 20, C = 0 })
+    assert(#ch == 1 and ch[1].full == "A", "only A levelled")
 end
 print("OK")
