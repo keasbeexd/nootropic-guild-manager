@@ -148,6 +148,7 @@ function E:Announce()
             end
         end
     end
+    if told > 0 and ns.GuildFeed then ns.GuildFeed:PlayFeed("event") end
     for id, starts in pairs(seen) do if starts < now - 86400 then seen[id] = nil end end -- done with
     g.eventsSeen = seen
 end

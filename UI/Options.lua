@@ -183,10 +183,11 @@ local function ActionPicker(L, label, key)
     return b
 end
 
--- Picks the level-up sound: the NGM Addon's own, the game's, and any from
--- LibSharedMedia (in groups when there are many). Picking one plays it.
+-- Picks a Guild Feed sound (feed: "levelUp" or "event"): Off, the NGM
+-- Addon's own, the game's, and any from LibSharedMedia (in groups when
+-- there are many). Picking one plays it.
 local SHARED_PER_MENU = 25
-local function SoundPicker(L)
+local function SoundPicker(L, feed, title)
     local F = ns.GuildFeed
     local y = L:Row(28)
     local text = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
@@ -197,9 +198,9 @@ local function SoundPicker(L)
     local function Item(key, name)
         return {
             text = name, radio = true,
-            checked = function() return F:SoundKey() == key end,
+            checked = function() return F:SoundKey(feed) == key end,
             func = function()
-                ns.DB:Settings().levelUpSoundChoice = key
+                ns.DB:Settings()[F.FEEDS[feed].choice] = key
                 F:PlaySound(key)
                 O:Refresh()
             end,
@@ -207,7 +208,7 @@ local function SoundPicker(L)
     end
     b:SetScript("OnClick", function(self)
         local c = F:SoundChoices()
-        local items = { { text = "Level-up sound", isTitle = true } }
+        local items = { { text = title, isTitle = true }, Item(F.OFF, "Off"), { divider = true } }
         for _, s in ipairs(c.own) do items[#items + 1] = Item(s.key, s.name) end
         if #c.game > 0 then
             items[#items + 1] = { divider = true }
@@ -227,7 +228,7 @@ local function SoundPicker(L)
         end
         W.ShowMenu(self, items)
     end)
-    b.Label = text
+    b.Label, b.feed = text, feed
     return b
 end
 
@@ -281,16 +282,14 @@ function O:BuildMain()
     L:Space(4)
 
     L:Header("Guild Feed  |cff9d9d9d(in your own chat, never sent)|r")
-    self.eventNoticesCheck = L:Check("New events in chat",
+    self.eventNoticesCheck = L:Check("Show new guild events",
         "A line when a new raid, dungeon or event from NGM Peon reaches the game: what, when (your time) and where to sign up.",
-        function(on) ns.DB:Settings().eventNotices = on end)
-    self.levelUpsCheck = L:Check("Guildmates' level-ups in chat",
+        function(on) ns.DB:Settings().eventNotices = on; O:Refresh() end)
+    self.eventSoundPicker = SoundPicker(L, "event", "New event sound")
+    self.levelUpsCheck = L:Check("Show guild level-ups",
         "A line when someone in the guild levels up (\"Pip reached level 31!\"), while you're online.",
-        function(on) ns.DB:Settings().levelUps = on end)
-    self.levelUpSoundCheck = L:Check("Play a sound with level-ups",
-        "A short sound with each level-up line.",
-        function(on) ns.DB:Settings().levelUpSound = on; O:Refresh() end)
-    self.levelUpSoundPicker = SoundPicker(L)
+        function(on) ns.DB:Settings().levelUps = on; O:Refresh() end)
+    self.levelUpSoundPicker = SoundPicker(L, "levelUp", "Level-up sound")
 
     L:Space(4)
 
@@ -708,9 +707,10 @@ function O:Refresh()
     self.addonCountCheck:SetChecked(s.showAddonCount ~= false)
     self.eventNoticesCheck:SetChecked(s.eventNotices ~= false)
     self.levelUpsCheck:SetChecked(s.levelUps ~= false)
-    self.levelUpSoundCheck:SetChecked(s.levelUpSound == true)
-    self.levelUpSoundPicker:SetText(ns.GuildFeed:SoundName())
-    SetUsable(self.levelUpSoundPicker, s.levelUpSound == true)
+    for _, pick in ipairs({ { self.eventSoundPicker, s.eventNotices ~= false }, { self.levelUpSoundPicker, s.levelUps ~= false } }) do
+        pick[1]:SetText(ns.GuildFeed:SoundName(ns.GuildFeed:SoundKey(pick[1].feed)))
+        SetUsable(pick[1], pick[2]) -- no line, no sound
+    end
     self.communitiesCheck:SetChecked(s.communitiesButton ~= false)
     self.blizzRosterCheck:SetChecked(s.blizzRoster ~= false)
     self.learnCheck:SetChecked(ns.Profile:LearnEnabled())

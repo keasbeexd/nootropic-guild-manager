@@ -91,6 +91,8 @@ do
     guild.eventsSeen, guild.upcoming = nil, {}
     local realSync, store2 = ns.Sync, {}
     ns.Sync = { CanWrite = function() return false end, Store = function() return store2 end, Set = function() end }
+    local rang = 0
+    ns.GuildFeed = { PlayFeed = function(_, feed) assert(feed == "event"); rang = rang + 1 end }
     E:Take({ { id = 1, kind = "raid", starts = now + 7200, minutes = 60, title = "Molten Core", channel = "raids" } })
     printed = {}
     E:Announce()
@@ -99,14 +101,15 @@ do
              { id = 2, kind = "dungeon", starts = now + 9000, minutes = 60, title = "Deadmines", channel = "" } })
     E:Announce()
     assert(#printed == 1 and printed[1]:find("New dungeon posted", 1, true) and printed[1]:find("Deadmines", 1, true), printed[1])
+    assert(rang == 1, "the new-event sound, once")
     E:Announce()
-    assert(#printed == 1, "told once")
+    assert(#printed == 1 and rang == 1, "told once")
     settings.eventNotices = false
     E:Take({ { id = 3, kind = "event", starts = now + 9000, minutes = 60, title = "Fishing", channel = "" } })
     E:Announce()
-    assert(#printed == 1, "switched off")
+    assert(#printed == 1 and rang == 1, "switched off: no line, no sound")
     settings.eventNotices = nil
-    ns.Sync = realSync
+    ns.Sync, ns.GuildFeed = realSync, nil
 end
 
 -- Guild Feed: who levelled since the last roster (a level read as 0 is no ding)

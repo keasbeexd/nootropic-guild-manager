@@ -45,7 +45,7 @@ and connect it on NGM Peon's dashboard.
   Peon: when, who's coming and where to sign up in Discord. A new one is
   announced in your chat when it arrives.
 - **Guild Feed** — in your own chat (never sent): new events from NGM Peon,
-  and guildmates' level-ups ("Pip reached level 31!"), with an optional sound.
+  and guildmates' level-ups ("Pip reached level 31!"), each with an optional sound.
 - **Profiles** — spec, roles, professions with skill levels, Discord,
   usual play hours, raid readiness (Onyxia attunement, the
   Barrow Deeps key) and your own private notes.
@@ -244,7 +244,7 @@ Options has four pages in the game's AddOns list:
 - **Nootropic Guild Manager** (main page)
   - **Appearance**: always in your guild's colors: the NGM Addon's icon is the NGM Addon's herald banner in your tabard's colors, and the accents take them too, the same as on ngmpeon.app (herald blue without a tabard). Also: **show how many guildmates use the NGM Addon** (on by default), the **shortcut on the Guild & Communities window**, and **Show alts and profiles on the Guild roster** (on by default).
   - **Sharing**: a switch only for what comes from your own copy of the NGM Addon and nowhere else: **Share my recipes** and **Learn when I usually play** (this character), both on by default. Turning one off stops sharing it and clears what was already shared. Your spec, professions, statistics (never gold) and guild chat time (never the words) are always shared, as they're public anyway (Blizzard's API, inspecting you, guild chat); likewise everyone online near your level shows in Play Together. A **Show the Welcome Tour** button reopens the walkthrough.
-  - **Guild Feed**: **New events in chat** and **Guildmates' level-ups in chat** (both on by default) and **Play a sound with level-ups** (off). Pick the sound under it: one of the NGM Addon's five (**NGM Chime**, the default, **NGM Fanfare**, **NGM Horn**, **NGM Harp**, **NGM Bells**), a few of the game's, or any sound from **SharedMedia** when another addon you use brings LibSharedMedia. Picking one plays it. The NGM Addon's five sounds are also offered to other addons through SharedMedia. Lines appear only in your own chat; nothing is sent.
+  - **Guild Feed**: **Show new guild events** and **Show guild level-ups** (both on by default), each with its own **Sound** under it (Off by default). Pick one of the NGM Addon's five (**NGM Chime**, the default, **NGM Fanfare**, **NGM Horn**, **NGM Harp**, **NGM Bells**), a few of the game's, or any sound from **SharedMedia** when another addon you use brings LibSharedMedia. Picking one plays it. The NGM Addon's five sounds are also offered to other addons through SharedMedia. Lines appear only in your own chat; nothing is sent.
   - **Minimap Button**: show/hide it (also `/ngm minimap`), and choose what left-click, right-click and shift-click do (Find, Play Together, Recruitment, Audit, Options, show/hide window, or nothing). Drag the button to move it around the edge of the minimap; the spot is saved. The game's own AddOns menu button on the minimap (where this addon is also listed) is Blizzard's and can't be moved.
   - **Reset**: window size and position, and list columns (roster and recruitment list).
   - **Sync and Commands**: sync stats with a **Sync Now** button, **Open Guild Manager**, and the most useful commands.

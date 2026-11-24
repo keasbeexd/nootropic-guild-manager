@@ -15,10 +15,11 @@ ns.GuildFeed = F
 
 F.MAX_LINES = 5 -- per roster update: a guild-wide jump is a few lines, not a flood
 
--- The level-up sounds to pick from (Options, Guild Feed). Saved as a key:
+-- The sounds to pick from (Options, Guild Feed), for level-ups and for new
+-- events, each its own choice (F.FEEDS). Saved as a key: "off" no sound,
 -- "ngm:<name>" our own, "kit:<SOUNDKIT name>" the game's, "lsm:<name>" one
 -- from LibSharedMedia. A choice that's gone (an addon removed) plays the
--- default instead.
+-- feed's fallback instead.
 local SOUND_DIR = "Interface\\AddOns\\NootropicGuildManager\\Media\\Sounds\\"
 F.OWN_SOUNDS = {
     { key = "ngm:chime", name = "NGM Chime", file = SOUND_DIR .. "Chime.ogg" },
@@ -36,7 +37,12 @@ F.GAME_SOUNDS = {
     { key = "kit:MAP_PING", name = "Map ping" },
     { key = "kit:RAID_WARNING", name = "Raid warning" },
 }
-F.DEFAULT_SOUND = "ngm:chime"
+F.OFF = "off"
+-- each feed's setting, and what plays when its choice is gone
+F.FEEDS = {
+    levelUp = { choice = "levelUpSoundChoice", fallback = "ngm:chime" },
+    event = { choice = "eventSoundChoice", fallback = "ngm:horn" },
+}
 
 -- LibSharedMedia-3.0, only when another addon loaded it (we don't bring it)
 local function SharedMedia()
@@ -84,15 +90,18 @@ function F:ResolveSound(key)
     if data and data ~= 1 then return "file", data end -- 1 is LibSharedMedia's "None"
 end
 
--- The saved choice if it's still there, else the default.
-function F:SoundKey()
-    local key = ns.DB:Settings().levelUpSoundChoice
+-- A feed's saved choice: "off", the sound if it's still there, else the
+-- feed's fallback.
+function F:SoundKey(feed)
+    local f = F.FEEDS[feed]
+    local key = ns.DB:Settings()[f.choice]
+    if key == nil or key == F.OFF then return F.OFF end
     if self:ResolveSound(key) then return key end
-    return F.DEFAULT_SOUND
+    return f.fallback
 end
 
 function F:SoundName(key)
-    key = key or self:SoundKey()
+    if key == F.OFF then return "Off" end
     local own = Own(key)
     if own then return own.name end
     for _, s in ipairs(F.GAME_SOUNDS) do if s.key == key then return s.name end end
@@ -100,9 +109,15 @@ function F:SoundName(key)
 end
 
 function F:PlaySound(key)
-    local how, what = self:ResolveSound(key or self:SoundKey())
+    local how, what = self:ResolveSound(key)
     if how == "kit" then ns.PlaySound(what)
     elseif how == "file" and PlaySoundFile then pcall(PlaySoundFile, what) end
+end
+
+-- A feed's sound, unless it's off.
+function F:PlayFeed(feed)
+    local key = self:SoundKey(feed)
+    if key ~= F.OFF then self:PlaySound(key) end
 end
 
 local last -- full name -> level, as of the previous roster
@@ -133,7 +148,7 @@ function F:OnRoster()
                     ns:Print(("|c%s%s|r reached level %d!"):format(ns.ClassHex(e.classFile), e.short or e.full, e.level))
                 end
             end
-            if told > 0 and s.levelUpSound then F:PlaySound() end
+            if told > 0 then F:PlayFeed("levelUp") end
         end
     end
     last = now
