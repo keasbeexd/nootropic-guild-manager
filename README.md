@@ -107,6 +107,7 @@ The first time you log in with the NGM Addon, a short **welcome tour** opens: a 
 
 - `/ngm` (or `/nootropic`), the minimap button, the NGM Addon compartment menu, or the **shortcut tab on the Guild & Communities window**.
 - Minimap button: left-click opens Find, right-click the Options, shift-click Recruitment (all changeable in Options). Clicking again closes the window.
+- Key bindings: the game's Key Bindings list **Nootropic Guild Manager**, with a key to open or close the window and one for each tab (Find, Upcoming Events, Overview, Hall of Fame, Play Together, Recruitment, Audit). A tab's key opens the window on that tab; press it again to close the window. None are set until you pick keys.
 - Drag the grip in the bottom-right corner to resize the window. The size is saved.
 
 ## What you see

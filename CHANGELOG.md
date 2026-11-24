@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.0.14
+
+- **Key bindings for every tab.** The game's Key Bindings now list Nootropic Guild Manager, with a key to open or close the window and one for each tab: Find, Upcoming Events, Overview, Hall of Fame, Play Together, Recruitment and Audit. A tab's key opens the window right on that tab, and pressing it again closes the window. No keys are set until you pick them.
+
 ## 3.0.13
 
 - **New events are announced in your chat.** When a raid, dungeon or event from NGM Peon reaches the game, by NGM Desktop, `/ngm peon` or from an officer through guild sync, a line says what it is, when (your time) and where to sign up. Once per event.
