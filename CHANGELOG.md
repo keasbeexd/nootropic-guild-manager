@@ -4,8 +4,8 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 
 ## 3.0.14
 
-- **Key bindings for every tab.** The game's Key Bindings now list Nootropic Guild Manager, with a key to open or close the window and one for each tab: Find, Upcoming Events, Overview, Hall of Fame, Play Together, Recruitment and Audit. A tab's key opens the window right on that tab, and pressing it again closes the window. No keys are set until you pick them.
-- **Pick your level-up sound.** The Guild Feed's level-up sound was the game's quest-complete sound, so a guildmate's ding sounded like your own quest. It's now **NGM Chime** by default; Options, Guild Feed, Sound also has **NGM Fanfare**, a few of the game's sounds, and every sound from **SharedMedia** if another addon you use brings it. Picking one plays it. The NGM Addon's two sounds show up in other addons' SharedMedia sound lists too.
+- **Key bindings for every tab.** The game's Key Bindings now have a Nootropic Guild Manager section with a key for each tab: Find, Upcoming Events, Overview, Hall of Fame, Play Together, Recruitment and Audit. A tab's key opens the window right on that tab, and pressing it again closes the window. No keys are set until you pick them.
+- **Pick your level-up sound.** The Guild Feed's level-up sound was the game's quest-complete sound, so a guildmate's ding sounded like your own quest. It's now **NGM Chime** by default; Options, Guild Feed, Sound also has **NGM Fanfare**, **NGM Horn**, **NGM Harp** and **NGM Bells**, a few of the game's sounds, and every sound from **SharedMedia** if another addon you use brings it. Picking one plays it. The NGM Addon's five sounds show up in other addons' SharedMedia sound lists too.
 
 ## 3.0.13
 

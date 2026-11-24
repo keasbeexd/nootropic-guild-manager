@@ -23,6 +23,9 @@ local SOUND_DIR = "Interface\\AddOns\\NootropicGuildManager\\Media\\Sounds\\"
 F.OWN_SOUNDS = {
     { key = "ngm:chime", name = "NGM Chime", file = SOUND_DIR .. "Chime.ogg" },
     { key = "ngm:fanfare", name = "NGM Fanfare", file = SOUND_DIR .. "Fanfare.ogg" },
+    { key = "ngm:horn", name = "NGM Horn", file = SOUND_DIR .. "Horn.ogg" },
+    { key = "ngm:harp", name = "NGM Harp", file = SOUND_DIR .. "Harp.ogg" },
+    { key = "ngm:bells", name = "NGM Bells", file = SOUND_DIR .. "Bells.ogg" },
 }
 -- names checked against Forever's own list (wow-ui-source, forever branch:
 -- Blizzard_SharedXML/Mainline/SoundKitConstants.lua); any this client

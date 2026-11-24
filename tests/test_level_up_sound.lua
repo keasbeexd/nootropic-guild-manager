@@ -26,7 +26,7 @@ end
 
 -- without LibSharedMedia
 local c = F:SoundChoices()
-assert(#c.own == 2 and #c.game == 2 and #c.shared == 0, "own, the game's this client has, nothing shared")
+assert(#c.own == 5 and #c.game == 2 and #c.shared == 0, "own, the game's this client has, nothing shared")
 assert(F:SoundKey() == "ngm:chime" and F:SoundName() == "NGM Chime", "default")
 F:PlaySound()
 assert(files[1]:match("Chime%.ogg$"), "the default plays our chime")
@@ -60,6 +60,6 @@ assert(F:SoundKey() == "ngm:chime", "None is no sound to pick")
 
 -- login: ours go to LibSharedMedia
 F:Init()
-assert(#registered == 2 and registered[1][1] == "sound" and registered[1][2] == "NGM Chime" and registered[2][2] == "NGM Fanfare")
+assert(#registered == 5 and registered[1][1] == "sound" and registered[1][2] == "NGM Chime" and registered[5][2] == "NGM Bells")
 assert(handlers.ROSTER_UPDATED, "still listens to the roster")
 print("OK")

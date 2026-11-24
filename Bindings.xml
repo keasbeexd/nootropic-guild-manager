@@ -1,13 +1,13 @@
-<!-- Key bindings (the game's Key Bindings, under Nootropic Guild Manager).
-     Names and the header are set in UI/MainFrame.lua. Tab numbers are the
-     tabs' ids (UI/MainFrame.lua TAB_LABELS), listed in the window's order. -->
+<!-- Key bindings: a key per tab, in their own section of the game's Key
+     Bindings (category: the section's title is the global it names, set in
+     UI/MainFrame.lua with the bindings' names). Tab numbers are the tabs'
+     ids (UI/MainFrame.lua TAB_LABELS), listed in the window's order. -->
 <Bindings>
-    <Binding name="NOOTROPICGM_TOGGLE" header="NOOTROPICGM">NootropicGuildManager_Toggle()</Binding>
-    <Binding name="NOOTROPICGM_TAB1">NootropicGuildManager_OpenTab(1)</Binding>
-    <Binding name="NOOTROPICGM_TAB7">NootropicGuildManager_OpenTab(7)</Binding>
-    <Binding name="NOOTROPICGM_TAB5">NootropicGuildManager_OpenTab(5)</Binding>
-    <Binding name="NOOTROPICGM_TAB6">NootropicGuildManager_OpenTab(6)</Binding>
-    <Binding name="NOOTROPICGM_TAB2">NootropicGuildManager_OpenTab(2)</Binding>
-    <Binding name="NOOTROPICGM_TAB3">NootropicGuildManager_OpenTab(3)</Binding>
-    <Binding name="NOOTROPICGM_TAB4">NootropicGuildManager_OpenTab(4)</Binding>
+    <Binding name="NOOTROPICGM_TAB1" category="BINDING_HEADER_NOOTROPICGM">NootropicGuildManager_OpenTab(1)</Binding>
+    <Binding name="NOOTROPICGM_TAB7" category="BINDING_HEADER_NOOTROPICGM">NootropicGuildManager_OpenTab(7)</Binding>
+    <Binding name="NOOTROPICGM_TAB5" category="BINDING_HEADER_NOOTROPICGM">NootropicGuildManager_OpenTab(5)</Binding>
+    <Binding name="NOOTROPICGM_TAB6" category="BINDING_HEADER_NOOTROPICGM">NootropicGuildManager_OpenTab(6)</Binding>
+    <Binding name="NOOTROPICGM_TAB2" category="BINDING_HEADER_NOOTROPICGM">NootropicGuildManager_OpenTab(2)</Binding>
+    <Binding name="NOOTROPICGM_TAB3" category="BINDING_HEADER_NOOTROPICGM">NootropicGuildManager_OpenTab(3)</Binding>
+    <Binding name="NOOTROPICGM_TAB4" category="BINDING_HEADER_NOOTROPICGM">NootropicGuildManager_OpenTab(4)</Binding>
 </Bindings>
