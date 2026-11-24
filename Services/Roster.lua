@@ -52,6 +52,21 @@ function R:Init()
     ns:On("OFFICER_CHANGED", redecorate) -- officer-only fields appear or disappear
 
     self:Request()
+    self:StartRefresh()
+end
+
+-- The game sends a fresh roster only when a client asks for it (we ask at
+-- login and when a tab opens; Blizzard's own UI only while the Guild window
+-- is open), so levels, zones and notes could stay stale for an hour. Ask
+-- once a minute, outside combat, so Guild Feed level-ups come on time.
+R.REFRESH_EVERY = 60
+
+function R:StartRefresh()
+    if self.refreshTicker or not (C_Timer and C_Timer.NewTicker) then return end
+    self.refreshTicker = C_Timer.NewTicker(R.REFRESH_EVERY, function()
+        if InCombatLockdown and InCombatLockdown() then return end
+        R:Request()
+    end)
 end
 
 function R:Request()

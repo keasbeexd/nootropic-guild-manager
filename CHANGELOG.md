@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.0.15
+
+- **Level-ups on time.** Guildmates' level-ups in chat could come up to an hour late: the game only sends a fresh guild roster when asked, and the NGM Addon asked only at login and when you opened a tab. It now asks once a minute (not during combat), so a ding shows within a minute. Levels, zones and notes on the Find tab stay current the same way.
+
 ## 3.0.14
 
 - **Key bindings for every tab.** The game's Key Bindings now have a Nootropic Guild Manager section with a key for each tab: Find, Upcoming Events, Overview, Hall of Fame, Play Together, Recruitment and Audit. A tab's key opens the window right on that tab, and pressing it again closes the window. No keys are set until you pick them.
