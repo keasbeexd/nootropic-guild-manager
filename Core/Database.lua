@@ -30,6 +30,7 @@ local DEFAULTS = {
         eventNotices = true,         -- Guild Feed: a chat line for each new event from NGM Peon
         levelUps = true,             -- Guild Feed: a chat line when a guildmate levels up
         levelUpSound = false,        -- Guild Feed: and a sound with it
+        levelUpSoundChoice = "ngm:chime", -- which sound (Services/GuildFeed.lua keys)
         whoWhisperButton = true,     -- recruitment whisper button on the game's /who results
         shareRecipes = true,         -- share my recipes
         playRange = 5,               -- Play Together: levels either side of yours (0 = any)

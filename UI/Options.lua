@@ -183,6 +183,54 @@ local function ActionPicker(L, label, key)
     return b
 end
 
+-- Picks the level-up sound: the NGM Addon's own, the game's, and any from
+-- LibSharedMedia (in groups when there are many). Picking one plays it.
+local SHARED_PER_MENU = 25
+local function SoundPicker(L)
+    local F = ns.GuildFeed
+    local y = L:Row(28)
+    local text = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
+    text:SetPoint("TOPLEFT", 42, y - 4)
+    text:SetText("Sound")
+    local b = W.Button(L.panel, "", 200, 22)
+    b:SetPoint("TOPLEFT", 150, y)
+    local function Item(key, name)
+        return {
+            text = name, radio = true,
+            checked = function() return F:SoundKey() == key end,
+            func = function()
+                ns.DB:Settings().levelUpSoundChoice = key
+                F:PlaySound(key)
+                O:Refresh()
+            end,
+        }
+    end
+    b:SetScript("OnClick", function(self)
+        local c = F:SoundChoices()
+        local items = { { text = "Level-up sound", isTitle = true } }
+        for _, s in ipairs(c.own) do items[#items + 1] = Item(s.key, s.name) end
+        if #c.game > 0 then
+            items[#items + 1] = { divider = true }
+            for _, s in ipairs(c.game) do items[#items + 1] = Item(s.key, s.name) end
+        end
+        if #c.shared > 0 then
+            items[#items + 1] = { divider = true }
+            local n = #c.shared
+            for first = 1, n, SHARED_PER_MENU do
+                local last = math.min(first + SHARED_PER_MENU - 1, n)
+                local sub = {}
+                for i = first, last do sub[#sub + 1] = Item("lsm:" .. c.shared[i], c.shared[i]) end
+                local label = "SharedMedia"
+                if n > SHARED_PER_MENU then label = ("SharedMedia: %s - %s"):format(c.shared[first], c.shared[last]) end
+                items[#items + 1] = { text = label, submenu = sub }
+            end
+        end
+        W.ShowMenu(self, items)
+    end)
+    b.Label = text
+    return b
+end
+
 -- Six small word boxes (keywords, Do Not Whisper words), three per row.
 local function WordBoxes(L, maxLetters, onChange)
     local boxes = {}
@@ -241,7 +289,8 @@ function O:BuildMain()
         function(on) ns.DB:Settings().levelUps = on end)
     self.levelUpSoundCheck = L:Check("Play a sound with level-ups",
         "A short sound with each level-up line.",
-        function(on) ns.DB:Settings().levelUpSound = on end)
+        function(on) ns.DB:Settings().levelUpSound = on; O:Refresh() end)
+    self.levelUpSoundPicker = SoundPicker(L)
 
     L:Space(4)
 
@@ -660,6 +709,8 @@ function O:Refresh()
     self.eventNoticesCheck:SetChecked(s.eventNotices ~= false)
     self.levelUpsCheck:SetChecked(s.levelUps ~= false)
     self.levelUpSoundCheck:SetChecked(s.levelUpSound == true)
+    self.levelUpSoundPicker:SetText(ns.GuildFeed:SoundName())
+    SetUsable(self.levelUpSoundPicker, s.levelUpSound == true)
     self.communitiesCheck:SetChecked(s.communitiesButton ~= false)
     self.blizzRosterCheck:SetChecked(s.blizzRoster ~= false)
     self.learnCheck:SetChecked(ns.Profile:LearnEnabled())
