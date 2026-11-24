@@ -390,6 +390,7 @@ local function PrintHelp()
     end
     ns:Print("  |cffffffff/ngm diag|r  - troubleshooting: version, sync, and the NGM Addon's hooks into game windows")
     ns:Print("  |cffffffff/ngm reset|r  - reset the window size and position")
+    ns:Print("Key bindings for the window and each tab: the game's Key Bindings, under Nootropic Guild Manager.")
 end
 
 SLASH_NOOTROPICGM1 = "/ngm"

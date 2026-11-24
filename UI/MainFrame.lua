@@ -605,6 +605,21 @@ function UI:Toggle()
     f:SetShown(not f:IsShown())
 end
 
+-- Key bindings (Bindings.xml): one per tab. A tab's key opens the window
+-- on it, or closes the window when that tab is already showing. The header
+-- is the title of their section in the game's Key Bindings.
+BINDING_HEADER_NOOTROPICGM = "Nootropic Guild Manager"
+for i, label in ipairs(TAB_LABELS) do _G["BINDING_NAME_NOOTROPICGM_TAB" .. i] = label .. " tab" end
+
+function NootropicGuildManager_OpenTab(id)
+    if not TAB_LABELS[id] then return end
+    if not UI:IsTabAvailable(id) then
+        ns:Print(("The %s tab isn't open to your rank."):format(UI:TabTitle(id)))
+        return
+    end
+    UI:OpenTab(id, true)
+end
+
 function UI:SetSearch(text)
     self:Create()
     self:SelectTab(1)

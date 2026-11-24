@@ -29,7 +29,8 @@ local DEFAULTS = {
         showAddonCount = true,       -- "x using ... Guild Manager" at the bottom of the window
         eventNotices = true,         -- Guild Feed: a chat line for each new event from NGM Peon
         levelUps = true,             -- Guild Feed: a chat line when a guildmate levels up
-        levelUpSound = false,        -- Guild Feed: and a sound with it
+        levelUpSoundChoice = "off",  -- Guild Feed: the level-up sound ("off", or a Services/GuildFeed.lua key)
+        eventSoundChoice = "off",    -- Guild Feed: the new-event sound
         whoWhisperButton = true,     -- recruitment whisper button on the game's /who results
         shareRecipes = true,         -- share my recipes
         playRange = 5,               -- Play Together: levels either side of yours (0 = any)
@@ -62,6 +63,13 @@ end
 function DB:Init()
     NootropicGuildManagerDB = NootropicGuildManagerDB or {}
     local sv = NootropicGuildManagerDB
+    -- 3.0.14: the level-up sound's on/off box became a choice with Off
+    local old = sv.settings
+    if old and old.levelUpSound ~= nil then
+        if old.levelUpSound ~= true then old.levelUpSoundChoice = "off"
+        elseif old.levelUpSoundChoice == nil or old.levelUpSoundChoice == "off" then old.levelUpSoundChoice = "ngm:chime" end
+        old.levelUpSound = nil
+    end
     ApplyDefaults(DEFAULTS, sv)
     -- 2.0: settings of removed features
     local st = sv.settings
