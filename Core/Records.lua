@@ -33,8 +33,10 @@
       HX:<member>          left out of the Hall of Fame: "1" ("" = shown)
       HW:<month>           that month's champions: "quests=Name,Name;kills=Name"
       HA:<month>           that month's champions were announced: "<time>"
-      HB:<period>          NGM Peon's Hall of Fame for all, month or last (from
-                           /ngm peon): "<month>;<card>:<name>~<n>,.../_t:..."
+      HB:<period>          Hall of Fame boards for all, month or last: NGM
+                           Peon's (from /ngm peon), or without NGM Peon an
+                           officer's copy's (with a "_s" card):
+                           "<month>;<card>:<name>~<n>,.../_t:.../_s:..."
       EV:<id>              an upcoming event from NGM Peon (Services/Events.lua):
                            "kind;starts;minutes;coming;channel;server;title;description"
                            (numbers base 36; "" = gone)
@@ -85,7 +87,7 @@ S.TYPES = {
     HX = { scope = "guild",   officer = true, label = "Hidden from Hall of Fame" },
     HW = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame champions" },
     HA = { scope = "guild",   officer = true, noAudit = true, label = "Champions announced" },
-    HB = { scope = "guild",   officer = true, noAudit = true, label = "NGM Peon's Hall of Fame" },
+    HB = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame boards" },
     EV = { scope = "guild",   officer = true, noAudit = true, label = "Upcoming event" },
     HC = { scope = "officer", officer = true, noAudit = true, label = "Hall of Fame check" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },

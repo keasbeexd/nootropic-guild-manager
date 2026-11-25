@@ -155,4 +155,59 @@ assert(HF:Boards("last", 202611).peon == nil, "no last-month board brought in: t
 ns.Sync.Value = realValue
 assert(HF:Boards("all", 202611).peon == nil)
 ns.Sync.Get = realGet
+
+-- The launch month comes from all time, whatever the member's copy said
+-- (copies before 3.0.8 counted it from when they were installed)
+do
+  HF.LAUNCH_MONTH = 202611
+  local saved = guild.sync.guild["HF:Big Main-R"]
+  guild.sync.guild["HF:Big Main-R"] = { v = HF.Encode(202611, { quests = 300 }, { quests = 40 }, 0, {}), t = 1, a = "Big Main-R" }
+  assert(HF:For("Big Main-R", "month", 202611).quests == 300, "November is all of it")
+  assert(HF:For("Big Main-R", "last", 202612).quests == 300, "a November record read in December")
+  guild.sync.guild["HF:Big Main-R"].v = HF.Encode(202612, { quests = 500 }, { quests = 40 }, 202611, { quests = 100 })
+  assert(HF:For("Big Main-R", "last", 202612).quests == 460, "November: all time less December")
+  assert(HF:For("Big Main-R", "month", 202612).quests == 40)
+  guild.sync.guild["HF:Big Main-R"] = saved
+  HF.LAUNCH_MONTH = 0
+end
+
+-- One board for everyone, without NGM Peon: officers' copies share it
+local officer = false
+ns.IsOfficer = function() return officer end
+assert(HF:ShareBoards() == 0, "members don't share boards")
+assert(HF:Boards("all", month).shared == nil, "nothing shared yet: your own")
+officer = true
+assert(HF:ShareBoards() == 2, "all time and this month (nobody has numbers for last month)")
+local sb = HF:Boards("all", month)
+assert(sb.shared and sb.shared.by == "Me Self-R" and sb.shared.at == NOW)
+assert(sb.boards.quests[1].key == "Big Main-R" and sb.boards.quests[1].n == 350, "alt still added to main")
+assert(sb.sharing == 2 and sb.people == 3 and sb.noAddon == HF:OwnBoards("all", month).noAddon)
+assert(HF:Boards("month", month).boards.quests[1].n == 20)
+assert(HF:ShareBoards() == 0, "nothing changed: nothing sent")
+-- an officer's copy missing a record can't lower the board: the higher number wins
+local savedAlt = guild.sync.guild["HF:Big Alt-R"]
+guild.sync.guild["HF:Big Alt-R"] = nil
+assert(HF:OwnBoards("all", month).boards.quests[1].n == 300)
+assert(HF:ShareBoards() == 0 and HF:Boards("all", month).boards.quests[1].n == 350)
+guild.sync.guild["HF:Big Alt-R"] = savedAlt
+-- new numbers: everyone keeps seeing the shared board until it's shared again
+put("Big Main-R", { quests = 400, deaths = 5 }, { quests = 20 })
+assert(HF:Boards("all", month).boards.quests[1].n == 350)
+assert(HF:ShareBoards() == 1 and HF:Boards("all", month).boards.quests[1].n == 450)
+-- left out by officers: off the shared board as well
+guild.sync.guild["HX:Big Main-R"] = { v = "1", t = 1, a = "Me Self-R" }
+HF:ShareBoards()
+for _, p in ipairs(HF:Boards("all", month).boards.quests) do assert(p.key ~= "Big Main-R", "hidden but shared") end
+guild.sync.guild["HX:Big Main-R"] = nil
+-- a board from an earlier month isn't shown
+assert(HF:Boards("month", 202703).shared == nil)
+-- the value fits the sync's limits
+assert(ns.Sync.ValidValue("HB", ns.Sync:Value("HB:all")) and #ns.Sync:Value("HB:all") < ns.Sync.MAX_VALUE)
+-- a guild using NGM Peon: officers' copies don't share, and an addon board isn't taken for NGM Peon's
+ns.Sync.Value = function(self, k) if k == "GS:peon" then return "1" end return realValue(self, k) end
+assert(HF:ShareBoards() == 0)
+local pb2 = HF:Boards("all", month)
+assert(not pb2.peon and not pb2.shared, "the addon's own boards")
+ns.Sync.Value = realValue
+officer = false
 print("OK")

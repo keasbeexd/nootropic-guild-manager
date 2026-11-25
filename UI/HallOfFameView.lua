@@ -374,6 +374,12 @@ function HV:Refresh()
         note = "This game client doesn't give addons character statistics, so there's nothing to show."
     elseif data.sharing == 0 then
         note = "Nobody has shared their statistics yet. Each member's own addon shares them a little after they log in."
+    elseif data.shared then
+        note = "From the game's own statistics (the Statistics page of the achievement window), shared by each member's addon. "
+            .. ("Put together by %s's NGM Addon (an officer), %s, so everyone sees the same board. "):format(
+                ns.ShortName(data.shared.by or "?"), HV.When(data.shared.at))
+            .. "It updates every 10 minutes while an officer is online. Top 5 of each card. "
+            .. "Members without the NGM Addon aren't listed. Gold is never shared."
     else
         note = "From the game's own statistics (the Statistics page of the achievement window), shared by each member's addon. "
             .. "Members without the NGM Addon aren't listed. Gold is never shared."
