@@ -49,6 +49,7 @@ function UI:Create()
     end)
     f:Hide()
     tinsert(UISpecialFrames, f:GetName())
+    ns.Gamepad:Register(f, "window")
 
     self:UpdateTitle()
     self:BuildPortrait(f)

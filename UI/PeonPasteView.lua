@@ -29,6 +29,7 @@ function V:Build()
     f:Hide()
     W.SetTitle(f, "From NGM Peon")
     tinsert(UISpecialFrames, "NootropicGMPeonPaste") -- Escape closes it
+    ns.Gamepad:Register(f, "popup")
     self.frame = f
 
     local steps = f:CreateFontString(nil, "OVERLAY", "NGMFontText")

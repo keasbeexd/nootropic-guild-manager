@@ -103,6 +103,7 @@ function MV:Build()
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
     f:Hide()
     tinsert(UISpecialFrames, f:GetName())
+    ns.Gamepad:Register(f, "window")
     W.SetTitle(f, "Custom Recruitment Messages")
     self.frame = f
 
