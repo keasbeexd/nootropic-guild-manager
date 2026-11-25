@@ -2,6 +2,11 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.0.16
+
+- **One Hall of Fame for everyone, without NGM Peon.** Each member's NGM Addon used to work out the boards from its own copy of guildmates' numbers, so members missing some of them (offline when they came in, or on a version too old to sync) saw different leaders and winners. Now officers' NGM Addons put the boards together every 10 minutes and share them, and everyone sees that same board, with who put it together and when. An officer missing some numbers can't lower it: the higher number for each person wins. Champions are crowned from it too.
+- **November counts the same for everyone.** Members on versions before 3.0.8 still shared "This month" counted from when they installed the NGM Addon. November (and "Last month" in December) is now worked out from their all-time numbers, whatever version they're on.
+
 ## 3.0.15
 
 - **Level-ups on time.** Guildmates' level-ups in chat could come up to an hour late: the game only sends a fresh guild roster when asked, and the NGM Addon asked only at login and when you opened a tab. It now asks once a minute (not during combat), so a ding shows within a minute. Levels, zones and notes on the Find tab stay current the same way.

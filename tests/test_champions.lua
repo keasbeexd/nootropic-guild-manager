@@ -43,6 +43,9 @@ ns.Sync.readyFor = "g"; ns.Sync.QueueOutgoing = function() end
 assert(loadfile(ROOT .. "/Services/Sharing.lua"))("NGM", ns)
 assert(loadfile(ROOT .. "/Services/HallOfFame.lua"))("NGM", ns)
 local HF = ns.HallOfFame
+-- the one shared board (tests/test_hall_of_fame.lua) would lag behind the
+-- records these tests put in: this file checks crowning from live numbers
+HF.ShareBoards = function() return 0 end
 
 -- Social Butterfly
 local t0 = 1800000000 - (1800000000 % 86400) -- midnight UTC

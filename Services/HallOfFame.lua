@@ -285,13 +285,23 @@ function HF:For(full, period, nowMonth)
     if not HF.Plausible(r) then return nil end
     if period == "all" then return r.all end
     nowMonth = nowMonth or HF.Month()
+    -- The launch month is worked out here from all time, whatever the
+    -- member's copy said: copies before 3.0.8 counted it from when they were
+    -- installed, so it came out different for each member.
+    local launch = HF.LAUNCH_MONTH
     if period == "month" then
-        return r.month == nowMonth and r.this or {}
+        if r.month ~= nowMonth then return {} end
+        return r.month == launch and r.all or r.this
     end
     -- last month: what they had then, from a record written then or since
     local want = HF.PrevMonth(nowMonth)
-    if r.month == nowMonth then return r.lastMonth == want and r.last or {} end
-    if r.month == want then return r.this end
+    if r.month == nowMonth then
+        if r.lastMonth ~= want then return {} end
+        -- all time less this month: what they had when the launch month ended
+        if want == launch then return Minus(r.all, r.this) end
+        return r.last
+    end
+    if r.month == want then return want == launch and r.all or r.this end
     return {}
 end
 
@@ -303,6 +313,7 @@ end
 -- kills add together). Members left out by officers or whose numbers break
 -- the limits aren't listed.
 -- { people, sharing, noAddon, hidden, flagged, totals, boards = { key = { { e, n, key }... } } }
+-- plus peon = { at } (NGM Peon's) or shared = { at, by } (an officer's copy's).
 function HF:Boards(period, month)
     month = month or HF.Month()
     -- a guild using NGM Peon shows NGM Peon's boards (Blizzard's numbers for
@@ -310,7 +321,18 @@ function HF:Boards(period, month)
     if self:PeonCrowns() then
         local peon = self:PeonBoards(period, month)
         if peon then return peon end
+    else
+        -- without NGM Peon: the board officers' copies share, the same for everyone
+        local shared = self:SharedBoards(period, month)
+        if shared then return shared end
     end
+    return self:OwnBoards(period, month)
+end
+
+-- The boards worked out from this copy's own records (what each member's
+-- addon shared), plus left = { [person] = true } for those left out.
+function HF:OwnBoards(period, month)
+    month = month or HF.Month()
     local groups, order = {}, {}
     for _, e in ipairs(ns.Roster.members) do
         local key = e.main or e.full
@@ -324,7 +346,7 @@ function HF:Boards(period, month)
         if e.full == key then g.e = e end
     end
     local wins = self:Wins(period, month)
-    local boards, totals, sharing, noAddon, hidden, flagged = {}, {}, 0, 0, 0, 0
+    local boards, totals, sharing, noAddon, hidden, flagged, left = {}, {}, 0, 0, 0, 0, {}
     for _, s in ipairs(self.STATS) do boards[s.key] = {} end
     for _, key in ipairs(order) do
         local g = groups[key]
@@ -336,9 +358,9 @@ function HF:Boards(period, month)
             if self:Implausible(c.full) then isFlagged = true end
         end
         if isHidden then
-            hidden = hidden + 1
+            hidden, left[key] = hidden + 1, true
         elseif isFlagged then
-            flagged = flagged + 1
+            flagged, left[key] = flagged + 1, true
         else
             for _, c in ipairs(g.chars) do
                 local t = self:For(c.full, period, month)
@@ -368,7 +390,7 @@ function HF:Boards(period, month)
         end)
     end
     return { people = #order, sharing = sharing, noAddon = noAddon, hidden = hidden, flagged = flagged,
-             totals = totals, boards = boards }
+             totals = totals, boards = boards, left = left }
 end
 
 -- NGM Peon's boards for a period (HB:<period>, shared by the officer who
@@ -388,6 +410,10 @@ function HF.DecodePeon(v)
             end
             if key == "_t" then
                 for _, x in ipairs(entries) do out.totals[x.name] = x.n end
+            elseif key == "_s" then
+                -- who worked it out: "_s:addon~1,sharing~<n>" (an officer's copy)
+                out.source = {}
+                for _, x in ipairs(entries) do out.source[x.name] = x.n end
             else
                 out.boards[key] = entries
             end
@@ -403,8 +429,15 @@ function HF:PeonBoards(period, month)
     local v, at = rec and rec.v, rec and rec.t
     if (not v or v == "") and mine and mine[period] then v, at = mine[period], mine.at end
     local d = HF.DecodePeon(v)
-    if not d then return nil end
+    if not d or d.source then return nil end
     if period ~= "all" and d.month ~= month then return nil end
+    local out = self:FromDecoded(d)
+    out.peon = { at = at }
+    return out
+end
+
+-- A decoded board (DecodePeon's shape) in HF:Boards' shape.
+function HF:FromDecoded(d)
     local boards = {}
     local people = {}
     for _, s in ipairs(self.STATS) do
@@ -424,7 +457,114 @@ function HF:PeonBoards(period, month)
     for _ in pairs(groups) do n = n + 1 end
     local shown = 0
     for _ in pairs(people) do shown = shown + 1 end
-    return { people = n, sharing = shown, noAddon = 0, hidden = 0, flagged = 0, totals = d.totals, boards = boards, peon = { at = at } }
+    return { people = n, sharing = shown, noAddon = 0, hidden = 0, flagged = 0, totals = d.totals, boards = boards }
+end
+
+------------------------------------------------------------------------
+-- One board for everyone, without NGM Peon. Each copy used to work out the
+-- boards from its own copy of guildmates' records, so members missing some
+-- records (offline when they came, or on a copy too old to sync) saw other
+-- winners. Now officers' copies share the board, in NGM Peon's HB format
+-- plus a "_s" card, and every copy shows that. Numbers in a period only
+-- ever go up, so a copy merges what's shared with its own (the higher
+-- number for each person wins): officers missing different records end up
+-- with the same board, and one with fewer records can't lower it.
+------------------------------------------------------------------------
+HF.SHARE_TOP = 5            -- people per card
+HF.SHARE_EVERY = 600        -- an officer's copy checks every 10 minutes
+HF.SHARE_PERIODS = { "all", "month", "last" }
+
+function HF:SharedBoards(period, month)
+    local rec = ns.Sync:Get("HB:" .. period)
+    local d = rec and HF.DecodePeon(rec.v)
+    if not (d and d.source and d.source.addon) or d.month ~= month then return nil end
+    local out = self:FromDecoded(d)
+    out.sharing = d.source.sharing or out.sharing
+    -- who has no addon is the game's roster: the same for everyone
+    local own = self:OwnBoards(period, month)
+    out.noAddon, out.hidden, out.flagged = own.noAddon, own.hidden, own.flagged
+    out.shared = { at = rec.t, by = rec.a }
+    return out
+end
+
+local function Sorted(map, top)
+    local list = {}
+    for name, n in pairs(map) do list[#list + 1] = { name = name, n = n } end
+    table.sort(list, function(a, b)
+        if a.n ~= b.n then return a.n > b.n end
+        return a.name < b.name
+    end)
+    for i = #list, top + 1, -1 do list[i] = nil end
+    return list
+end
+
+-- This copy's boards for a period in DecodePeon's shape, merged with
+-- `old` (the shared one, same month): the higher number per person.
+function HF:MergedBoards(period, month, old)
+    local own = self:OwnBoards(period, month)
+    local d = { month = month, boards = {}, totals = {}, source = { addon = 1, sharing = own.sharing } }
+    for _, s in ipairs(self.STATS) do
+        local best = {}
+        for _, x in ipairs(old and old.boards[s.key] or {}) do
+            if not own.left[x.name] then best[x.name] = x.n end
+        end
+        for _, p in ipairs(own.boards[s.key] or {}) do
+            if p.n > (best[p.key] or 0) then best[p.key] = p.n end
+        end
+        d.boards[s.key] = Sorted(best, self.SHARE_TOP)
+    end
+    for k, n in pairs(own.totals) do d.totals[k] = n end
+    for k, n in pairs(old and old.totals or {}) do
+        if n > (d.totals[k] or 0) then d.totals[k] = n end
+    end
+    if old and old.source and (old.source.sharing or 0) > d.source.sharing then
+        d.source.sharing = old.source.sharing
+    end
+    return d
+end
+
+-- DecodePeon's shape -> the HB value. Names can't hold the separators
+-- (character names never do); anything that does is left out.
+function HF.EncodeShared(d)
+    local B36 = ns.Sync.Base36
+    local cards = {}
+    local function Card(key, list)
+        local parts = {}
+        for _, x in ipairs(list) do
+            if not x.name:find("[,~/:;|\t\n]") then parts[#parts + 1] = x.name .. "~" .. B36(math.floor(x.n)) end
+        end
+        cards[#cards + 1] = key .. ":" .. table.concat(parts, ",")
+    end
+    for _, s in ipairs(HF.STATS) do Card(s.key, d.boards[s.key] or {}) end
+    local totals = {}
+    for _, s in ipairs(HF.STATS) do
+        if d.totals[s.key] then totals[#totals + 1] = { name = s.key, n = d.totals[s.key] } end
+    end
+    Card("_t", totals)
+    Card("_s", { { name = "addon", n = 1 }, { name = "sharing", n = d.source.sharing or 0 } })
+    return tostring(d.month) .. ";" .. table.concat(cards, "/")
+end
+
+-- Officers' copies, in a guild without NGM Peon: shares each period's board
+-- when it changed. Returns how many were written.
+function HF:ShareBoards(month)
+    if not (ns.IsOfficer() and ns.Sync.readyFor and IsInGuild()) or self:PeonCrowns() then return 0 end
+    month = month or HF.Month()
+    local wrote = 0
+    for _, period in ipairs(self.SHARE_PERIODS) do
+        local key = "HB:" .. period
+        local rec = ns.Sync:Get(key)
+        local old = rec and HF.DecodePeon(rec.v)
+        if not (old and old.source and old.source.addon and old.month == month) then old = nil end
+        local d = self:MergedBoards(period, month, old)
+        local any = false
+        for _, list in pairs(d.boards) do if #list > 0 then any = true break end end
+        local v = HF.EncodeShared(d)
+        if (any or old) and v ~= (rec and rec.v) and ns.Sync:CanWrite(key) and ns.Sync:Set(key, v) then
+            wrote = wrote + 1
+        end
+    end
+    return wrote
 end
 
 -- Last month's champion of each card: winner takes all, and a tie makes
@@ -495,6 +635,8 @@ function HF:RecordChampions(now)
     now = now or ns.DB:Now()
     if not (ns.IsOfficer() and ns.Sync.readyFor) or self:PeonCrowns() then return false end
     if tonumber(date("!%d", now)) < self.RECORD_ON_DAY then return false end
+    -- crown from the board everyone sees, brought up to date first
+    self:ShareBoards(HF.Month(now))
     local last = HF.PrevMonth(HF.Month(now))
     local key = "HW:" .. last
     if ns.Sync:Get(key) then return self:Recount(now) end -- already crowned: maybe a recount
@@ -849,6 +991,10 @@ function HF:Init()
     -- together don't both crown: the first one's record reaches the other)
     C_Timer.After(120 + math.random() * 60, record)
     C_Timer.NewTicker(3600, record)
+    -- officers, without NGM Peon: the one board everyone sees
+    local share = ns.Safe(function() HF:ShareBoards() end, "HallOfFame")
+    C_Timer.After(90 + math.random() * 20, share)
+    C_Timer.NewTicker(self.SHARE_EVERY, share)
     -- recount day: re-check soon after guildmates' late numbers arrive
     ns:On("HALL_OF_FAME_CHANGED", function()
         if ns.IsOfficer() and HF:InRecount() then ns.Debounce("hofrecount", 60, record) end
