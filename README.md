@@ -43,7 +43,9 @@ and connect it on NGM Peon's dashboard.
   month. With NGM Peon, the whole guild's, the same as on Discord.
 - **Upcoming Events** — the guild's dungeons, raids and nights from NGM
   Peon: when, who's coming and where to sign up in Discord. A new one is
-  announced in your chat when it arrives.
+  announced in your chat when it arrives. Below them, the game's own
+  calendar: the daily and weekly resets, and holidays for the next 30 days
+  (read from the game, so they're there without NGM Peon too).
 - **Guild Feed** — in your own chat (never sent): new events from NGM Peon,
   and guildmates' level-ups ("Pip reached level 31!"), each with an optional sound.
 - **Profiles** — spec, roles, professions with skill levels, Discord,
@@ -330,6 +332,7 @@ A note on trust: every copy of the NGM Addon checks each change it receives agai
 | `/ngm overview` | open the Overview tab |
 | `/ngm hof` | open the Hall of Fame tab |
 | `/ngm events` | open the Upcoming Events tab |
+| `/ngm events check` | show what the game's calendar gives: resets, holidays and how many entries it found |
 | `/ngm craft <name>` | who in the guild can craft it (the Who Can Craft? window) |
 | `/ngm recruit` | open the Recruitment tab |
 | `/ngm options` | open the options |

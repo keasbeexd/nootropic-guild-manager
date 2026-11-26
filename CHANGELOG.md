@@ -5,6 +5,8 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 ## 3.1.0
 
 - **Resets and holidays on Upcoming Events.** The tab now shows when the next daily reset is, at the top, and lists the next weekly reset and the game's holidays for the next 30 days below NGM Peon's events, each with its times (your own) and the game's description. The NGM Addon reads them from the game itself, so they're there without NGM Peon too.
+- **Resets and holidays in Discord.** The Guild Master's and officers' NGM Addon now sends them to NGM Peon too (through NGM Desktop, or `/ngm discord`). On the dashboard, Guild settings, **Resets and holidays**, NGM Peon can add them to your server's Events list and post in a channel as each one starts. The dashboard's Upcoming Events tab lists them as the game does.
+- `/ngm events check` shows what the game's calendar gives: resets, holidays and how many entries it found.
 
 ## 3.0.16
 
