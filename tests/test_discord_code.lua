@@ -68,6 +68,13 @@ local without = DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite
     { since = 0, upto = 1, records = {} })
 assert(not DC.Base64UrlDecode(without:match("^NGM2%.([^.]+)%.")):find("accent", 1, true), "tabard unknown: no line")
 
+-- events made in game and sign-ups, with the version line (3.1): the same example as ngm-hub's test/gameevents.test.ts
+assert(DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite = true }, { name = "M", officer = false, invite = false } },
+    { since = 0, upto = 1, version = "3.1.0", records = {
+        { key = "EG:a1", v = "dungeon;tpb7s0;3c;Rae;;Strat;Bring potions", t = 1795000000, a = "Rae" },
+        { key = "ES:ga1:Ann", v = "healer;Annalt", t = 1795000100, a = "Annalt" },
+    } }) == "NGM2.dXMKRwpPSTpHTQotLTpNCgpzaW5jZQkwCnVwdG8JMQp2ZXIJMy4xLjAKUglFRzphMQl0b3AydjQJUmFlCWR1bmdlb247dHBiN3MwOzNjO1JhZTs7U3RyYXQ7QnJpbmcgcG90aW9ucwpSCUVTOmdhMTpBbm4JdG9wMnh3CUFubmFsdAloZWFsZXI7QW5uYWx0.97692c39")
+
 -- the game's resets and holidays (3.1): the same example as ngm-hub's test/gamecal.test.ts
 local withCal = DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite = true }, { name = "M", officer = false, invite = false } },
     { since = 0, upto = 1, records = {}, calendar = { daily = 1795600800, weekly = 1796032800, holidays = {
