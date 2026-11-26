@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.1.0
+
+- **Resets and holidays on Upcoming Events.** The tab now shows when the next daily reset is, at the top, and lists the next weekly reset and the game's holidays for the next 30 days below NGM Peon's events, each with its times (your own) and the game's description. The NGM Addon reads them from the game itself, so they're there without NGM Peon too.
+
 ## 3.0.16
 
 - **One Hall of Fame for everyone, without NGM Peon.** Each member's NGM Addon used to work out the boards from its own copy of guildmates' numbers, so members missing some of them (offline when they came in, or on a version too old to sync) saw different leaders and winners. Now officers' NGM Addons put the boards together every 10 minutes and share them, and everyone sees that same board, with who put it together and when. An officer missing some numbers can't lower it: the higher number for each person wins. Champions are crowned from it too.

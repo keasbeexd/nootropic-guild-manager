@@ -3,7 +3,9 @@
     The guild's upcoming events from NGM Peon (Services/Events.lua), as the
     dashboard's Upcoming Events tab shows them: when (your own time), what,
     how long, how many are coming, and where to sign up (the Discord channel
-    and server). Each in a box, as the dashboard's.
+    and server). Each in a box, as the dashboard's. Below them, what the
+    game itself has coming (Services/GameCalendar.lua): the daily reset as
+    a line at the top, the weekly reset and holidays in boxes of their own.
 ]]
 local _, ns = ...
 local W = ns.Widgets
@@ -62,9 +64,42 @@ function EV:Build(frame)
     self.empty:SetJustifyH("LEFT")
     self.note = content:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
     self.note:SetJustifyH("LEFT")
+    self.daily = content:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
+    self.daily:SetJustifyH("LEFT")
+    self.gameHeader = content:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
+    self.gameHeader:SetJustifyH("LEFT")
+    self.gameCards = {}
 
-    page:SetScript("OnShow", function() EV:Refresh() end)
+    page:SetScript("OnShow", function()
+        if ns.GameCalendar then ns.GameCalendar:Refresh() end
+        EV:Refresh()
+    end)
     page:SetScript("OnSizeChanged", function() if page:IsVisible() then EV:Refresh() end end)
+    ns:On("EVENTS_CHANGED", function() EV:Refresh() end)
+    ns:On("GAME_CALENDAR_CHANGED", function() EV:Refresh() end)
+end
+
+-- One of the game's own: the weekly reset or a holiday. No sign-ups.
+local function FillGameCard(c, item, inner, now)
+    local GC = ns.GameCalendar
+    c.Title:SetText(ns.Theme.Upper(item.title ~= "" and item.title or "Holiday"))
+    c.Coming:SetText("")
+    if item.kind == "weekly" then
+        c.When:SetText(("%s  " .. GRAY .. "·|r  Reset  " .. GRAY .. "·|r  in %s"):format(date("%a %d %b, %H:%M", item.starts), GC.Short(item.starts - now)))
+    elseif item.starts <= now then
+        c.When:SetText(("On now, until %s  " .. GRAY .. "·|r  Holiday"):format(date("%a %d %b, %H:%M", item.ends)))
+    else
+        c.When:SetText(("%s to %s  " .. GRAY .. "·|r  Holiday"):format(date("%a %d %b, %H:%M", item.starts), date("%a %d %b, %H:%M", item.ends)))
+    end
+    c.Text:SetWidth(inner - 2 * PAD)
+    c.Text:SetText(item.description or "")
+    c.Text:SetShown((item.description or "") ~= "")
+    c.Where:SetText("")
+    c.Where:Hide()
+    local h = PAD + c.Title:GetStringHeight() + 6 + c.When:GetStringHeight()
+        + (c.Text:IsShown() and (6 + c.Text:GetStringHeight()) or 0) + PAD
+    c:SetHeight(h)
+    return h
 end
 
 function EV:Refresh()
@@ -74,9 +109,22 @@ function EV:Refresh()
     local width = math.max(300, math.floor(self.scroll:GetWidth()))
     local inner = width - 2 * EDGE
     local y = EDGE
+    local now = ns.DB:Now()
+    local game, daily = {}, nil
+    if ns.GameCalendar then game, daily = ns.GameCalendar:Upcoming(now) end
+    self.daily:SetShown(daily ~= nil)
+    if daily then
+        self.daily:ClearAllPoints()
+        self.daily:SetPoint("TOPLEFT", EDGE, -y)
+        self.daily:SetWidth(inner)
+        self.daily:SetText(("Daily reset in " .. ns.GOLD .. "%s|r  " .. GRAY .. "·|r  %s"):format(ns.GameCalendar.Short(daily - now), date("%H:%M", daily)))
+        y = y + self.daily:GetStringHeight() + GAP
+    end
     self.empty:SetShown(#list == 0)
+    self.empty:ClearAllPoints()
+    self.empty:SetPoint("TOPLEFT", EDGE, -y)
     self.empty:SetWidth(inner)
-    self.empty:SetText("No upcoming events yet. Events are created on the " .. ns.GOLD .. "NGM Peon dashboard|r (/ngm dashboard in Discord, Create Events tab), and reach the game when an officer brings in NGM Peon's code (" .. ns.GOLD .. "/ngm peon|r).")
+    self.empty:SetText("No upcoming events from NGM Peon yet. They're created on the " .. ns.GOLD .. "NGM Peon dashboard|r (/ngm dashboard in Discord, Create Events tab), and reach the game when an officer brings in NGM Peon's code (" .. ns.GOLD .. "/ngm peon|r).")
     for i, ev in ipairs(list) do
         local c = self.cards[i] or Card(self.content)
         self.cards[i] = c
@@ -104,8 +152,28 @@ function EV:Refresh()
         y = y + h + GAP
     end
     for i = #list + 1, #self.cards do self.cards[i]:Hide() end
+    if #list == 0 then y = y + self.empty:GetStringHeight() + GAP end
+    -- the game's own: weekly reset and holidays
+    self.gameHeader:SetShown(#game > 0)
+    if #game > 0 then
+        self.gameHeader:ClearAllPoints()
+        self.gameHeader:SetPoint("TOPLEFT", EDGE, -y)
+        self.gameHeader:SetText(ns.Theme.Upper("Resets and holidays"))
+        y = y + self.gameHeader:GetStringHeight() + 8
+    end
+    for i, item in ipairs(game) do
+        local c = self.gameCards[i] or Card(self.content)
+        self.gameCards[i] = c
+        c:ClearAllPoints()
+        c:SetPoint("TOPLEFT", EDGE, -y)
+        c:SetWidth(inner)
+        local h = FillGameCard(c, item, inner, now)
+        c:Show()
+        y = y + h + GAP
+    end
+    for i = #game + 1, #self.gameCards do self.gameCards[i]:Hide() end
     self.note:ClearAllPoints()
-    self.note:SetPoint("TOPLEFT", EDGE, -(#list == 0 and (EDGE + 30) or y))
+    self.note:SetPoint("TOPLEFT", EDGE, -y)
     self.note:SetWidth(inner)
     self.note:SetText("Times are your own. Sign up in Discord, with the buttons on each event's post. New ones reach the game when an officer brings in NGM Peon's code (" .. ns.GOLD .. "/ngm peon|r).")
     self.content:SetSize(width, y + 40)
