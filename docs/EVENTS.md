@@ -47,6 +47,8 @@ Every copy judges each record by these rules, as for all records.
                        picked: the character brought ("" = the member's main)
                        written by the member themselves only
     GS:evranks         who may create, from NGM Peon (above)
+    LK:<member>        "1": this character is linked to NGM Peon (written by
+                       NGM Peon only; "" = unlinked)
 
 - `EG` may be written by the creator (if allowed to create that kind) and by
   officers; edits keep the creator. Past events stop being editable once
@@ -70,10 +72,11 @@ only their own.
   creator's rank against Event Settings (the creator's character must be
   linked: that's how NGM Peon knows the rank, and whose event it is). Each
   `EG` id is posted once (events.game_id).
-- `ES`: the sign-up of a linked member counts on the Discord post (as the
-  character picked, or their main). Unlinked members' in-game sign-ups count
-  in game only, and the card says so: "Link your characters on Discord to
-  count on the post".
+- `ES`: the sign-up counts on the Discord post (as the character picked, or
+  their main). Only linked characters can sign up at all in a guild with NGM
+  Peon, in game as on Discord: a character without `LK` gets no sign-up
+  buttons, but "Link your characters to sign up: type /ngm link in Discord".
+  NGM Peon refuses an `ES` from a character that isn't linked.
 
 **NGM Peon to game (NGMP1, NGM Desktop or `/ngm peon`):**
 
@@ -83,10 +86,14 @@ only their own.
 - Discord sign-ups come back as `ES:p<id>:<member>` records written by NGM
   Peon (each linked member's main as the member name), so the game shows who
   signed up where, whichever side they used. Newest wins on both sides.
-- `GS:evranks` as an `R` line.
+- `GS:evranks` as an `R` line, and `LK:<member>` for every linked character
+  (cleared when they unlink). After linking, in-game sign-ups open with the
+  next update from NGM Peon; Discord's buttons work at once.
 
-Events made on the dashboard stay edited and cancelled on the dashboard;
-the in-game Edit and Cancel are for events made in game.
+Each event is edited where it was made: events made on the dashboard show
+"Made on the dashboard: edit it there" in game instead of Edit and Cancel,
+and events made in game show "Made in game: edit it there" on the
+dashboard's Create Events tab.
 
 ## The window
 
