@@ -328,6 +328,8 @@ function S:CanWrite(key)
     local def = S.TYPES[typ]
     if def.selfOnly then return member == Me() end
     if def.anyone then return IsInGuild() end -- (DN removal is checked in RC:RemoveDNW)
+    -- events made in game and sign-ups: what's in them is checked too (Services/Events.lua)
+    if typ == "EG" or typ == "ES" or typ == "LK" then return self:MayAuthor(Me(), typ, member, rest) end
     -- your own profile: the Guild Master decides (everyone by default)
     if def.self and member == Me() and ns.DB:HasPerm("ownprofile") then return true end
     -- permissions only the Guild Master changes

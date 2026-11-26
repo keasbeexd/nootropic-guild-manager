@@ -62,6 +62,7 @@ UI\InvitePrompt.lua
 UI\DiscordCodeView.lua
 UI\PeonPasteView.lua
 UI\EventsView.lua
+UI\EventForm.lua
 UI\MessagesView.lua
 UI\AuditView.lua
 UI\MainFrame.lua

@@ -90,4 +90,25 @@ check("NGM Peon's copy of a Discord sign-up", rec("Mira Officer-R", "ES:p42:Ann 
 -- kept until 7 days after the event starts
 local r = guild.sync.guild["EG:b1"]
 check("an event expires 7 days after it starts", S:ExpiresAt("EG:b1", r), NOW + 86400 + 7 * 86400)
+-- the Create form's service (Services/Events.lua): as an officer, then as a member
+date, time = os.date, os.time
+assert(loadfile(ROOT .. "/Services/Events.lua"))("NGM", ns)
+local E = ns.Events
+ns.PlayerFullName = function() return "Gm Boss-R" end
+check("the Guild Master may create every kind", table.concat(E:KindsICanCreate(), ","), "dungeon,raid,event")
+local f = { kind = "raid", starts = NOW + 3600, minutes = 120, title = "Onyxia; then MC", description = "Line one\nline two |cffff0000x" }
+local id = assert(E:Create(f))
+local made = S.ParseGameEvent(guild.sync.guild["EG:" .. id].v)
+check("created: title without ;", made.title, "Onyxia, then MC")
+check("one line, no escape codes", made.description, "Line one line two /cffff0000x")
+check("it's listed for everyone, as made in game", (function() for _, e in ipairs(E:List()) do if e.id == id then return e.source .. ":" .. e.creator end end end)(), "game:Gm Boss-R")
+check("a past time is refused", select(2, E:Create({ kind = "raid", starts = NOW - 60, minutes = 120, title = "Late" })), "Pick a time that's still to come.")
+check("an odd length is refused", select(2, E:Create({ kind = "raid", starts = NOW + 60, minutes = 45, title = "X" })), "Pick a length.")
+check("edited (the kind stays)", (E:Edit(id, { kind = "dungeon", starts = NOW + 7200, minutes = 60, title = "Onyxia" })), true)
+check("...kind and creator kept", S.ParseGameEvent(guild.sync.guild["EG:" .. id].v).kind .. ":" .. S.ParseGameEvent(guild.sync.guild["EG:" .. id].v).creator, "raid:Gm Boss-R")
+ns.PlayerFullName = function() return "Ann Member-R" end
+check("a member may not edit it", select(2, E:Edit(id, { starts = NOW + 7200, minutes = 60, title = "Mine" })), "Only its creator or an officer can change it.")
+ns.PlayerFullName = function() return "Gm Boss-R" end
+check("cancelled", (E:Cancel(id)), true)
+check("and gone from the list", (function() for _, e in ipairs(E:List()) do if e.id == id then return true end end return false end)(), false)
 print("OK")

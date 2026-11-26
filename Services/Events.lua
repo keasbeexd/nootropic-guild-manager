@@ -16,6 +16,16 @@
       ns.Events:Announce()     a chat line for each event this character
                                hasn't heard of (Options, Guild Feed), however
                                it arrived: NGM Desktop, /ngm peon or guild sync
+
+    Events made in game (3.1, docs/EVENTS.md): EG:<id> records, shared with
+    the guild by sync at once; with NGM Peon, also posted in Discord.
+
+      ns.Events:KindsICanCreate()   { "dungeon", ... } for the Create form
+      ns.Events:Create(fields)      -> id, or nil and why
+      ns.Events:Edit(id, fields)    -> true, or nil and why
+      ns.Events:Cancel(id)          -> true, or nil and why
+      ns.Events:MayEdit(ev)         this character may edit or cancel it
+    fields: { kind, starts, minutes, title, description }
 ]]
 local _, ns = ...
 local E = {}
@@ -33,6 +43,9 @@ local function B36(n)
     return s
 end
 local function Clean(s) return ((s or ""):gsub("[;\t\n]", ",")) end
+-- one key per listed event, whichever side made it (NGM Peon's ids are numbers)
+local function ListKey(ev) return ev.source == "game" and ("g" .. ev.id) or B36(ev.id) end
+E.ListKey = ListKey
 
 function E.Value(ev)
     return table.concat({ ev.kind, B36(ev.starts), B36(ev.minutes), B36(ev.coming or 0), Clean(ev.channel), Clean(ev.server), Clean(ev.title), Clean(ev.description) }, ";")
@@ -62,7 +75,7 @@ function E:Take(events)
     local key = function(ev) return "EV:" .. B36(ev.id) end
     -- what was listed before, to say what's new and what's gone
     local before = {}
-    for _, ev in ipairs(self:List()) do before[B36(ev.id)] = ev.starts end
+    for _, ev in ipairs(self:List()) do before[ListKey(ev)] = ev.starts end
     if ns.Sync and ns.Sync.CanWrite and ns.Sync:CanWrite("EV:0") then
         -- an officer: for the whole guild
         local wanted = {}
@@ -94,7 +107,7 @@ function E:Take(events)
     local list = self:List()
     local added, after = 0, {}
     for _, ev in ipairs(list) do
-        local id = B36(ev.id)
+        local id = ListKey(ev)
         after[id] = true
         if not before[id] then added = added + 1 end
     end
@@ -118,9 +131,95 @@ function E:List()
         local id = B36(ev.id)
         if not byId[id] and ev.starts > now then byId[id] = ev end
     end
-    for _, ev in pairs(byId) do list[#list + 1] = ev end
+    for _, ev in pairs(byId) do ev.source = "peon" list[#list + 1] = ev end
+    -- made in game (shared through guild sync)
+    for k, rec in pairs((ns.Sync and ns.Sync.Store and ns.Sync:Store("guild")) or {}) do
+        if k:sub(1, 3) == "EG:" then
+            local ev = ns.Sync.ParseGameEvent(rec.v)
+            if ev and not ev.cancelled and ev.starts > now then
+                ev.id, ev.source, ev.channel, ev.server, ev.coming = k:sub(4), "game", "", "", 0
+                list[#list + 1] = ev
+            end
+        end
+    end
     table.sort(list, function(a, b) return a.starts < b.starts end)
     return list
+end
+
+------------------------------------------------------------------------
+-- Events made in game (EG records)
+------------------------------------------------------------------------
+E.DURATIONS = { 30, 60, 90, 120, 180, 240, 300, 360 } -- minutes, as NGM Peon's form (ngm-hub src/events/model.ts)
+E.MAX_TITLE, E.MAX_DESCRIPTION = 100, 400
+
+-- text for a record: one line, no ";" in the title (the value's separator)
+local function OneLine(s, max) return ((s or ""):gsub("[\r\n\t]+", " "):gsub("|", "/"):gsub("^%s+", ""):gsub("%s+$", "")):sub(1, max) end
+
+function E.GameValue(ev)
+    return table.concat({ ev.kind, B36(ev.starts), B36(ev.minutes), ev.creator, ev.cancelled and "x" or "",
+        (OneLine(ev.title, E.MAX_TITLE):gsub(";", ",")), OneLine(ev.description, E.MAX_DESCRIPTION) }, ";")
+end
+
+function E:KindsICanCreate()
+    local out = {}
+    for _, k in ipairs(ns.Sync.EVENT_KINDS) do
+        if ns.Sync:MayCreateEvent(ns.PlayerFullName(), k) then out[#out + 1] = k end
+    end
+    return out
+end
+
+local function Check(f)
+    if not (f.kind == "dungeon" or f.kind == "raid" or f.kind == "event") then return "Pick Dungeon, Raid or Event." end
+    if OneLine(f.title, E.MAX_TITLE) == "" then return "Give it a title." end
+    if not f.starts or f.starts <= ns.DB:Now() then return "Pick a time that's still to come." end
+    local okLength = false
+    for _, m in ipairs(E.DURATIONS) do if m == f.minutes then okLength = true end end
+    if not okLength then return "Pick a length." end
+end
+
+local function NewId()
+    return B36(ns.DB:Now()) .. B36(math.random(36, 36 * 36 - 1))
+end
+
+function E:Create(f)
+    local why = Check(f)
+    if why then return nil, why end
+    local me = ns.PlayerFullName()
+    if not ns.Sync:MayCreateEvent(me, f.kind) then return nil, "Your rank can't create that kind of event." end
+    local id = NewId()
+    local ok, err = ns.Sync:Set("EG:" .. id, E.GameValue({ kind = f.kind, starts = f.starts, minutes = f.minutes, creator = me, title = f.title, description = f.description }))
+    if not ok then return nil, err end
+    return id
+end
+
+local function Held(id)
+    local rec = (ns.Sync:Store("guild") or {})["EG:" .. id]
+    return rec and ns.Sync.ParseGameEvent(rec.v)
+end
+
+function E:MayEdit(ev)
+    if not ev or ev.source ~= "game" then return false end
+    local me = ns.PlayerFullName()
+    return ns.Sync.Same(me, ev.creator) or ns.Sync:EventManager(me)
+end
+
+function E:Edit(id, f)
+    local was = Held(id)
+    if not was or was.cancelled then return nil, "That event is gone." end
+    if not self:MayEdit({ source = "game", creator = was.creator }) then return nil, "Only its creator or an officer can change it." end
+    if was.starts <= ns.DB:Now() then return nil, "It has started: it can't be changed now." end
+    f.kind = was.kind -- the kind stays (as on the dashboard)
+    local why = Check(f)
+    if why then return nil, why end
+    return ns.Sync:Set("EG:" .. id, E.GameValue({ kind = was.kind, starts = f.starts, minutes = f.minutes, creator = was.creator, title = f.title, description = f.description }))
+end
+
+function E:Cancel(id)
+    local was = Held(id)
+    if not was or was.cancelled then return nil, "That event is gone." end
+    if not self:MayEdit({ source = "game", creator = was.creator }) then return nil, "Only its creator or an officer can cancel it." end
+    was.cancelled = true
+    return ns.Sync:Set("EG:" .. id, E.GameValue(was))
 end
 
 local KIND = { raid = "raid", dungeon = "dungeon", event = "event" }
@@ -137,7 +236,7 @@ function E:Announce()
     local on = ns.DB:Settings().eventNotices ~= false
     local told = 0
     for _, ev in ipairs(list) do
-        local id = B36(ev.id)
+        local id = ListKey(ev)
         if not seen[id] then
             seen[id] = ev.starts
             if on and not first and told < 5 then

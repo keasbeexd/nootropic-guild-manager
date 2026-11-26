@@ -36,6 +36,10 @@ local function Card(parent)
     c.Text:SetJustifyH("LEFT")
     c.Where = c:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     c.Where:SetJustifyH("LEFT")
+    -- events made in game: Edit (its creator, or a manager)
+    c.Edit = W.Button(c, "Edit", 70, 22)
+    c.Edit:SetPoint("BOTTOMRIGHT", -PAD + 4, PAD - 6)
+    c.Edit:Hide()
     return c
 end
 
@@ -47,6 +51,11 @@ function EV:Build(frame)
 
     self.title = page:CreateFontString(nil, "OVERLAY", "NGMFontLabel")
     self.title:SetPoint("TOPLEFT", frame, "TOPLEFT", 80, -37)
+    -- Create (3.1): for ranks that may create some kind of event
+    self.create = W.Button(page, "Create Event", 120, 22)
+    self.create:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -32)
+    self.create:SetScript("OnClick", function() ns.EventForm:Open() end)
+    W.Tooltip(self.create, "Create an event", "Your guild sees it at once. With NGM Peon, it's posted in Discord with your next update.")
 
     local inset = frame.Inset
     local scroll = W.TryCreate("ScrollFrame", "NootropicGMEventsScroll", page, "ScrollFrameTemplate", "UIPanelScrollFrameTemplate")
@@ -106,6 +115,8 @@ function EV:Refresh()
     if not (self.page and self.page:IsVisible()) then return end
     local list = ns.Events:List()
     self.title:SetText(("Upcoming Events  " .. GRAY .. "- %d in the next 30 days|r"):format(#list))
+    self.create:SetShown(#ns.Events:KindsICanCreate() > 0)
+    local manager = ns.Sync:EventManager(ns.PlayerFullName())
     local width = math.max(300, math.floor(self.scroll:GetWidth()))
     local inner = width - 2 * EDGE
     local y = EDGE
@@ -124,7 +135,9 @@ function EV:Refresh()
     self.empty:ClearAllPoints()
     self.empty:SetPoint("TOPLEFT", EDGE, -y)
     self.empty:SetWidth(inner)
-    self.empty:SetText("No upcoming events from NGM Peon yet. They're created on the " .. ns.GOLD .. "NGM Peon dashboard|r (/ngm dashboard in Discord, Create Events tab), and reach the game when an officer brings in NGM Peon's code (" .. ns.GOLD .. "/ngm peon|r).")
+    self.empty:SetText(ns.Sync:PeonGuild()
+        and ("No upcoming events yet. Create one here, or on the " .. ns.GOLD .. "NGM Peon dashboard|r (/ngm dashboard in Discord, Create Events tab).")
+        or "No upcoming events yet. The Guild Master and officers can create one here.")
     for i, ev in ipairs(list) do
         local c = self.cards[i] or Card(self.content)
         self.cards[i] = c
@@ -141,12 +154,24 @@ function EV:Refresh()
         c.Where:ClearAllPoints()
         c.Where:SetPoint("TOPLEFT", c.Text:IsShown() and c.Text or c.When, "BOTTOMLEFT", 0, -8)
         c.Where:SetWidth(inner - 2 * PAD)
-        -- sign-ups are in Discord only: one list per event
-        local where = ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or ""
-        local server = ev.server ~= "" and (" " .. GRAY .. "on|r " .. ev.server) or ""
-        c.Where:SetText(ns.GOLD .. "Sign up in Discord|r" .. where .. server)
+        local editable = ev.source == "game" and ns.Events:MayEdit(ev)
+        c.Where:SetWidth(inner - 2 * PAD - (editable and 80 or 0))
+        if ev.source == "game" then
+            -- made in game: who made it; with NGM Peon, posted with the next update
+            c.Coming:SetText("")
+            c.Where:SetText(("Made in game by %s%s"):format(ns.ShortName(ev.creator),
+                ns.Sync:PeonGuild() and ("  " .. GRAY .. "·|r  NGM Peon posts it with the next update") or ""))
+        else
+            -- sign-ups are in Discord only: one list per event
+            local where = ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or ""
+            local server = ev.server ~= "" and (" " .. GRAY .. "on|r " .. ev.server) or ""
+            c.Where:SetText(ns.GOLD .. "Sign up in Discord|r" .. where .. server
+                .. (manager and ("\n" .. GRAY .. "Made on the dashboard: edit it there.|r") or ""))
+        end
+        c.Edit:SetShown(editable)
+        c.Edit:SetScript("OnClick", function() ns.EventForm:Open(ev) end)
         local h = PAD + c.Title:GetStringHeight() + 6 + c.When:GetStringHeight()
-            + (c.Text:IsShown() and (6 + c.Text:GetStringHeight()) or 0) + 8 + c.Where:GetStringHeight() + PAD
+            + (c.Text:IsShown() and (6 + c.Text:GetStringHeight()) or 0) + 8 + math.max(c.Where:GetStringHeight(), editable and 16 or 0) + PAD
         c:SetHeight(h)
         c:Show()
         y = y + h + GAP
