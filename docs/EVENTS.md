@@ -49,6 +49,10 @@ Every copy judges each record by these rules, as for all records.
     GS:evranks         who may create, from NGM Peon (above)
     LK:<member>        "1": this character is linked to NGM Peon (written by
                        NGM Peon only; "" = unlinked)
+    EL:<NGM Peon id>   NGM Peon's post for an event: "<EG id>;<tank>,<healer>,<dps>"
+                       (the event made in game it came from, "" if made on the
+                       dashboard; its role limits, "" = no limit; written by
+                       NGM Peon only)
 
 - `EG` may be written by the creator (if allowed to create that kind) and by
   officers; edits keep the creator. Past events stop being editable once
@@ -80,9 +84,13 @@ only their own.
 
 **NGM Peon to game (NGMP1, NGM Desktop or `/ngm peon`):**
 
-- `E` lines gain an 11th field: the `EG` id the event came from (empty for
-  events made on the dashboard). The addon then lists that event once, as
-  NGM Peon's, with its Discord post.
+- `EL:<id>` records link NGM Peon's event to the `EG` it came from, so the
+  addon lists it once, as NGM Peon's, with its Discord post; and carry the
+  post's role limits. (An `E` line can't grow: the `EV` record it becomes
+  ends with the description, and 3.0 copies check its shape.)
+- Sign-ups on a linked event: in game they're written under NGM Peon's id
+  (`ES:p<id>:...`); ones written before the link (`ES:g<EG id>:...`) are
+  read with them, newest per member wins.
 - Discord sign-ups come back as `ES:p<id>:<member>` records written by NGM
   Peon (each linked member's main as the member name), so the game shows who
   signed up where, whichever side they used. Newest wins on both sides.
