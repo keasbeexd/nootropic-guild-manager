@@ -143,10 +143,22 @@ function E:List()
         local id = B36(ev.id)
         if not byId[id] and ev.starts > now then byId[id] = ev end
     end
-    for _, ev in pairs(byId) do ev.source = "peon" list[#list + 1] = ev end
-    -- made in game (shared through guild sync)
-    for k, rec in pairs((ns.Sync and ns.Sync.Store and ns.Sync:Store("guild")) or {}) do
-        if k:sub(1, 3) == "EG:" then
+    -- NGM Peon's post for each (EL): the event made in game it came from, and its limits
+    local store = (ns.Sync and ns.Sync.Store and ns.Sync:Store("guild")) or {}
+    local posted = {}
+    for id, ev in pairs(byId) do
+        ev.source = "peon"
+        local link = store["EL:" .. id]
+        local game, t, h, d = (link and link.v or ""):match("^(%w*);(%d*),(%d*),(%d*)$")
+        if game then
+            if game ~= "" then ev.game, posted[game] = game, true end
+            ev.limits = { tank = tonumber(t), healer = tonumber(h), dps = tonumber(d) }
+        end
+        list[#list + 1] = ev
+    end
+    -- made in game (shared through guild sync); once NGM Peon has posted one, it's listed as NGM Peon's
+    for k, rec in pairs(store) do
+        if k:sub(1, 3) == "EG:" and not posted[k:sub(4)] then
             local ev = ns.Sync.ParseGameEvent(rec.v)
             if ev and not ev.cancelled and ev.starts > now then
                 ev.id, ev.source, ev.channel, ev.server, ev.coming = k:sub(4), "game", "", "", 0
@@ -249,16 +261,28 @@ end
 -- the sign-up key's event part: "g<EG id>" or "p<NGM Peon id>"
 function E.SignupEvent(ev) return ev.source == "game" and ("g" .. ev.id) or ("p" .. B36(ev.id)) end
 
-function E:SignUps(ev)
-    local prefix, out = "ES:" .. E.SignupEvent(ev) .. ":", {}
+-- every sign-up record for this event, newest per member: NGM Peon's id,
+-- and (once NGM Peon has posted an event made in game) the ones from before
+local function Records(ev)
+    local prefixes = { "ES:" .. E.SignupEvent(ev) .. ":" }
+    if ev.game then prefixes[2] = "ES:g" .. ev.game .. ":" end
+    local best = {}
     for k, rec in pairs((ns.Sync and ns.Sync:Store("guild")) or {}) do
-        if k:sub(1, #prefix) == prefix and (rec.v or "") ~= "" then
-            local part, picked = rec.v:match("^(%l+);(.*)$")
-            if part then
+        for _, prefix in ipairs(prefixes) do
+            if k:sub(1, #prefix) == prefix then
                 local member = k:sub(#prefix + 1)
-                out[#out + 1] = { member = member, part = part, picked = picked, name = picked ~= "" and picked or member, t = rec.t }
+                if not best[member] or rec.t > best[member].t then best[member] = rec end
             end
         end
+    end
+    return best
+end
+
+function E:SignUps(ev)
+    local out = {}
+    for member, rec in pairs(Records(ev)) do
+        local part, picked = (rec.v or ""):match("^(%l+);(.*)$")
+        if part then out[#out + 1] = { member = member, part = part, picked = picked, name = picked ~= "" and picked or member, t = rec.t } end
     end
     return out
 end
@@ -307,7 +331,7 @@ end
 local function MyMain() return ns.DB:RootOf(ns.PlayerFullName()) or ns.PlayerFullName() end
 
 function E:Mine(ev)
-    local rec = (ns.Sync:Store("guild") or {})["ES:" .. E.SignupEvent(ev) .. ":" .. MyMain()]
+    local rec = Records(ev)[MyMain()]
     if not rec or (rec.v or "") == "" then return nil end
     return rec.v:match("^(%l+);(.*)$")
 end

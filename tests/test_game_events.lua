@@ -138,5 +138,17 @@ check("the card lists the alt, with class and level", E:Fields(dev)[2].value, "B
 check("changing role keeps the alt", (E:SignUp(dev, "absent")) and guild.sync.guild["ES:g" .. dung .. ":Bob Member-R"].v, "absent;Bob Alt-R")
 check("Can't come listed by name", E:Fields(dev)[#E:Fields(dev)].name, "Can't come (1)")
 check("events: Going instead of roles", table.concat(E:Parts("event"), ","), "going,tentative,absent")
+-- NGM Peon posts the event made in game: EL links them, so it's listed once, as NGM Peon's
+rec("Mira Officer-R", "EV:16", "NGM Peon", "dungeon;" .. b36(NOW + 3600) .. ";1o;0;dungeons;Nootropic;Strat;")
+check("NGM Peon's link is only NGM Peon's to write", rec("Bob Member-R", "EL:16", "Bob Member-R", dung .. ";1,1,3"), nil)
+rec("Mira Officer-R", "EL:16", "NGM Peon", dung .. ";2,1,3")
+local strat = {}
+for _, e in ipairs(E:List()) do if e.title == "Strat" then strat[#strat + 1] = e end end
+check("listed once, as NGM Peon's", #strat .. ":" .. strat[1].source .. ":" .. tostring(strat[1].game), "1:peon:" .. dung)
+check("with the post's limits", E:Fields(strat[1])[1].name, "Tanks (2/2)")
+check("sign-ups from before the link still count", E:Fields(strat[1])[1].value, "Rae Raider, Gm Boss")
+-- a Discord sign-up (NGM Peon's copy, newer) wins over the in-game one for the same member
+rec("Mira Officer-R", "ES:p16:Rae Raider-R", "NGM Peon", "healer;")
+check("newest per member wins, whichever side", E:Fields(strat[1])[2].value, "Rae Raider")
 check("closed once started", select(2, E:CanSignUp({ source = "game", id = dung, kind = "dungeon", starts = NOW - 1 })), "Sign-ups are closed: it has started.")
 print("OK")

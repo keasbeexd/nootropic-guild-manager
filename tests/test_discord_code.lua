@@ -294,6 +294,10 @@ store = {
     ["RL:Ann Main"] = { v = "healer", t = now - 9, a = "Ann Main" },   -- hers, by her
     ["RL:Zed"] = { v = "tank", t = now - 8, a = "Zed" },               -- someone else's
     ["RL:Ann Alt"] = { v = "tank", t = now - 7, a = "Off" },           -- hers, by someone else
+    ["EG:a1"] = { v = "raid;tozso0;3c;Ann Alt;;Onyxia;", t = now - 6, a = "Ann Alt" },  -- 3.1: her event
+    ["EG:b1"] = { v = "raid;tozso0;3c;Zed;;Zed's raid;", t = now - 6, a = "Zed" },      -- someone else's
+    ["ES:gb1:Ann Main"] = { v = "tank;Ann Alt", t = now - 5, a = "Ann Alt" },          -- her sign-up
+    ["ES:p5:Ann Main"] = { v = "going;", t = now - 5, a = "NGM Peon" },                -- NGM Peon's own copy: never sent back
 }
 local body = function(code) return DC.Base64UrlDecode(code:match("^NGM2%.([^.]+)%.")) end
 guildData = { peon = { made = 5 } }
@@ -316,6 +320,9 @@ local memberBody = body(assert(guildData.desktopCode, "a member's code"))
 assert(memberBody:find("M:Ann Alt", 1, true) and memberBody:find("RL:Ann Main", 1, true), memberBody)
 assert(not memberBody:find("RL:Zed", 1, true) and not memberBody:find("RL:Ann Alt", 1, true), "a member's carries only their own, by them")
 assert(not memberBody:find("\nhours\t") and not memberBody:find("\naccent\t"), "and no When we play or tabard")
+assert(memberBody:find("R\tEG:a1\t", 1, true) and memberBody:find("R\tES:gb1:Ann Main\t", 1, true), "her event and her sign-up go up")
+assert(not memberBody:find("EG:b1", 1, true) and not memberBody:find("ES:p5", 1, true), "not someone else's event, not NGM Peon's own copies")
+assert(gmBody:find("R\tEG:b1\t", 1, true) and not gmBody:find("ES:p5", 1, true), "the Guild Master's carries every event, still not NGM Peon's copies")
 GetGuildInfo = function() return nil end
 DC:SaveForDesktop()
 assert(guildData.desktopCode == nil, "no guild: an old code goes")

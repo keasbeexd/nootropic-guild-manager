@@ -169,7 +169,8 @@ function DC:Changes(since)
     local store = ns.Sync:Store("guild") or {}
     for key, rec in pairs(store) do
         local typ = key:match("^(%u+):")
-        if (typ == "M" or typ == "RL") and (rec.t or 0) > since and rec.a and rec.a ~= ""
+        -- 3.1: events made in game and sign-ups too (not NGM Peon's own copies)
+        if (typ == "M" or typ == "RL" or typ == "EG" or (typ == "ES" and rec.a ~= (ns.Sync.PEON or "NGM Peon"))) and (rec.t or 0) > since and rec.a and rec.a ~= ""
             and ns.Sync.ValidValue(typ, rec.v) then
             out[#out + 1] = { key = key, v = rec.v or "", t = rec.t, a = rec.a }
         end
@@ -536,7 +537,10 @@ function DC:ForDesktop()
         for _, alt in ipairs(ns.DB.GetAltsOf and ns.DB:GetAltsOf(root) or {}) do own[alt] = true end
         local mine = {}
         for _, r in ipairs(records) do
-            local member = r.key:match("^%u+:(.+)$")
+            local typ, member = r.key:match("^(%u+):(.+)$")
+            -- a sign-up is the member's (ES:<event>:<member>); an event made in game its creator's
+            if typ == "ES" then member = member:match("^[^:]+:(.+)$") end
+            if typ == "EG" then member = (r.v or ""):match("^%l+;%w+;%w+;([^;]+);") end
             if member and own[member] and own[r.a] then mine[#mine + 1] = r end
         end
         records = mine
