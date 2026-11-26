@@ -87,6 +87,16 @@ check("linked member can", rec("Rae Raider-R", "ES:gb1:Rae Raider-R", "Rae Raide
 check("withdrawing needs no link", rec("Bob Member-R", "ES:ga1:Bob Member-R", "Bob Member-R", ""), "")
 check("NGM Peon's copy of a Discord sign-up", rec("Mira Officer-R", "ES:p42:Ann Member-R", "NGM Peon", "going;"), "going;")
 
+-- a member brings in NGM Peon's code: they may not pass its records on, so they're kept for them alone
+ns.PlayerFullName = function() return "Ann Member-R" end
+check("a member keeps NGM Peon's link for themselves", S:KeepPeonOwn("LK:Ann Member-R", { v = "1", t = NOW, a = "NGM Peon" }), true)
+check("...not in guild sync", guild.sync.guild["LK:Ann Member-R"], nil)
+check("...and it counts: she may sign up", S:Linked("Ann Member-R"), true)
+check("only NGM Peon's own records", S:KeepPeonOwn("LK:Bob Member-R", { v = "1", t = NOW, a = "Bob Member-R" }), false)
+check("only the 3.1 kinds", S:KeepPeonOwn("M:Bob Member-R", { v = "", t = NOW, a = "NGM Peon" }), false)
+check("an older copy doesn't replace a newer one", S:KeepPeonOwn("LK:Ann Member-R", { v = "", t = NOW - 5, a = "NGM Peon" }), false)
+ns.PlayerFullName = function() return "Me Self-R" end
+
 -- kept until 7 days after the event starts
 local r = guild.sync.guild["EG:b1"]
 check("an event expires 7 days after it starts", S:ExpiresAt("EG:b1", r), NOW + 86400 + 7 * 86400)

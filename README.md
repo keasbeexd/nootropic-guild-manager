@@ -46,6 +46,13 @@ and connect it on NGM Peon's dashboard.
   announced in your chat when it arrives. Below them, the game's own
   calendar: the daily and weekly resets, and holidays for the next 30 days
   (read from the game, so they're there without NGM Peon too).
+  From 3.1, create events and sign up right here: Tank, Healer, DPS (or
+  Going), Tentative, Can't come, with an alt if you like. Without NGM Peon
+  the Guild Master and officers create them, and everything travels by guild
+  sync. With NGM Peon its Event Settings decide who creates what, you sign up
+  once your characters are linked, and changes travel between the game and
+  Discord when someone with NGM Desktop reloads or logs out (yours with your
+  own NGM Desktop; everyone's with an officer's).
 - **Guild Feed** — in your own chat (never sent): new events from NGM Peon,
   and guildmates' level-ups ("Pip reached level 31!"), each with an optional sound.
 - **Profiles** — spec, roles, professions with skill levels, Discord,

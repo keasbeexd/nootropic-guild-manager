@@ -387,7 +387,11 @@ function DC:ApplyPeon(code)
                 out.had = out.had + 1
             else
                 local ok, key = ns.Sync:Intake(r.key, r.t, r.a, nil, r.v, { origin = "remote", channel = "GUILD", sender = ns.PlayerFullName() })
-                if ok then
+                if not ok and ns.Sync.KeepPeonOwn and ns.Sync:KeepPeonOwn(r.key, r) then
+                    -- 3.1: NGM Peon's records a member may not pass on: kept for themselves
+                    out.taken = out.taken + 1
+                    ok = nil
+                elseif ok then
                     out.taken = out.taken + 1
                     ns.Sync:Broadcast(key, ns.Sync:Get(key))
                     local who = key:match("^%u+:(.*)$")

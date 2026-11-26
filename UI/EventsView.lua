@@ -69,6 +69,13 @@ function EV:Build(frame)
     self.create = W.Button(page, "Create Event", 120, 22)
     self.create:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -32)
     self.create:SetScript("OnClick", function() ns.EventForm:Open() end)
+    -- with NGM Desktop: send your changes now (a /reload writes them for the app)
+    self.send = W.Button(page, "Send to Discord", 130, 22)
+    self.send:SetPoint("RIGHT", self.create, "LEFT", -6, 0)
+    self.send:SetScript("OnClick", function()
+        W.Confirm("Send your changes to Discord now? This reloads your UI.", function() ns.DiscordCode:ReloadAndSync() end)
+    end)
+    W.Tooltip(self.send, "Send to Discord", "NGM Desktop sends what the game saves at a /reload. This reloads your UI now.")
     W.Tooltip(self.create, "Create an event", "Your guild sees it at once. With NGM Peon, it's posted in Discord with your next update.")
 
     local inset = frame.Inset
@@ -169,6 +176,15 @@ function EV:FillSignups(c, ev, inner, top)
         W.Tooltip(c.Change, "Change character", "Which of your characters you're bringing (your main unless you pick another).")
         c.Change:Show()
     end
+    -- with NGM Peon: your sign-up changed this session isn't on the Discord post yet
+    if ns.Sync:PeonGuild() and E:MineUnsent(ev) then
+        c.Notice:ClearAllPoints()
+        c.Notice:SetPoint("TOPLEFT", PAD, -(y + 28))
+        c.Notice:SetWidth(inner - 2 * PAD)
+        c.Notice:SetText("Your sign-up reaches the Discord post " .. E:Carrier() .. ".")
+        c.Notice:Show()
+        return (y - top) + 28 + c.Notice:GetStringHeight()
+    end
     return (y - top) + 24
 end
 
@@ -200,6 +216,7 @@ function EV:Refresh()
     local list = ns.Events:List()
     self.title:SetText(("Upcoming Events  " .. GRAY .. "- %d in the next 30 days|r"):format(#list))
     self.create:SetShown(#ns.Events:KindsICanCreate() > 0)
+    self.send:SetShown(ns.Sync:PeonGuild() and ns.Events:Unsent() and ns.DiscordCode:DesktopInstalled())
     local manager = ns.Sync:EventManager(ns.PlayerFullName())
     local width = math.max(300, math.floor(self.scroll:GetWidth()))
     local inner = width - 2 * EDGE
@@ -243,8 +260,13 @@ function EV:Refresh()
         if ev.source == "game" then
             -- made in game: who made it; with NGM Peon, posted with the next update
             c.Coming:SetText("")
-            c.Where:SetText(("Made in game by %s%s"):format(ns.ShortName(ev.creator),
-                ns.Sync:PeonGuild() and ("  " .. GRAY .. "·|r  NGM Peon posts it with the next update") or ""))
+            -- with NGM Peon: not on Discord until the game's saved data reaches it
+            local status = ""
+            if ns.Sync:PeonGuild() then
+                status = "\n" .. ns.ORANGE .. "Not on Discord yet|r " .. GRAY .. (ns.Sync.Same(ev.creator, ns.PlayerFullName())
+                    and ("(goes " .. ns.Events:Carrier() .. ")") or "(goes when its creator or an officer with NGM Desktop reloads or logs out)") .. "|r"
+            end
+            c.Where:SetText(("Made in game by %s"):format(ns.ShortName(ev.creator)) .. status)
         else
             -- sign-ups are in Discord only: one list per event
             local where = ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or ""
@@ -286,7 +308,7 @@ function EV:Refresh()
     self.note:SetPoint("TOPLEFT", EDGE, -y)
     self.note:SetWidth(inner)
     self.note:SetText(ns.Sync:PeonGuild()
-        and ("Times are your own. Sign up here or with the buttons on each event's post in Discord: both count. New ones reach the game with NGM Desktop, or when an officer brings in NGM Peon's code (" .. ns.GOLD .. "/ngm peon|r).")
+        and ("Times are your own. Sign up here or with the buttons on each event's post in Discord: both count. Changes travel between the game and Discord when someone with " .. ns.GOLD .. "NGM Desktop|r reloads or logs out (yours with your own; everyone's with an officer's), or when an officer uses the codes (" .. ns.GOLD .. "/ngm discord|r, " .. ns.GOLD .. "/ngm peon|r).")
         or "Times are your own. Sign up with the buttons on each event.")
     self.content:SetSize(width, y + 40)
 end

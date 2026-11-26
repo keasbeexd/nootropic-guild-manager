@@ -551,8 +551,42 @@ end
 S.PARTS = { tank = true, healer = true, dps = true, going = true, tentative = true, absent = true }
 S.EVENT_KINDS = { "dungeon", "raid", "event" }
 
+-- NGM Peon's records a member brought in for themselves (3.1): only
+-- officers may pass NGM Peon's records on to the guild, so a member's copy
+-- keeps them apart (g.peonOwn), out of guild sync. Read with Plan().
+S.OWN_PEON = { LK = true, EL = true, ES = true, GS = true }
+S.OWN_PEON_KEEP = 60 * 86400
+
+function S:PeonOwn()
+    local g = ns.DB:Guild()
+    if not g then return {} end
+    g.peonOwn = g.peonOwn or {}
+    return g.peonOwn
+end
+
+-- Keeps one of NGM Peon's records for this character only (newest wins).
+function S:KeepPeonOwn(key, rec)
+    local typ = key:match("^(%u+):")
+    if not (typ and S.OWN_PEON[typ] and rec.a == S.PEON) then return false end
+    if typ == "GS" and key ~= "GS:peon" and key ~= "GS:evranks" then return false end
+    if not S.ValidValue(typ, rec.v) then return false end
+    local own = self:PeonOwn()
+    local cur = own[key]
+    if cur and cur.t >= rec.t then return false end
+    own[key] = { v = rec.v, t = rec.t, a = rec.a }
+    for k, r in pairs(own) do if r.t < Now() - S.OWN_PEON_KEEP then own[k] = nil end end
+    return true
+end
+
+-- A record from guild sync, or NGM Peon's copy this character keeps, newest.
+function S:Plan(key)
+    local a, b = (self:Store("guild") or {})[key], self:PeonOwn()[key]
+    if a and b then return (b.t > a.t) and b or a end
+    return a or b
+end
+
 local function Setting(key)
-    local rec = (S:Store("guild") or {})["GS:" .. key]
+    local rec = S:Plan("GS:" .. key)
     return rec and rec.v or nil
 end
 
@@ -617,7 +651,7 @@ end
 
 -- With NGM Peon, only characters linked to it may sign up (LK).
 function S:Linked(name)
-    local rec = (self:Store("guild") or {})["LK:" .. (name or "")]
+    local rec = self:Plan("LK:" .. (name or ""))
     return rec ~= nil and rec.v == "1"
 end
 

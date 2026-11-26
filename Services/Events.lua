@@ -148,7 +148,7 @@ function E:List()
     local posted = {}
     for id, ev in pairs(byId) do
         ev.source = "peon"
-        local link = store["EL:" .. id]
+        local link = ns.Sync.Plan and ns.Sync:Plan("EL:" .. id) or store["EL:" .. id]
         local game, t, h, d = (link and link.v or ""):match("^(%w*);(%d*),(%d*),(%d*)$")
         if game then
             if game ~= "" then ev.game, posted[game] = game, true end
@@ -173,6 +173,19 @@ end
 ------------------------------------------------------------------------
 -- Events made in game (EG records)
 ------------------------------------------------------------------------
+-- Changes this session that NGM Peon hasn't had yet (the game writes its
+-- saved data, which NGM Desktop sends, only at /reload or logout).
+E.unsent = {}
+function E:Unsent() return next(self.unsent) ~= nil end
+local function Mark(key) E.unsent[key] = true end
+
+-- Where a change of yours goes next, for the card: with NGM Desktop at
+-- your next /reload or logout; without it, when an officer's does.
+function E:Carrier()
+    if ns.DiscordCode and ns.DiscordCode:DesktopInstalled() then return "at your next /reload or logout" end
+    return "when an officer with NGM Desktop reloads or logs out"
+end
+
 E.DURATIONS = { 30, 60, 90, 120, 180, 240, 300, 360 } -- minutes, as NGM Peon's form (ngm-hub src/events/model.ts)
 E.MAX_TITLE, E.MAX_DESCRIPTION = 100, 400
 
@@ -213,6 +226,7 @@ function E:Create(f)
     local id = NewId()
     local ok, err = ns.Sync:Set("EG:" .. id, E.GameValue({ kind = f.kind, starts = f.starts, minutes = f.minutes, creator = me, title = f.title, description = f.description }))
     if not ok then return nil, err end
+    Mark("EG:" .. id)
     return id
 end
 
@@ -235,6 +249,7 @@ function E:Edit(id, f)
     f.kind = was.kind -- the kind stays (as on the dashboard)
     local why = Check(f)
     if why then return nil, why end
+    Mark("EG:" .. id)
     return ns.Sync:Set("EG:" .. id, E.GameValue({ kind = was.kind, starts = f.starts, minutes = f.minutes, creator = was.creator, title = f.title, description = f.description }))
 end
 
@@ -243,6 +258,7 @@ function E:Cancel(id)
     if not was or was.cancelled then return nil, "That event is gone." end
     if not self:MayEdit({ source = "game", creator = was.creator }) then return nil, "Only its creator or an officer can cancel it." end
     was.cancelled = true
+    Mark("EG:" .. id)
     return ns.Sync:Set("EG:" .. id, E.GameValue(was))
 end
 
@@ -267,11 +283,14 @@ local function Records(ev)
     local prefixes = { "ES:" .. E.SignupEvent(ev) .. ":" }
     if ev.game then prefixes[2] = "ES:g" .. ev.game .. ":" end
     local best = {}
-    for k, rec in pairs((ns.Sync and ns.Sync:Store("guild")) or {}) do
-        for _, prefix in ipairs(prefixes) do
-            if k:sub(1, #prefix) == prefix then
-                local member = k:sub(#prefix + 1)
-                if not best[member] or rec.t > best[member].t then best[member] = rec end
+    -- guild sync's, and NGM Peon's copies this member keeps for themselves
+    for _, src in ipairs({ (ns.Sync and ns.Sync:Store("guild")) or {}, (ns.Sync and ns.Sync.PeonOwn and ns.Sync:PeonOwn()) or {} }) do
+        for k, rec in pairs(src) do
+            for _, prefix in ipairs(prefixes) do
+                if k:sub(1, #prefix) == prefix then
+                    local member = k:sub(#prefix + 1)
+                    if not best[member] or rec.t > best[member].t then best[member] = rec end
+                end
             end
         end
     end
@@ -336,6 +355,9 @@ function E:Mine(ev)
     return rec.v:match("^(%l+);(.*)$")
 end
 
+-- Is your sign-up for this event still to reach NGM Peon?
+function E:MineUnsent(ev) return self.unsent["ES:" .. E.SignupEvent(ev)] == true end
+
 function E:CanSignUp(ev, picked)
     if ev.starts <= ns.DB:Now() then return nil, "Sign-ups are closed: it has started." end
     if ns.Sync:PeonGuild() and not ns.Sync:Linked((picked and picked ~= "") and picked or MyMain()) then
@@ -349,6 +371,7 @@ function E:SignUp(ev, part, picked)
     if picked == nil then picked = select(2, self:Mine(ev)) or "" end
     local ok, why = self:CanSignUp(ev, picked)
     if not ok then return nil, why end
+    Mark("ES:" .. E.SignupEvent(ev))
     return ns.Sync:Set("ES:" .. E.SignupEvent(ev) .. ":" .. MyMain(), part .. ";" .. picked)
 end
 
