@@ -123,6 +123,8 @@ function DC:MakeUpdate(region, guild, ranks, update)
     lines[#lines + 1] = ""
     lines[#lines + 1] = "since\t" .. B36(update.since)
     lines[#lines + 1] = "upto\t" .. B36(update.upto)
+    -- 3.1: which NGM Addon made it, so NGM Peon only sends 3.1's records to copies that take them
+    if update.version then lines[#lines + 1] = "ver\t" .. update.version end
     if update.hours then lines[#lines + 1] = "hours\t" .. DC.HoursValue(update.hours) end
     -- the tabard's colours, for NGM Peon's accent (left out while unknown)
     if update.tabard and update.tabard.bg and update.tabard.border then
@@ -280,7 +282,7 @@ function DC:ForMyGuild(mode)
     local bg, border, emblem
     if ns.Accent then bg, border, emblem = ns.Accent:Tabard() end
     local tabard = (bg and border) and { bg = bg, border = border, emblem = emblem } or nil
-    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard, calendar = self:Calendar() })
+    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard, calendar = self:Calendar(), version = ns.version })
     g.peon.made = upto
     if gm then g.peon.ranks = self.RankSignature(ranks) end
     return code, nil, since == 0, #records, since
@@ -374,7 +376,9 @@ function DC:ApplyPeon(code)
     for _, r in ipairs(c.records) do
         local typ = r.key:match("^(%u+):")
         -- mains, roles, Discord names, champions, and the setting that NGM Peon crowns them
+        -- 3.1: links to NGM Peon, who may create events, posts' links and Discord sign-ups
         local wanted = typ == "M" or typ == "RL" or typ == "CN" or (typ == "HW" and r.key:match("^HW:%d%d%d%d%d%d$")) or r.key == "GS:peon"
+            or typ == "LK" or typ == "EL" or typ == "ES" or r.key == "GS:evranks"
         if not wanted then
             out.refused = out.refused + 1
         else
@@ -545,7 +549,7 @@ function DC:ForDesktop()
         end
         records = mine
     end
-    return self:MakeUpdate(region, guild, ranks, { since = since, upto = ns.DB:Now(), hours = hours, records = records, tabard = tabard, calendar = calendar })
+    return self:MakeUpdate(region, guild, ranks, { since = since, upto = ns.DB:Now(), hours = hours, records = records, tabard = tabard, calendar = calendar, version = ns.version })
 end
 
 -- NGM Desktop's news: the app keeps NGM Peon's code (the same one the
