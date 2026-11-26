@@ -40,6 +40,12 @@
       EV:<id>              an upcoming event from NGM Peon (Services/Events.lua):
                            "kind;starts;minutes;coming;channel;server;title;description"
                            (numbers base 36; "" = gone)
+      EG:<id>              an event made in game (3.1, Services/Events.lua; docs/EVENTS.md):
+                           "kind;starts;minutes;creator;state;title;description"
+                           (numbers base 36; state "" on, "x" cancelled)
+      ES:<event>:<member>  a sign-up (3.1): "part;picked" (event "g<EG id>" or
+                           "p<NGM Peon id>"; member: the person's main; "" = withdrawn)
+      LK:<member>          "1": linked to NGM Peon (3.1; written by NGM Peon only)
       DN:<player>          Do Not Whisper entry ("" = removed)
       RS:<player>          recruitment status (kept 14 days)
       IR:<member>          reminded to install the addon (kept 30 days)
@@ -89,6 +95,9 @@ S.TYPES = {
     HA = { scope = "guild",   officer = true, noAudit = true, label = "Champions announced" },
     HB = { scope = "guild",   officer = true, noAudit = true, label = "Hall of Fame boards" },
     EV = { scope = "guild",   officer = true, noAudit = true, label = "Upcoming event" },
+    EG = { scope = "guild",   officer = true, noAudit = true, label = "Event made in game" },
+    ES = { scope = "guild",   noAudit = true, ttl = 45 * 86400, label = "Event sign-up" },
+    LK = { scope = "guild",   noAudit = true, label = "Linked to NGM Peon" },
     HC = { scope = "officer", officer = true, noAudit = true, label = "Hall of Fame check" },
     JN = { scope = "officer", officer = true, noAudit = true, label = "Joined" },
     RK = { scope = "officer", officer = true, noAudit = true, label = "Rank since" },
@@ -107,7 +116,9 @@ function S.EventSig(typ, member, new)
     return typ .. "|" .. (member or "") .. "|" .. (new or "")
 end
 -- Types whose key is not about one member.
-local NO_MEMBER = { A = true, GS = true, HW = true, HA = true, HB = true, EV = true }
+local NO_MEMBER = { A = true, GS = true, HW = true, HA = true, HB = true, EV = true, EG = true }
+S.PEON = "NGM Peon" -- the author of records NGM Peon writes (ngm-hub PEON_AUTHOR)
+S.EVENT_KEEP = 7 * 86400 -- an event made in game is kept this long after it starts
 
 S.storeVersion = 0
 S.officers = {} -- name -> rank index when seen sending on the officer channel this session
@@ -154,6 +165,8 @@ function S.ParseKey(key)
     local member
     if typ == "L" or typ == "RP" then
         member = rest:match("^([^:]+):")
+    elseif typ == "ES" then
+        member = rest:match("^[^:]+:(.+)$")
     elseif not NO_MEMBER[typ] then
         member = rest
     end
@@ -270,6 +283,11 @@ function S:ExpiresAt(key, rec)
     local typ = S.ParseKey(key)
     if not typ then return nil end
     local def = S.TYPES[typ]
+    if typ == "EG" then
+        local starts = (rec.v or ""):match("^%l+;(%w+);")
+        starts = starts and tonumber(starts, 36)
+        return starts and starts + S.EVENT_KEEP or nil
+    end
     return def.ttl and rec.t + def.ttl or nil
 end
 
@@ -362,15 +380,19 @@ S.Same, S.RosterEntry, S.IsGuildMaster = Same, RosterEntry, IsGuildMaster
 --   events   Upcoming Events (EV, 3.0): their own lane, so a 2.12 copy
 --            (which ignores lanes it doesn't know) never sees them in a
 --            fingerprint and never keeps re-checking over them      GUILD
+--   plans    events made in game, sign-ups and links to NGM Peon (EG,
+--            ES, LK, 3.1): their own lane for the same reason, as 3.0
+--            copies already know the events lane                     GUILD
 ------------------------------------------------------------------------
-S.LANES = { "guild", "recruit", "officer", "events" }
-S.LANE_STORE = { guild = "guild", recruit = "guild", officer = "officer", events = "guild" }
-S.LANE_CHANNEL = { guild = "GUILD", recruit = "GUILD", officer = "OFFICER", events = "GUILD" }
+S.LANES = { "guild", "recruit", "officer", "events", "plans" }
+S.LANE_STORE = { guild = "guild", recruit = "guild", officer = "officer", events = "guild", plans = "guild" }
+S.LANE_CHANNEL = { guild = "GUILD", recruit = "GUILD", officer = "OFFICER", events = "GUILD", plans = "GUILD" }
 
 function S.LaneOf(key)
     local typ = key:match("^(%u+):")
     if typ == "RS" then return "recruit" end
     if typ == "EV" then return "events" end
+    if typ == "EG" or typ == "ES" or typ == "LK" then return "plans" end
     local def = typ and S.TYPES[typ]
     return def and def.scope
 end
@@ -383,7 +405,7 @@ end
 function S:InLane(lane)
     if lane == "officer" then return ns.IsOfficer() end
     if lane == "recruit" then return self:MayRecruit() end
-    return lane == "guild" or lane == "events"
+    return lane == "guild" or lane == "events" or lane == "plans"
 end
 
 -- Will guildmates accept other people's records of this lane from `name`?
@@ -519,9 +541,92 @@ function S:MayRecruitName(name)
 end
 
 -- Would `name` be allowed to write this record themselves?
+------------------------------------------------------------------------
+-- Events made in game and sign-ups (3.1, docs/EVENTS.md)
+------------------------------------------------------------------------
+S.PARTS = { tank = true, healer = true, dps = true, going = true, tentative = true, absent = true }
+S.EVENT_KINDS = { "dungeon", "raid", "event" }
+
+local function Setting(key)
+    local rec = (S:Store("guild") or {})["GS:" .. key]
+    return rec and rec.v or nil
+end
+
+-- Does this guild use NGM Peon? (its code sets GS:peon)
+function S:PeonGuild() return Setting("peon") == "1" end
+
+-- NGM Peon's Event Settings (GS:evranks): kind -> lowest rank that may
+-- create it (nil: managers only), and whether officers are managers.
+function S:EventRules()
+    local v = Setting("evranks")
+    if not v or v == "" then return nil end
+    local out = { lowest = {}, officers = false }
+    for k, r in v:gmatch("(%l+)=([^;]*)") do
+        if k == "officers" then out.officers = r == "1"
+        elseif r ~= "-" then out.lowest[k] = tonumber(r) end
+    end
+    return out
+end
+
+-- Managers: the Guild Master; officers (with NGM Peon: if its settings make them managers).
+function S:EventManager(name)
+    if IsGuildMaster(name) then return true end
+    if not self:KnownOfficer(name) then return false end
+    if not self:PeonGuild() then return true end
+    local rules = self:EventRules()
+    return rules ~= nil and rules.officers
+end
+
+-- May `name` create an event of this kind? Without NGM Peon: the Guild
+-- Master and officers. With it: its Event Settings, as on the dashboard.
+function S:MayCreateEvent(name, kind)
+    if self:EventManager(name) then return true end
+    if not self:PeonGuild() then return false end
+    local rules, e = self:EventRules(), RosterEntry(name)
+    local low = rules and rules.lowest[kind]
+    return low ~= nil and e ~= nil and e.rankIndex <= low
+end
+
+function S.ParseGameEvent(v)
+    if not v or v == "" then return nil end
+    local f = {}
+    for part in (v .. ";"):gmatch("([^;]*);") do f[#f + 1] = part end
+    local starts, minutes = tonumber(f[2] or "", 36), tonumber(f[3] or "", 36)
+    if not (starts and minutes) then return nil end
+    return { kind = f[1], starts = starts, minutes = minutes, creator = f[4] or "", cancelled = f[5] == "x",
+             title = f[6] or "", description = table.concat(f, ";", 7) }
+end
+
+-- An event made in game, written by `author`: new ones by someone who may
+-- create that kind, as themselves; changes by its creator or a manager,
+-- keeping the creator.
+function S:MayWriteEvent(author, v, old)
+    local ev = S.ParseGameEvent(v)
+    if not ev then return false end
+    local was = old and S.ParseGameEvent(old.v)
+    if was then
+        if not Same(was.creator, ev.creator) then return false end
+        return Same(author, ev.creator) or self:EventManager(author)
+    end
+    return Same(author, ev.creator) and self:MayCreateEvent(author, ev.kind)
+end
+
+-- With NGM Peon, only characters linked to it may sign up (LK).
+function S:Linked(name)
+    local rec = (self:Store("guild") or {})["LK:" .. (name or "")]
+    return rec ~= nil and rec.v == "1"
+end
+
 function S:MayAuthor(name, typ, member, rest)
     local def = S.TYPES[typ]
     if not (def and name and name ~= "") then return false end
+    if typ == "LK" then return false end
+    if typ == "ES" then return Same(ns.DB:RootOf(name), member) or Same(name, member) end
+    if typ == "EG" then
+        if self:EventManager(name) then return true end
+        for _, k in ipairs(S.EVENT_KINDS) do if self:MayCreateEvent(name, k) then return true end end
+        return false
+    end
     if def.anyone then return RosterEntry(name) ~= nil end
     if def.selfOnly then return Same(name, member) end
     if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers" or rest == "recruiters") then return IsGuildMaster(name) end
@@ -564,6 +669,25 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     -- whole guild in someone else's name
     if typ == "IR" then return Same(sender, author) or self:KnownOfficer(sender) end
     if def.anyone then return true end
+    -- events made in game, sign-ups and links (docs/EVENTS.md)
+    if typ == "EG" or typ == "ES" or typ == "LK" then
+        if not (Same(sender, author) or self:KnownOfficer(sender)) then return false end
+        if typ == "LK" then return author == S.PEON end
+        if typ == "ES" then
+            -- NGM Peon's copy of a Discord sign-up
+            if author == S.PEON then return true end
+            -- the member themselves (any of their characters); with NGM Peon,
+            -- the character they bring must be linked to it
+            if not (Same(ns.DB:RootOf(author), member) or Same(author, member)) then return false end
+            if (rec.v or "") ~= "" and self:PeonGuild() then
+                local picked = rec.v:match(";(.*)$")
+                return self:Linked(picked ~= "" and picked or member)
+            end
+            return true
+        end
+        -- officers may pass on anyone's; the author must still have been allowed
+        return self:MayWriteEvent(author, rec.v, (self:Store("guild") or {})[ctx.key])
+    end
     if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers" or rest == "recruiters") then
         return IsGuildMaster(author) and (Same(sender, author) or self:KnownOfficer(sender))
     end
@@ -600,6 +724,17 @@ function S.ValidValue(typ, v)
         return v == "" or (#v <= 40 and not v:find("[,:\t]"))
     elseif typ == "HB" then
         return v == "" or (not v:find("[\t\n|]") and v:match("^%d%d%d%d%d%d;") ~= nil)
+    elseif typ == "EG" then
+        if #v > 600 or v:find("[\t\n|]") then return false end
+        local kind, starts, minutes, creator, state = v:match("^(%l+);(%w+);(%w+);([^;]+);(x?);")
+        return (kind == "dungeon" or kind == "raid" or kind == "event") and tonumber(starts, 36) ~= nil
+            and tonumber(minutes, 36) ~= nil and #creator <= 60 and state ~= nil
+    elseif typ == "ES" then
+        if v == "" then return true end
+        local part, picked = v:match("^(%l+);([^;]*)$")
+        return S.PARTS[part or ""] == true and #(picked or "") <= 60
+    elseif typ == "LK" then
+        return v == "" or v == "1"
     elseif typ == "EV" then
         if v == "" then return true end
         if #v > 600 or v:find("[\t\n]") then return false end
@@ -614,7 +749,8 @@ function S:WithinLimits(typ, member, rest, rec, ctx, store)
     if #(rec.v or "") > self.MAX_VALUE then return false end
     if not S.ValidValue(typ, rec.v) then return false end
     if (typ == "HW" or typ == "HA") and not rest:match("^%d%d%d%d%d%d$") then return false end
-    if typ == "EV" and not rest:match("^%w+$") then return false end
+    if (typ == "EV" or typ == "EG") and not rest:match("^%w+$") then return false end
+    if typ == "ES" and not rest:match("^[gp]%w+:[^:]+$") then return false end
     if typ == "HB" and rest ~= "all" and rest ~= "month" and rest ~= "last" then return false end
     -- reminders only about guildmates, holding the time they were sent
     if typ == "IR" then
@@ -892,7 +1028,7 @@ function S:Materialize(typ, key, member, rec)
     elseif typ == "IR" then
         ns.Debounce("reminderschanged", 0.3, function() ns:Fire("MEMBER_CHANGED") end)
         return
-    elseif typ == "EV" then
+    elseif typ == "EV" or typ == "EG" or typ == "ES" or typ == "LK" then
         -- events are about the guild, not a member (Services/Events.lua)
         ns.Debounce("eventschanged", 0.5, function() ns:Fire("EVENTS_CHANGED") end)
         return

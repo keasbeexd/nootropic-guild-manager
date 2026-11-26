@@ -878,7 +878,7 @@ function S:QueueSize() return #queues.high + #queues.bulk end
 ------------------------------------------------------------------------
 -- Status (/ngm sync, Options, the dot in the window's status bar)
 ------------------------------------------------------------------------
-local LANE_LABEL = { guild = "Guild data", officer = "Officer data", recruit = "Recruiting data" }
+local LANE_LABEL = { guild = "Guild data", officer = "Officer data", recruit = "Recruiting data", events = "Upcoming events", plans = "Events made in game and sign-ups" }
 
 local function Ago(at)
     local s = math.floor(GetTime() - (at or GetTime()))
