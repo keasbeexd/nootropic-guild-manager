@@ -23,6 +23,12 @@
                                     play counts (7 days x 12 two-hour blocks,
                                     server time, Monday first), as the Overview
         R<TAB>key<TAB>t<TAB>author<TAB>value   main/alt (M) and roles (RL)
+        reset<TAB>daily<TAB>weekly  the game's next resets (3.1; 0 = unknown)
+        H<TAB>starts<TAB>ends<TAB>title<TAB>description
+                                    the game's holidays, next 30 days (3.1;
+                                    Services/GameCalendar.lua); reset and H
+                                    from the Guild Master's and officers'
+                                    codes only, and only from a fresh read
     Times are server time in seconds, in base 36. Only changes are sent:
     since = what NGM Peon last said it has, else the last code made, less two
     weeks (a code made but never pasted is covered). Newest wins on both
@@ -108,7 +114,10 @@ end
 
 -- update: { since =, upto =, hours = { sharing =, counts = {84} } or nil,
 --           records = { { key =, v =, t =, a = }, ... },
---           tabard = { bg =, border = } (hex) or nil }
+--           tabard = { bg =, border = } (hex) or nil,
+--           calendar = { daily =, weekly =, holidays = { { starts =, ends =, title =, description = } } } or nil }
+local function Flat(s, max) return (((s or ""):gsub("[\t\r\n]+", " "):gsub("|", "/")):sub(1, max)) end
+DC.MAX_HOLIDAYS = 30
 function DC:MakeUpdate(region, guild, ranks, update)
     local lines = RankLines(region, guild, ranks)
     lines[#lines + 1] = ""
@@ -123,8 +132,32 @@ function DC:MakeUpdate(region, guild, ranks, update)
     for _, r in ipairs(update.records) do
         lines[#lines + 1] = "R\t" .. r.key .. "\t" .. B36(r.t) .. "\t" .. r.a .. "\t" .. r.v
     end
+    local cal = update.calendar
+    if cal then
+        lines[#lines + 1] = "reset\t" .. B36(cal.daily or 0) .. "\t" .. B36(cal.weekly or 0)
+        for i, h in ipairs(cal.holidays or {}) do
+            if i > DC.MAX_HOLIDAYS then break end
+            lines[#lines + 1] = "H\t" .. B36(h.starts) .. "\t" .. B36(h.ends) .. "\t" .. Flat(h.title, 100) .. "\t" .. Flat(h.description, 300)
+        end
+    end
     local payload = table.concat(lines, "\n")
     return "NGM2." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)
+end
+
+-- The game's resets and holidays for NGM Peon (Discord Events), from a read
+-- in the last two days; nil without one.
+DC.CALENDAR_FRESH = 2 * 86400
+function DC:Calendar()
+    local GC = ns.GameCalendar
+    local got = GC and GC:Get()
+    local now = ns.DB:Now()
+    if not got or now - (got.at or 0) > self.CALENDAR_FRESH then return nil end
+    local r = GC:Resets(now)
+    local holidays = {}
+    for _, h in ipairs(got.holidays or {}) do
+        if h.ends > now then holidays[#holidays + 1] = h end
+    end
+    return { daily = r.daily, weekly = r.weekly, holidays = holidays }
 end
 
 DC.OVERLAP = 14 * 86400 -- before NGM Peon's word: a code made but never pasted is covered
@@ -246,7 +279,7 @@ function DC:ForMyGuild(mode)
     local bg, border, emblem
     if ns.Accent then bg, border, emblem = ns.Accent:Tabard() end
     local tabard = (bg and border) and { bg = bg, border = border, emblem = emblem } or nil
-    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard })
+    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard, calendar = self:Calendar() })
     g.peon.made = upto
     if gm then g.peon.ranks = self.RankSignature(ranks) end
     return code, nil, since == 0, #records, since
@@ -486,13 +519,14 @@ function DC:ForDesktop()
     if peon.has then since = math.max(0, peon.has - self.ARRIVAL)
     elseif peon.made then since = math.max(0, peon.made - self.OVERLAP) end
     local records = self:Changes(since)
-    local hours, tabard
+    local hours, tabard, calendar
     if officer then
         hours = self:Hours()
         if hours and since > 0 and peon.hoursHash and ns.Sync.Hash(self.HoursValue(hours)) == peon.hoursHash then hours = nil end
         local bg, border, emblem
         if ns.Accent then bg, border, emblem = ns.Accent:Tabard() end
         tabard = (bg and border) and { bg = bg, border = border, emblem = emblem } or nil
+        calendar = self:Calendar()
     else
         -- the player's own characters: this one, its main and the main's alts
         local me = ns.PlayerFullName()
@@ -507,7 +541,7 @@ function DC:ForDesktop()
         end
         records = mine
     end
-    return self:MakeUpdate(region, guild, ranks, { since = since, upto = ns.DB:Now(), hours = hours, records = records, tabard = tabard })
+    return self:MakeUpdate(region, guild, ranks, { since = since, upto = ns.DB:Now(), hours = hours, records = records, tabard = tabard, calendar = calendar })
 end
 
 -- NGM Desktop's news: the app keeps NGM Peon's code (the same one the

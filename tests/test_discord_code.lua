@@ -68,6 +68,18 @@ local without = DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite
     { since = 0, upto = 1, records = {} })
 assert(not DC.Base64UrlDecode(without:match("^NGM2%.([^.]+)%.")):find("accent", 1, true), "tabard unknown: no line")
 
+-- the game's resets and holidays (3.1): the same example as ngm-hub's test/gamecal.test.ts
+local withCal = DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite = true }, { name = "M", officer = false, invite = false } },
+    { since = 0, upto = 1, records = {}, calendar = { daily = 1795600800, weekly = 1796032800, holidays = {
+        { starts = 1795500000, ends = 1795850000, title = "Call to Arms: Arathi Basin", description = "Bonus honor.\tTwo lines\nhere |cffff0000red|r" },
+        { starts = 1796100000, ends = 1796700000, title = "Darkmoon Faire", description = "" },
+    } } })
+local calBody = DC.Base64UrlDecode(withCal:match("^NGM2%.([^.]+)%."))
+assert(calBody:find("\nreset\ttp1yg0\ttpb7s0\n", 1, true), calBody)
+assert(calBody:find("\nH\ttozso0\ttp7aq8\tCall to Arms: Arathi Basin\tBonus honor. Two lines here /cffff0000red/r\n", 1, true), calBody)
+assert(calBody:sub(-1) == "\t" and calBody:find("\nH\t[%w]+\t[%w]+\tDarkmoon Faire\t$"), calBody)
+assert(withCal == "NGM2.dXMKRwpPSTpHTQotLTpNCgpzaW5jZQkwCnVwdG8JMQpyZXNldAl0cDF5ZzAJdHBiN3MwCkgJdG96c28wCXRwN2FxOAlDYWxsIHRvIEFybXM6IEFyYXRoaSBCYXNpbglCb251cyBob25vci4gVHdvIGxpbmVzIGhlcmUgL2NmZmZmMDAwMHJlZC9yCkgJdHBjbm1vCXRwcGlsYwlEYXJrbW9vbiBGYWlyZQk.4293360f", withCal)
+
 -- only changes: since NGM Peon's word, else the last code less two weeks; "all" sends everything
 local now = 3000000
 local store = {
