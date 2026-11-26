@@ -62,7 +62,8 @@ function GC:Resets(now)
     if dt then
         for key, fn in pairs({ daily = "GetSecondsUntilDailyReset", weekly = "GetSecondsUntilWeeklyReset" }) do
             local ok, s = pcall(dt[fn] or error)
-            if ok and type(s) == "number" and s > 0 then out[key] = now + math.floor(s) end
+            -- to the minute: the game's count lands a few seconds before the hour
+            if ok and type(s) == "number" and s > 0 then out[key] = math.floor((now + s) / 60 + 0.5) * 60 end
         end
     end
     return out

@@ -32,7 +32,7 @@ ns.DB = { Now = function() return now end, Guild = function() return guild end }
 
 C_DateAndTime = {
     GetCurrentCalendarTime = function() return ct(now + 25) end, -- seconds off: rounded away
-    GetSecondsUntilDailyReset = function() return 8 * 3600 end,
+    GetSecondsUntilDailyReset = function() return 8 * 3600 - 2 end, -- 09:59:58: shown as 10:00
     GetSecondsUntilWeeklyReset = function() return 6 * 86400 end,
 }
 local DAY = 86400
