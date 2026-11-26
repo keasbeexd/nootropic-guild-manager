@@ -111,4 +111,32 @@ check("a member may not edit it", select(2, E:Edit(id, { starts = NOW + 7200, mi
 ns.PlayerFullName = function() return "Gm Boss-R" end
 check("cancelled", (E:Cancel(id)), true)
 check("and gone from the list", (function() for _, e in ipairs(E:List()) do if e.id == id then return true end end return false end)(), false)
+
+-- sign-ups, as NGM Peon's post: a dungeon (1 / 1 / 3), first come first in, the rest on the bench
+ns.DB.GetAltsOf = function(_, main) return main == "Bob Member-R" and { "Bob Alt-R" } or {} end
+ns.Roster.byName["Bob Alt-R"].className, ns.Roster.byName["Bob Alt-R"].level = "Priest", 60
+local dung = assert(E:Create({ kind = "dungeon", starts = NOW + 3600, minutes = 60, title = "Strat" }))
+local dev = { source = "game", id = dung, kind = "dungeon", starts = NOW + 3600 }
+ns.PlayerFullName = function() return "Me Self-R" end -- guildmates' sign-ups arrive from others
+rec("Rae Raider-R", "ES:g" .. dung .. ":Rae Raider-R", "Rae Raider-R", "tank;")
+rec("Mira Officer-R", "ES:g" .. dung .. ":Gm Boss-R", "Gm Boss-R", "tank;") -- linked? no: refused with NGM Peon
+check("with NGM Peon, an unlinked member's sign-up is refused", guild.sync.guild["ES:g" .. dung .. ":Gm Boss-R"], nil)
+rec("Mira Officer-R", "LK:Gm Boss-R", "NGM Peon", "1")
+rec("Mira Officer-R", "LK:Bob Alt-R", "NGM Peon", "1")
+rec("Gm Boss-R", "ES:g" .. dung .. ":Gm Boss-R", "Gm Boss-R", "tank;")
+local fields = E:Fields(dev)
+check("first tank in, the second on the bench", fields[1].name .. " " .. fields[1].value, "Tanks (1/1) Rae Raider")
+check("limits shown, as on the post", fields[2].name .. "|" .. fields[3].name, "Healers (0/1)|DPS (0/3)")
+check("bench", fields[4].name .. " " .. fields[4].value, "Bench (1) Gm Boss")
+-- you sign up as your main; with NGM Peon the character brought must be linked
+ns.PlayerFullName = function() return "Bob Alt-R" end
+check("not linked: why, not buttons", select(2, E:CanSignUp(dev)), "Link your characters to sign up: type /ngm link in Discord.")
+check("bringing a linked alt works", (E:SignUp(dev, "healer", "Bob Alt-R")), true)
+check("kept under the main, with the alt picked", guild.sync.guild["ES:g" .. dung .. ":Bob Member-R"].v, "healer;Bob Alt-R")
+check("Mine", table.concat({ E:Mine(dev) }, ","), "healer,Bob Alt-R")
+check("the card lists the alt, with class and level", E:Fields(dev)[2].value, "Bob Alt · Priest 60")
+check("changing role keeps the alt", (E:SignUp(dev, "absent")) and guild.sync.guild["ES:g" .. dung .. ":Bob Member-R"].v, "absent;Bob Alt-R")
+check("Can't come listed by name", E:Fields(dev)[#E:Fields(dev)].name, "Can't come (1)")
+check("events: Going instead of roles", table.concat(E:Parts("event"), ","), "going,tentative,absent")
+check("closed once started", select(2, E:CanSignUp({ source = "game", id = dung, kind = "dungeon", starts = NOW - 1 })), "Sign-ups are closed: it has started.")
 print("OK")

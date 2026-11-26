@@ -40,6 +40,20 @@ local function Card(parent)
     c.Edit = W.Button(c, "Edit", 70, 22)
     c.Edit:SetPoint("BOTTOMRIGHT", -PAD + 4, PAD - 6)
     c.Edit:Hide()
+    -- sign-ups (3.1): who's coming, as NGM Peon's post, and the buttons
+    c.Signups = c:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
+    c.Signups:SetJustifyH("LEFT")
+    c.Signups:SetSpacing(3)
+    c.Parts = {}
+    for _, part in ipairs({ "tank", "healer", "dps", "going", "tentative", "absent" }) do
+        local b = W.Button(c, ns.Events.PART_BUTTON[part], part == "absent" and 86 or 72, 22)
+        b:Hide()
+        c.Parts[part] = b
+    end
+    c.Change = W.Button(c, "Change character", 130, 22)
+    c.Change:Hide()
+    c.Notice = c:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
+    c.Notice:SetJustifyH("LEFT")
     return c
 end
 
@@ -86,6 +100,76 @@ function EV:Build(frame)
     page:SetScript("OnSizeChanged", function() if page:IsVisible() then EV:Refresh() end end)
     ns:On("EVENTS_CHANGED", function() EV:Refresh() end)
     ns:On("GAME_CALENDAR_CHANGED", function() EV:Refresh() end)
+end
+
+-- Sign-ups on a card: who's coming (as NGM Peon's post), your buttons, and
+-- Change character; or why you can't sign up. Returns the height it took.
+function EV:FillSignups(c, ev, inner, top)
+    local E = ns.Events
+    local lines = {}
+    local coming = 0
+    for _, f in ipairs(E:Fields(ev)) do
+        lines[#lines + 1] = ns.GOLD .. f.name .. "|r  " .. f.value
+        if f.name:match("^Tanks") or f.name:match("^Healers") or f.name:match("^DPS") or f.name:match("^Going") then
+            coming = coming + (tonumber(f.name:match("%((%d+)")) or 0)
+        end
+    end
+    if ev.source == "game" then c.Coming:SetText(("%d coming"):format(coming)) end
+    c.Signups:ClearAllPoints()
+    c.Signups:SetPoint("TOPLEFT", PAD, -(top + 8))
+    c.Signups:SetWidth(inner - 2 * PAD)
+    c.Signups:SetText(table.concat(lines, "\n"))
+    local y = top + 8 + c.Signups:GetStringHeight() + 8
+    local mine, picked = E:Mine(ev)
+    local ok, why = E:CanSignUp(ev, picked)
+    for _, b in pairs(c.Parts) do b:Hide() end
+    c.Change:Hide()
+    c.Notice:Hide()
+    if not ok then
+        c.Notice:ClearAllPoints()
+        c.Notice:SetPoint("TOPLEFT", PAD, -y)
+        c.Notice:SetWidth(inner - 2 * PAD)
+        c.Notice:SetText(why)
+        c.Notice:Show()
+        return (y - top) + c.Notice:GetStringHeight()
+    end
+    local x = PAD
+    for _, part in ipairs(E:Parts(ev.kind)) do
+        local b = c.Parts[part]
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", x, -y)
+        if b.LockHighlight then if mine == part then b:LockHighlight() else b:UnlockHighlight() end end
+        b:SetScript("OnClick", function()
+            local done, err = E:SignUp(ev, part)
+            if not done then ns:Print(err or "That didn't work.") end
+            EV:Refresh()
+        end)
+        W.Tooltip(b, E.PART_BUTTON[part], mine == part and "You're signed up as this." or "Sign up as this.")
+        b:Show()
+        x = x + b:GetWidth() + 4
+    end
+    local mains = E:MyCharacters()
+    if #mains > 1 then
+        c.Change:ClearAllPoints()
+        c.Change:SetPoint("TOPLEFT", x + 8, -y)
+        c.Change:SetScript("OnClick", function(btn)
+            if not mine then ns:Print("Pick your role first, then the character you're bringing.") return end
+            local items = { { text = "Which character are you bringing?", isTitle = true } }
+            for _, name in ipairs(mains) do
+                items[#items + 1] = { text = ns.ShortName(name), radio = true,
+                    checked = function() return (picked == "" and name == mains[1]) or picked == name end,
+                    func = function()
+                        local done, err = E:SignUp(ev, mine, name == mains[1] and "" or name)
+                        if not done then ns:Print(err or "That didn't work.") end
+                        EV:Refresh()
+                    end }
+            end
+            W.ShowMenu(btn, items)
+        end)
+        W.Tooltip(c.Change, "Change character", "Which of your characters you're bringing (your main unless you pick another).")
+        c.Change:Show()
+    end
+    return (y - top) + 24
 end
 
 -- One of the game's own: the weekly reset or a holiday. No sign-ups.
@@ -165,13 +249,14 @@ function EV:Refresh()
             -- sign-ups are in Discord only: one list per event
             local where = ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or ""
             local server = ev.server ~= "" and (" " .. GRAY .. "on|r " .. ev.server) or ""
-            c.Where:SetText(ns.GOLD .. "Sign up in Discord|r" .. where .. server
+            c.Where:SetText(ns.GOLD .. "On Discord|r" .. where .. server
                 .. (manager and ("\n" .. GRAY .. "Made on the dashboard: edit it there.|r") or ""))
         end
         c.Edit:SetShown(editable)
         c.Edit:SetScript("OnClick", function() ns.EventForm:Open(ev) end)
         local h = PAD + c.Title:GetStringHeight() + 6 + c.When:GetStringHeight()
-            + (c.Text:IsShown() and (6 + c.Text:GetStringHeight()) or 0) + 8 + math.max(c.Where:GetStringHeight(), editable and 16 or 0) + PAD
+            + (c.Text:IsShown() and (6 + c.Text:GetStringHeight()) or 0) + 8 + c.Where:GetStringHeight()
+        h = h + EV:FillSignups(c, ev, inner, h) + math.max(PAD, editable and 30 or 0)
         c:SetHeight(h)
         c:Show()
         y = y + h + GAP
@@ -200,6 +285,8 @@ function EV:Refresh()
     self.note:ClearAllPoints()
     self.note:SetPoint("TOPLEFT", EDGE, -y)
     self.note:SetWidth(inner)
-    self.note:SetText("Times are your own. Sign up in Discord, with the buttons on each event's post. New ones reach the game when an officer brings in NGM Peon's code (" .. ns.GOLD .. "/ngm peon|r).")
+    self.note:SetText(ns.Sync:PeonGuild()
+        and ("Times are your own. Sign up here or with the buttons on each event's post in Discord: both count. New ones reach the game with NGM Desktop, or when an officer brings in NGM Peon's code (" .. ns.GOLD .. "/ngm peon|r).")
+        or "Times are your own. Sign up with the buttons on each event.")
     self.content:SetSize(width, y + 40)
 end

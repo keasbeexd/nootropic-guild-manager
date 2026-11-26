@@ -26,6 +26,18 @@
       ns.Events:Cancel(id)          -> true, or nil and why
       ns.Events:MayEdit(ev)         this character may edit or cancel it
     fields: { kind, starts, minutes, title, description }
+
+    Sign-ups (3.1): ES:<event>:<member> records, as NGM Peon's post (ngm-hub
+    src/events/model.ts): by role for dungeons and raids, Going for events;
+    first come first in up to each role's limit, the rest on the bench. You
+    sign up as your main, or pick an alt. With NGM Peon only linked
+    characters may (LK), as on Discord.
+
+      ns.Events:Parts(kind)         the buttons
+      ns.Events:Fields(ev)          { { name =, value = } } as the post's fields
+      ns.Events:Mine(ev)            your part and the character picked
+      ns.Events:CanSignUp(ev)       true, or nil and why not
+      ns.Events:SignUp(ev, part, picked)
 ]]
 local _, ns = ...
 local E = {}
@@ -220,6 +232,108 @@ function E:Cancel(id)
     if not self:MayEdit({ source = "game", creator = was.creator }) then return nil, "Only its creator or an officer can cancel it." end
     was.cancelled = true
     return ns.Sync:Set("EG:" .. id, E.GameValue(was))
+end
+
+------------------------------------------------------------------------
+-- Sign-ups (ES records)
+------------------------------------------------------------------------
+E.PART_LABEL = { tank = "Tanks", healer = "Healers", dps = "DPS", going = "Going", tentative = "Tentative", absent = "Can't come" }
+E.PART_BUTTON = { tank = "Tank", healer = "Healer", dps = "DPS", going = "Going", tentative = "Tentative", absent = "Can't come" }
+E.LIMITS = { dungeon = { tank = 1, healer = 1, dps = 3 }, raid = {}, event = {} } -- NGM Peon's defaults
+
+function E:Parts(kind)
+    if kind == "event" then return { "going", "tentative", "absent" } end
+    return { "tank", "healer", "dps", "tentative", "absent" }
+end
+
+-- the sign-up key's event part: "g<EG id>" or "p<NGM Peon id>"
+function E.SignupEvent(ev) return ev.source == "game" and ("g" .. ev.id) or ("p" .. B36(ev.id)) end
+
+function E:SignUps(ev)
+    local prefix, out = "ES:" .. E.SignupEvent(ev) .. ":", {}
+    for k, rec in pairs((ns.Sync and ns.Sync:Store("guild")) or {}) do
+        if k:sub(1, #prefix) == prefix and (rec.v or "") ~= "" then
+            local part, picked = rec.v:match("^(%l+);(.*)$")
+            if part then
+                local member = k:sub(#prefix + 1)
+                out[#out + 1] = { member = member, part = part, picked = picked, name = picked ~= "" and picked or member, t = rec.t }
+            end
+        end
+    end
+    return out
+end
+
+-- who's in and who's on the bench (first come first in, per role)
+function E.Place(list, limits)
+    table.sort(list, function(a, b) if a.t ~= b.t then return a.t < b.t end return a.member < b.member end)
+    local inn, bench = { tank = {}, healer = {}, dps = {}, going = {}, tentative = {}, absent = {} }, {}
+    for _, s in ipairs(list) do
+        local cap = limits[s.part]
+        if inn[s.part] and cap and #inn[s.part] >= cap then bench[#bench + 1] = s
+        elseif inn[s.part] then inn[s.part][#inn[s.part] + 1] = s end
+    end
+    return inn, bench
+end
+
+local function Who(s)
+    local e = ns.Roster and ns.Roster.byName and ns.Roster.byName[s.name]
+    local name = ns.ShortName and ns.ShortName(s.name) or s.name
+    if e and (e.className or "") ~= "" then return name .. " · " .. e.className .. ((e.level or 0) > 0 and (" " .. e.level) or "") end
+    return name
+end
+
+-- the post's fields, as NGM Peon's (src/events/model.ts fields)
+function E:Fields(ev)
+    local limits = ev.limits or E.LIMITS[ev.kind] or {}
+    local inn, bench = E.Place(self:SignUps(ev), limits)
+    local function list(xs) if #xs == 0 then return "-" end local t = {} for i, s in ipairs(xs) do t[i] = Who(s) end return table.concat(t, ", ") end
+    local out = {}
+    if ev.kind == "event" then
+        out[#out + 1] = { name = ("Going (%d)"):format(#inn.going), value = list(inn.going) }
+    else
+        for _, part in ipairs({ "tank", "healer", "dps" }) do
+            out[#out + 1] = { name = ("%s (%d%s)"):format(E.PART_LABEL[part], #inn[part], limits[part] and ("/" .. limits[part]) or ""), value = list(inn[part]) }
+        end
+    end
+    if #bench > 0 then out[#out + 1] = { name = ("Bench (%d)"):format(#bench), value = list(bench) } end
+    if #inn.tentative > 0 then out[#out + 1] = { name = ("Tentative (%d)"):format(#inn.tentative), value = list(inn.tentative) } end
+    if #inn.absent > 0 then
+        local t = {} for i, s in ipairs(inn.absent) do t[i] = ns.ShortName and ns.ShortName(s.name) or s.name end
+        out[#out + 1] = { name = ("Can't come (%d)"):format(#inn.absent), value = table.concat(t, ", ") }
+    end
+    return out
+end
+
+local function MyMain() return ns.DB:RootOf(ns.PlayerFullName()) or ns.PlayerFullName() end
+
+function E:Mine(ev)
+    local rec = (ns.Sync:Store("guild") or {})["ES:" .. E.SignupEvent(ev) .. ":" .. MyMain()]
+    if not rec or (rec.v or "") == "" then return nil end
+    return rec.v:match("^(%l+);(.*)$")
+end
+
+function E:CanSignUp(ev, picked)
+    if ev.starts <= ns.DB:Now() then return nil, "Sign-ups are closed: it has started." end
+    if ns.Sync:PeonGuild() and not ns.Sync:Linked((picked and picked ~= "") and picked or MyMain()) then
+        return nil, "Link your characters to sign up: type /ngm link in Discord."
+    end
+    return true
+end
+
+function E:SignUp(ev, part, picked)
+    if not ns.Sync.PARTS[part] then return nil, "Pick a role." end
+    if picked == nil then picked = select(2, self:Mine(ev)) or "" end
+    local ok, why = self:CanSignUp(ev, picked)
+    if not ok then return nil, why end
+    return ns.Sync:Set("ES:" .. E.SignupEvent(ev) .. ":" .. MyMain(), part .. ";" .. picked)
+end
+
+-- your characters to pick from: your main and its alts
+function E:MyCharacters()
+    local main = MyMain()
+    local out = { main }
+    for _, alt in ipairs(ns.DB:GetAltsOf(main) or {}) do out[#out + 1] = alt end
+    return out
 end
 
 local KIND = { raid = "raid", dungeon = "dungeon", event = "event" }
