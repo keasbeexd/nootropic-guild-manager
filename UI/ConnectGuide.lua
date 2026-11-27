@@ -16,16 +16,17 @@
     NGM Desktop isn't a step: a short note under the steps says it's there
     to help the guild sync faster.
 
-    Opens by itself a little after login when step 2 or 4 is still to do
-    (NGM Desktop users too), at most every few days; Not Now and Don't Show
-    Again. /ngm connect and Options open it any time.
+    Opens by itself a little after every login and /reload while linking or
+    Discord in WoW is still to do (NGM Desktop users too). Not Now closes it
+    until the next one; Don't Show Again until the next version of the NGM
+    Addon (connectOff holds the version it was chosen on). /ngm connect and
+    Options open it any time.
 ]]
 local _, ns = ...
 local W = ns.Widgets
 local CG = {}
 ns.ConnectGuide = CG
 
-CG.REMIND_EVERY = 3 * 86400
 local GREEN, ORANGE, GRAY = "|cff6cbf5a", "|cfffe8019", "|cff9d9d9d"
 
 -- this player's characters: their main and its alts
@@ -132,18 +133,15 @@ function CG:Build()
     self.tip:SetJustifyH("LEFT")
     self.later = W.Button(f, "Not Now", 110, 24, "alt")
     self.later:SetPoint("BOTTOMRIGHT", -16, 14)
-    self.later:SetScript("OnClick", function()
-        ns.DB:Settings().connectNext = ns.DB:Now() + CG.REMIND_EVERY
-        f:Hide()
-    end)
+    self.later:SetScript("OnClick", function() f:Hide() end)
     self.never = W.Button(f, "Don't Show Again", 150, 24, "alt")
     self.never:SetPoint("RIGHT", self.later, "LEFT", -8, 0)
     self.never:SetScript("OnClick", function()
-        ns.DB:Settings().connectOff = true
+        ns.DB:Settings().connectOff = ns.version or "?"
         f:Hide()
-        ns:Print("Get Connected won't open by itself again. Type /ngm connect to see it.")
+        ns:Print("Get Connected won't open by itself until the next version of the NGM Addon. Type /ngm connect to see it.")
     end)
-    W.Tooltip(self.never, "Don't show again", "It won't open by itself. /ngm connect or Options still open it.")
+    W.Tooltip(self.never, "Don't show again", "It won't open by itself until the next version of the NGM Addon. /ngm connect or Options still open it.")
     ns:On("EVENTS_CHANGED", function() if f:IsShown() then CG:Refresh() end end)
 end
 
@@ -208,16 +206,20 @@ function CG:Open()
     self.frame:Show()
 end
 
--- A little after login (after the Welcome tour, if that's showing): when
--- linking or Discord in WoW is still to do, at most every few days.
+-- Turned off with Don't Show Again on this version? (a new version asks again)
+function CG:Silenced()
+    local off = ns.DB:Settings().connectOff
+    return off ~= nil and off ~= false and off == (ns.version or "?")
+end
+
+-- A little after every login and /reload (after the Welcome tour, if that's
+-- showing), while linking or Discord in WoW is still to do.
 function CG:Init()
-    C_Timer.After(30, function()
+    C_Timer.After(15, function()
         local st = ns.DB:Settings()
-        if st.connectOff or (st.connectNext or 0) > ns.DB:Now() then return end
+        if CG:Silenced() then return end
         if not st.welcomeDone or (ns.Welcome and ns.Welcome.frame and ns.Welcome.frame:IsShown()) then return end
         if InCombatLockdown and InCombatLockdown() then return end
-        if not CG:Needed() then return end
-        st.connectNext = ns.DB:Now() + CG.REMIND_EVERY
-        CG:Open()
+        if CG:Needed() then CG:Open() end
     end)
 end

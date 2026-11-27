@@ -38,6 +38,17 @@ assert(states():find("Discord in WoW=todo", 1, true) and CG:Needed(), states())
 assert(CG:Steps()[3].button and CG:Steps()[3].button.label == "Open Options")
 plan["DX:Ann Main"] = { v = "1" }
 assert(states():find("Discord in WoW=done", 1, true) and not CG:Needed(), states())
+-- Don't Show Again: until the next version
+local settings = {}
+ns.DB.Settings = function() return settings end
+ns.version = "3.1.0"
+assert(not CG:Silenced())
+settings.connectOff = "3.1.0"
+assert(CG:Silenced(), "silenced on this version")
+ns.version = "3.1.1"
+assert(not CG:Silenced(), "a new version asks again")
+settings.connectOff = true -- an earlier test copy's: asks again
+assert(not CG:Silenced())
 -- without NGM Peon: never opens by itself
 plan, peon = {}, false
 assert(not CG:Needed())
