@@ -337,6 +337,7 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.HallOfFame:Init()
     ns.DiscordCode:Init()
     ns.Events:Init()
+    ns.GameCalendar:Init()
     ns.GuildFeed:Init()
     ns.HofCheck:Init()
     ns.Sharing:Init()
@@ -346,6 +347,7 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.Minimap:Init()
     ns.Options:Init()
     ns.Welcome:Init()
+    ns.ConnectGuide:Init()
     ns.Communities:Init()
     ns.GuildRoster:Init()
     ns.DNWView:Init()
@@ -379,7 +381,8 @@ local function PrintHelp()
     end
     ns:Print("  |cffffffff/ngm minimap|r  - show or hide the minimap button")
     ns:Print("  |cffffffff/ngm options|r  - open the options")
-    ns:Print("  |cffffffff/ngm events|r  - the guild's upcoming events from NGM Peon, and where to sign up")
+    ns:Print("  |cffffffff/ngm events|r  - the guild's upcoming events from NGM Peon and where to sign up, plus the game's resets and holidays")
+    if ns.Sync.PeonGuild and ns.Sync:PeonGuild() then ns:Print("  |cffffffff/ngm connect|r  - Get Connected: linking with NGM Peon and Discord in WoW, and where each stands") end
     ns:Print(ns.GOLD .. "NGM Peon|r (your guild's Discord, ngmpeon.app):")
     ns:Print("  |cffffffff/ngm link|r  - in Discord, not here: link your characters for your rank role")
     if gm then ns:Print("  |cffffffff/ngm discord setup|r  - once: the code for /ngm-guild setup in Discord") end
@@ -442,8 +445,12 @@ SlashCmdList.NOOTROPICGM = function(msg)
         ns.UI:OpenTab(ns.UI.TAB_HOF)
     elseif cmd == "peon" then
         ns.PeonPasteView:Open()
+    elseif cmd == "connect" then
+        ns.ConnectGuide:Open()
     elseif cmd == "link" or cmd == "dashboard" then
         ns:Print(("|cffffffff/ngm %s|r is an NGM Peon command: type it in your guild's Discord server, not in game."):format(cmd))
+    elseif (cmd == "events" or cmd == "calendar" or cmd == "cal") and rest:lower() == "check" then
+        ns.GameCalendar:Check()
     elseif cmd == "events" or cmd == "calendar" or cmd == "cal" then
         ns.UI:OpenTab(ns.UI.TAB_EVENTS)
     elseif cmd == "reload" then

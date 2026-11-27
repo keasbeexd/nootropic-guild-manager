@@ -82,7 +82,8 @@ g:ResetStats()
 g:Login("Member 200")
 local t = g:Settle()
 print(("  A. in sync: %d messages, %d bytes, settled in %ds"):format(g.stats.messages, g.stats.bytes, t))
-check("A login with nothing to catch up on costs a few tiny messages", g.stats.messages <= 4 and g.stats.bytes < 300)
+-- one small check per lane (3.1 added "plans": events made in game and sign-ups)
+check("A login with nothing to catch up on costs a few tiny messages", g.stats.messages <= 6 and g.stats.bytes < 300)
 check("and says it's in sync", A.S:Health() == "ok")
 
 ------------------------------------------------------------------------

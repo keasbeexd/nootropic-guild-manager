@@ -155,7 +155,7 @@ g:Settle()
 check("her copy noticed and picked an officer", MYK.S.relay ~= nil and MYK.S.relayAcked)
 check("everyone has her new version", ANN.store["AV:Myk Broken"].v == "2.12.0" and BOB.store["AV:Myk Broken"].v == "2.12.0")
 check("and her changed record", ANN.store["P:Myk Broken"].v == "Arcane;;Tailoring:90" and GM.store["P:Myk Broken"].v == "Arcane;;Tailoring:90")
-check(("whispers stayed few (%d)"):format(g.stats.byChannel.WHISPER or 0), (g.stats.byChannel.WHISPER or 0) <= 12)
+check(("whispers stayed few (%d)"):format(g.stats.byChannel.WHISPER or 0), (g.stats.byChannel.WHISPER or 0) <= 14) -- 3.1: one more lane to compare
 check("her status says so", MYK.S:Health() == "busy" and select(2, MYK.S:Health()):find(MYK.S.relay, 1, true))
 -- her later changes go the same way
 g:As(MYK, function() MYK.S:Set("SC:Myk Broken", string.rep("0", 42)) end)

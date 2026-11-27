@@ -359,71 +359,93 @@ end
 ------------------------------------------------------------------------
 -- Popups
 ------------------------------------------------------------------------
-local function PopupEditBox(dialog)
-    return dialog.editBox or dialog.EditBox or (dialog.GetEditBox and dialog:GetEditBox())
+-- Our own small dialog, not Blizzard's StaticPopup: those frames are shared
+-- with the game's own popups (Release Spirit, ready checks, deleting an
+-- item...), and an addon using them can leave them tainted, so a later
+-- protected button in one fails ("Interface action failed because of an
+-- AddOn"). One dialog at a time; Escape closes it; a controller works it.
+--
+--   W.Confirm(text, onYes)                    Yes / No
+--   W.Prompt(text, default, onAccept, max)    a line of text
+--   W.Copy(text)                              text selected, to copy with Ctrl+C
+local dialog
+
+local function Dialog()
+    if dialog then return dialog end
+    local f = CreateFrame("Frame", "NootropicGMDialog", UIParent, "BasicFrameTemplateWithInset")
+    if ns.Theme and ns.Theme.Skin then ns.Theme:Skin(f) end
+    f:SetSize(380, 150)
+    f:SetPoint("TOP", 0, -180)
+    f:SetFrameStrata("FULLSCREEN_DIALOG")
+    f:SetClampedToScreen(true)
+    f:EnableMouse(true)
+    f:Hide()
+    tinsert(UISpecialFrames, "NootropicGMDialog") -- Escape closes it
+    f.Text = f:CreateFontString(nil, "OVERLAY", "NGMFontText")
+    f.Text:SetPoint("TOPLEFT", 18, -34)
+    f.Text:SetPoint("TOPRIGHT", -18, -34)
+    f.Text:SetJustifyH("LEFT")
+    f.Box = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+    f.Box:SetHeight(22)
+    f.Box:SetAutoFocus(false)
+    f.Box:SetScript("OnEscapePressed", function() f:Hide() end)
+    f.Box:SetScript("OnEnterPressed", function() f.Yes:Click() end)
+    f.Yes = W.Button(f, YES or "Yes", 110, 24)
+    f.Yes:SetPoint("BOTTOMRIGHT", f, "BOTTOM", -6, 14)
+    f.No = W.Button(f, NO or "No", 110, 24, "alt")
+    f.No:SetPoint("BOTTOMLEFT", f, "BOTTOM", 6, 14)
+    f.No:SetScript("OnClick", function() f:Hide() end)
+    f.Yes:SetScript("OnClick", function()
+        local fn, text = f.onYes, f.Box:GetText()
+        f:Hide()
+        if fn then fn(text) end
+    end)
+    f:SetScript("OnHide", function() f.onYes = nil f.Box:ClearFocus() end)
+    if ns.Gamepad then ns.Gamepad:Register(f, "popup") end
+    dialog = f
+    return f
 end
 
--- Never reassign StaticPopupDialogs itself: that taints a Blizzard global and
--- breaks the Escape key (ADDON_ACTION_FORBIDDEN SpellStopCasting). Adding our
--- own entries to the existing table is fine.
-
-StaticPopupDialogs.NOOTROPICGM_INPUT = {
-    text = "%s",
-    button1 = ACCEPT or "Accept",
-    button2 = CANCEL or "Cancel",
-    hasEditBox = true,
-    maxLetters = 32,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-    OnShow = function(self, data)
-        data = data or self.data
-        local eb = PopupEditBox(self)
-        if eb then
-            eb:SetText(data and data.default or "")
-            eb:HighlightText()
-            eb:SetFocus()
-        end
-    end,
-    OnAccept = function(self, data)
-        data = data or self.data
-        local eb = PopupEditBox(self)
-        if data and data.callback and eb then data.callback(eb:GetText()) end
-    end,
-    EditBoxOnEnterPressed = function(eb, data)
-        local dialog = eb:GetParent()
-        data = data or dialog.data
-        if data and data.callback then data.callback(eb:GetText()) end
-        dialog:Hide()
-    end,
-    EditBoxOnEscapePressed = function(eb)
-        eb:GetParent():Hide()
-    end,
-}
-
-StaticPopupDialogs.NOOTROPICGM_CONFIRM = {
-    text = "%s",
-    button1 = YES or "Yes",
-    button2 = NO or "No",
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    showAlert = true,
-    preferredIndex = 3,
-    OnAccept = function(self, data)
-        data = data or self.data
-        if data and data.callback then data.callback() end
-    end,
-}
+local function Open(text, opts)
+    if InCombatLockdown and InCombatLockdown() then return end -- our windows stay shut in combat
+    local f = Dialog()
+    f.Text:SetText(text or "")
+    f.onYes = opts.onYes
+    f.Box:SetShown(opts.box == true)
+    local h = 34 + f.Text:GetStringHeight() + 14
+    if opts.box then
+        f.Box:ClearAllPoints()
+        f.Box:SetPoint("TOPLEFT", f.Text, "BOTTOMLEFT", 6, -10)
+        f.Box:SetPoint("RIGHT", f, "RIGHT", -22, 0)
+        f.Box:SetMaxLetters(opts.max or 0)
+        f.Box:SetText(opts.default or "")
+        h = h + 34
+    end
+    f.Yes:SetText(opts.yes or (YES or "Yes"))
+    f.No:SetShown(opts.no ~= false)
+    f.Yes:ClearAllPoints()
+    if opts.no == false then f.Yes:SetPoint("BOTTOM", f, "BOTTOM", 0, 14)
+    else f.Yes:SetPoint("BOTTOMRIGHT", f, "BOTTOM", -6, 14) end
+    f:SetHeight(h + 44)
+    f:Show()
+    f:Raise()
+    if opts.box then
+        f.Box:SetFocus()
+        f.Box:HighlightText()
+    end
+end
 
 function W.Prompt(text, default, callback, maxLetters)
-    StaticPopupDialogs.NOOTROPICGM_INPUT.maxLetters = maxLetters or 32
-    StaticPopup_Show("NOOTROPICGM_INPUT", text, nil, { default = default, callback = callback })
+    Open(text, { box = true, default = default, max = maxLetters or 32, yes = ACCEPT or "Accept",
+        onYes = function(value) if callback then callback(value) end end })
 end
 
 function W.Confirm(text, callback)
-    StaticPopup_Show("NOOTROPICGM_CONFIRM", text, nil, { callback = callback })
+    Open(text, { onYes = function() if callback then callback() end end })
+end
+
+function W.Copy(text)
+    Open("Press Ctrl+C to copy, then Escape.", { box = true, default = text, yes = CLOSE or "Close", no = false })
 end
 
 ------------------------------------------------------------------------

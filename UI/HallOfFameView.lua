@@ -369,7 +369,7 @@ function HV:Refresh()
     if data.peon then
         note = "From Blizzard's statistics for everyone in the guild, worked out by NGM Peon (the same as on its dashboard and in Discord)"
             .. (data.peon.at and (" and brought in " .. date("%d %b", data.peon.at)) or "")
-            .. ". It updates when an officer brings in a newer code (|cffffffff/ngm peon|r). Top 5 of each card."
+            .. ". It updates when an officer brings in NGM Peon's news (|cffffffff/ngm peon|r, or their NGM Desktop by itself). Top 5 of each card."
     elseif not ns.HallOfFame:Available() then
         note = "This game client doesn't give addons character statistics, so there's nothing to show."
     elseif data.sharing == 0 then

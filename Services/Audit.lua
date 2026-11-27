@@ -173,7 +173,9 @@ function AU:Entries(filter)
     if not ns.IsOfficer() then return out end
     local text = filter.text and ns.Trim(filter.text):lower() or ""
     for _, e in ipairs(ns.Sync:AuditEntries()) do
-        if (not filter.member or e.member == filter.member)
+        -- NGM Peon's bookkeeping logged by earlier test copies: not something anyone changed
+        if e.typ == "GS" and ns.Sync.QUIET_SETTINGS and ns.Sync.QUIET_SETTINGS["GS:" .. (e.ref or "")] then
+        elseif (not filter.member or e.member == filter.member)
             and (not filter.category or e.typ == filter.category) then
             if text == "" then
                 out[#out + 1] = e

@@ -23,6 +23,12 @@
                                     play counts (7 days x 12 two-hour blocks,
                                     server time, Monday first), as the Overview
         R<TAB>key<TAB>t<TAB>author<TAB>value   main/alt (M) and roles (RL)
+        reset<TAB>daily<TAB>weekly  the game's next resets (3.1; 0 = unknown)
+        H<TAB>starts<TAB>ends<TAB>title<TAB>description
+                                    the game's holidays, next 30 days (3.1;
+                                    Services/GameCalendar.lua); reset and H
+                                    from the Guild Master's and officers'
+                                    codes only, and only from a fresh read
     Times are server time in seconds, in base 36. Only changes are sent:
     since = what NGM Peon last said it has, else the last code made, less two
     weeks (a code made but never pasted is covered). Newest wins on both
@@ -108,12 +114,19 @@ end
 
 -- update: { since =, upto =, hours = { sharing =, counts = {84} } or nil,
 --           records = { { key =, v =, t =, a = }, ... },
---           tabard = { bg =, border = } (hex) or nil }
+--           tabard = { bg =, border = } (hex) or nil,
+--           calendar = { daily =, weekly =, holidays = { { starts =, ends =, title =, description = } } } or nil }
+local function Flat(s, max) return (((s or ""):gsub("[\t\r\n]+", " "):gsub("|", "/")):sub(1, max)) end
+DC.MAX_HOLIDAYS = 30
 function DC:MakeUpdate(region, guild, ranks, update)
     local lines = RankLines(region, guild, ranks)
     lines[#lines + 1] = ""
     lines[#lines + 1] = "since\t" .. B36(update.since)
     lines[#lines + 1] = "upto\t" .. B36(update.upto)
+    -- 3.1: which NGM Addon made it, so NGM Peon only sends 3.1's records to copies that take them
+    if update.version then lines[#lines + 1] = "ver\t" .. update.version end
+    -- 3.1: how far this game has NGM Peon's news, so its dashboard can say what isn't in game yet
+    if update.got and update.got > 0 then lines[#lines + 1] = "got\t" .. B36(update.got) end
     if update.hours then lines[#lines + 1] = "hours\t" .. DC.HoursValue(update.hours) end
     -- the tabard's colours, for NGM Peon's accent (left out while unknown)
     if update.tabard and update.tabard.bg and update.tabard.border then
@@ -123,8 +136,32 @@ function DC:MakeUpdate(region, guild, ranks, update)
     for _, r in ipairs(update.records) do
         lines[#lines + 1] = "R\t" .. r.key .. "\t" .. B36(r.t) .. "\t" .. r.a .. "\t" .. r.v
     end
+    local cal = update.calendar
+    if cal then
+        lines[#lines + 1] = "reset\t" .. B36(cal.daily or 0) .. "\t" .. B36(cal.weekly or 0)
+        for i, h in ipairs(cal.holidays or {}) do
+            if i > DC.MAX_HOLIDAYS then break end
+            lines[#lines + 1] = "H\t" .. B36(h.starts) .. "\t" .. B36(h.ends) .. "\t" .. Flat(h.title, 100) .. "\t" .. Flat(h.description, 300)
+        end
+    end
     local payload = table.concat(lines, "\n")
     return "NGM2." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)
+end
+
+-- The game's resets and holidays for NGM Peon (Discord Events), from a read
+-- in the last two days; nil without one.
+DC.CALENDAR_FRESH = 2 * 86400
+function DC:Calendar()
+    local GC = ns.GameCalendar
+    local got = GC and GC:Get()
+    local now = ns.DB:Now()
+    if not got or now - (got.at or 0) > self.CALENDAR_FRESH then return nil end
+    local r = GC:Resets(now)
+    local holidays = {}
+    for _, h in ipairs(got.holidays or {}) do
+        if h.ends > now then holidays[#holidays + 1] = h end
+    end
+    return { daily = r.daily, weekly = r.weekly, holidays = holidays }
 end
 
 DC.OVERLAP = 14 * 86400 -- before NGM Peon's word: a code made but never pasted is covered
@@ -136,7 +173,8 @@ function DC:Changes(since)
     local store = ns.Sync:Store("guild") or {}
     for key, rec in pairs(store) do
         local typ = key:match("^(%u+):")
-        if (typ == "M" or typ == "RL") and (rec.t or 0) > since and rec.a and rec.a ~= ""
+        -- 3.1: events made in game and sign-ups too (not NGM Peon's own copies)
+        if (typ == "M" or typ == "RL" or typ == "EG" or (typ == "ES" and rec.a ~= (ns.Sync.PEON or "NGM Peon"))) and (rec.t or 0) > since and rec.a and rec.a ~= ""
             and ns.Sync.ValidValue(typ, rec.v) then
             out[#out + 1] = { key = key, v = rec.v or "", t = rec.t, a = rec.a }
         end
@@ -246,7 +284,7 @@ function DC:ForMyGuild(mode)
     local bg, border, emblem
     if ns.Accent then bg, border, emblem = ns.Accent:Tabard() end
     local tabard = (bg and border) and { bg = bg, border = border, emblem = emblem } or nil
-    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard })
+    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard, calendar = self:Calendar(), version = ns.version, got = self:PeonGot() })
     g.peon.made = upto
     if gm then g.peon.ranks = self.RankSignature(ranks) end
     return code, nil, since == 0, #records, since
@@ -254,7 +292,9 @@ end
 
 ------------------------------------------------------------------------
 -- The code from NGM Peon (/ngm peon): NGMP1.<base64url>.<adler-32>
---   region, guild, has<TAB>t, [hours<TAB>hash], R<TAB>key<TAB>t<TAB>author<TAB>value
+--   region, guild, has<TAB>t, [hours<TAB>hash], [mine<TAB>t (3.1: how far NGM
+--   Peon has this computer's own changes)], [at<TAB>t (3.1: when it was made;
+--   the next NGM2 sends the newest back as got)], R<TAB>key<TAB>t<TAB>author<TAB>value
 --   (records: M main/alt, RL Tank/Healer/DPS, CN a linked member's @Discord name,
 --   HW a month's Hall of Fame champions, GS:peon = "1": NGM Peon crowns them)
 -- (ngm-hub's src/records/addoncode.ts makes it). Its records are taken as
@@ -292,7 +332,13 @@ function DC:ParsePeon(code)
     local out = { region = lines[1], guild = lines[2], records = {}, events = {} }
     for i = 3, #lines do
         local f = ns.Split(lines[i], "\t")
-        if f[1] == "has" then
+        if f[1] == "at" then
+            -- 3.1: when NGM Peon made this code
+            out.at = tonumber(f[2] or "", 36)
+        elseif f[1] == "mine" then
+            -- 3.1: how far NGM Peon has this computer's own changes (NGM Desktop)
+            out.mine = tonumber(f[2] or "", 36)
+        elseif f[1] == "has" then
             out.has = tonumber(f[2] or "", 36)
             -- the newest NGM on GitHub, as NGM Peon last checked (NGM Peon adds it)
             out.release = f[3] ~= "" and f[3] or nil
@@ -340,7 +386,9 @@ function DC:ApplyPeon(code)
     for _, r in ipairs(c.records) do
         local typ = r.key:match("^(%u+):")
         -- mains, roles, Discord names, champions, and the setting that NGM Peon crowns them
+        -- 3.1: links to NGM Peon, who may create events, posts' links and Discord sign-ups
         local wanted = typ == "M" or typ == "RL" or typ == "CN" or (typ == "HW" and r.key:match("^HW:%d%d%d%d%d%d$")) or r.key == "GS:peon"
+            or typ == "LK" or typ == "DX" or typ == "EL" or typ == "ES" or r.key == "GS:evranks" or r.key == "GS:gamechat"
         if not wanted then
             out.refused = out.refused + 1
         else
@@ -349,7 +397,11 @@ function DC:ApplyPeon(code)
                 out.had = out.had + 1
             else
                 local ok, key = ns.Sync:Intake(r.key, r.t, r.a, nil, r.v, { origin = "remote", channel = "GUILD", sender = ns.PlayerFullName() })
-                if ok then
+                if not ok and ns.Sync.KeepPeonOwn and ns.Sync:KeepPeonOwn(r.key, r) then
+                    -- 3.1: NGM Peon's records a member may not pass on: kept for themselves
+                    out.taken = out.taken + 1
+                    ok = nil
+                elseif ok then
                     out.taken = out.taken + 1
                     ns.Sync:Broadcast(key, ns.Sync:Get(key))
                     local who = key:match("^%u+:(.*)$")
@@ -368,6 +420,18 @@ function DC:ApplyPeon(code)
     local g = ns.DB:Guild() or {}
     g.peon = g.peon or {}
     if not g.peon.has or c.has > g.peon.has then g.peon.has = c.has end
+    if c.mine and c.mine > (g.peon.mine or 0) then g.peon.mine = c.mine end
+    -- how far the game has NGM Peon's news (sent back in the next update);
+    -- officers share it, so the guild's next update says it too
+    if c.at and c.at > (g.peon.got or 0) then g.peon.got = c.at end
+    if c.at and ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peongot") and c.at > (tonumber(ns.Sync:Value("GS:peongot") or "", 36) or 0) then
+        ns.Sync:Set("GS:peongot", B36(c.at))
+    end
+    -- how far NGM Peon has the guild's changes: officers share it, so every
+    -- copy can say what isn't on Discord yet (DC:NotOnDiscord)
+    if ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peonhas") and c.has > (tonumber(ns.Sync:Value("GS:peonhas") or "", 36) or 0) then
+        ns.Sync:Set("GS:peonhas", B36(c.has))
+    end
     g.peon.hoursHash = c.hoursHash
     g.peon.joins = c.joins
     -- NGM Peon's Hall of Fame: an officer shares it with the guild (HB:<period>);
@@ -486,13 +550,14 @@ function DC:ForDesktop()
     if peon.has then since = math.max(0, peon.has - self.ARRIVAL)
     elseif peon.made then since = math.max(0, peon.made - self.OVERLAP) end
     local records = self:Changes(since)
-    local hours, tabard
+    local hours, tabard, calendar
     if officer then
         hours = self:Hours()
         if hours and since > 0 and peon.hoursHash and ns.Sync.Hash(self.HoursValue(hours)) == peon.hoursHash then hours = nil end
         local bg, border, emblem
         if ns.Accent then bg, border, emblem = ns.Accent:Tabard() end
         tabard = (bg and border) and { bg = bg, border = border, emblem = emblem } or nil
+        calendar = self:Calendar()
     else
         -- the player's own characters: this one, its main and the main's alts
         local me = ns.PlayerFullName()
@@ -502,12 +567,15 @@ function DC:ForDesktop()
         for _, alt in ipairs(ns.DB.GetAltsOf and ns.DB:GetAltsOf(root) or {}) do own[alt] = true end
         local mine = {}
         for _, r in ipairs(records) do
-            local member = r.key:match("^%u+:(.+)$")
+            local typ, member = r.key:match("^(%u+):(.+)$")
+            -- a sign-up is the member's (ES:<event>:<member>); an event made in game its creator's
+            if typ == "ES" then member = member:match("^[^:]+:(.+)$") end
+            if typ == "EG" then member = (r.v or ""):match("^%l+;%w+;%w+;([^;]+);") end
             if member and own[member] and own[r.a] then mine[#mine + 1] = r end
         end
         records = mine
     end
-    return self:MakeUpdate(region, guild, ranks, { since = since, upto = ns.DB:Now(), hours = hours, records = records, tabard = tabard })
+    return self:MakeUpdate(region, guild, ranks, { since = since, upto = ns.DB:Now(), hours = hours, records = records, tabard = tabard, calendar = calendar, version = ns.version })
 end
 
 -- NGM Desktop's news: the app keeps NGM Peon's code (the same one the
@@ -562,6 +630,80 @@ end
 -- saves NGM's update for the app to send and loads the app's newest news.
 -- Only with the app installed, never in combat.
 function DC:DesktopInstalled() return type(_G.NGMPeonDesktop) == "table" end
+
+------------------------------------------------------------------------
+-- In sync or not: one rule for everything the game sends NGM Peon
+------------------------------------------------------------------------
+-- How far NGM Peon has the guild's changes from the game, as far as this
+-- copy knows: its own code's, an officer's (GS:peonhas), or this
+-- computer's own changes (NGM Desktop: "mine").
+function DC:PeonHas()
+    local g = ns.DB:Guild() or {}
+    local p = g.peon or {}
+    return math.max(p.has or 0, p.mine or 0, tonumber(ns.Sync:Value("GS:peonhas") or "", 36) or 0)
+end
+
+-- How far this game has NGM Peon's news: its own, or an officer's shared one.
+function DC:PeonGot()
+    local g = ns.DB:Guild() or {}
+    local shared = ns.Sync.Value and ns.Sync:Value("GS:peongot")
+    return math.max((g.peon or {}).got or 0, tonumber(shared or "", 36) or 0)
+end
+
+-- What the game sends NGM Peon (DC:Changes): mains and alts, Tank / Healer
+-- / DPS, events made in game and sign-ups.
+DC.TAKES = { M = true, RL = true, EG = true, ES = true }
+
+-- Is this change still to reach NGM Peon (and so Discord)? With NGM Peon
+-- only; NGM Peon's own records never are.
+function DC:NotOnDiscord(key)
+    if not (ns.Sync.PeonGuild and ns.Sync:PeonGuild()) then return false end
+    local typ = key:match("^(%u+):")
+    local rec = ns.Sync:Get(key)
+    if not (typ and self.TAKES[typ] and rec) or rec.a == (ns.Sync.PEON or "NGM Peon") then return false end
+    return (rec.t or 0) > self:PeonHas()
+end
+
+-- When a change of yours reaches Discord: with NGM Desktop at your next
+-- /reload or logout; without it, when an officer's does.
+function DC:Carrier()
+    if self:DesktopInstalled() then return "at your next /reload or logout, or with Send to Discord" end
+    return "when an officer with NGM Desktop reloads or logs out"
+end
+
+-- Was this change handed to NGM Desktop already? The game saves at /reload
+-- and logout, and NGM Desktop sends it then (SaveForDesktop notes when);
+-- NGM Peon's confirmation comes back with the news, at the /reload after.
+-- A member's NGM Desktop sends only their own changes; an officer's, all.
+function DC:Handed(t, author)
+    local g = ns.DB:Guild() or {}
+    if not (t and g.desktopAt and t <= g.desktopAt and self:DesktopInstalled()) then return false end
+    if (ns.IsOfficer and ns.IsOfficer()) or (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then return true end
+    local me = ns.PlayerFullName()
+    return author == nil or author == "" or ns.Sync.Same(ns.DB:RootOf(author) or author, ns.DB:RootOf(me) or me)
+end
+
+-- The line under something changed in game that NGM Peon hasn't confirmed:
+-- sent already (NGM Desktop has it), or not on Discord yet and when it goes.
+-- rec: the changed record ({ t, a }); nil: yours, just now.
+function DC:PendingText(label, rec)
+    local author = rec and rec.a
+    if rec and self:Handed(rec.t, author) then
+        return "|cff6cbf5aSent to Discord|r |cff9d9d9d(confirmed here at your next /reload)|r"
+    end
+    local mine = author == nil or author == "" or ns.Sync.Same(ns.DB:RootOf(author) or author, ns.DB:RootOf(ns.PlayerFullName()) or ns.PlayerFullName())
+    return ns.ORANGE .. label .. "|r |cff9d9d9d(Discord gets it " .. (mine and self:Carrier()
+        or "when its maker or an officer with NGM Desktop reloads or logs out") .. ")|r"
+end
+
+-- Said after each change in game: who sees it, and when Discord does.
+-- Guild sync sends changes together after a few seconds (S.BATCH_DELAY);
+-- guildmates offline get them from whoever's online when they log in.
+function DC:Reach()
+    local guild = "Guildmates online get it within a minute; the rest when they next log in."
+    if not (ns.Sync.PeonGuild and ns.Sync:PeonGuild()) then return guild end
+    return guild .. " Discord gets it " .. self:Carrier() .. "."
+end
 function DC:ReloadAndSync()
     if not self:DesktopInstalled() then
         ns:Print("Reload and Sync needs NGM Desktop (ngmpeon.app). Without it, use the dashboard's Sync tab.")
@@ -571,7 +713,9 @@ function DC:ReloadAndSync()
         ns:Print("Not in combat. Try again after the fight.")
         return
     end
-    ReloadUI()
+    ns:Print("Reloading: NGM Desktop sends your changes to NGM Peon now.")
+    local reload = (C_UI and C_UI.Reload) or ReloadUI
+    if not (reload and pcall(reload)) then ns:Print("The game didn't reload. Type |cffffffff/reload|r instead: it does the same.") end
 end
 
 -- At logout and /reload: the code for the app, or nothing (an old one goes).
@@ -580,6 +724,8 @@ function DC:SaveForDesktop()
     if not g then return end
     local ok, code = pcall(self.ForDesktop, self)
     g.desktopCode = ok and code or nil
+    -- everything up to now goes with it (DC:Handed)
+    if g.desktopCode then g.desktopAt = ns.DB:Now() end
 end
 
 function DC:Init()

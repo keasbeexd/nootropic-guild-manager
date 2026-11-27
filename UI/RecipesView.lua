@@ -31,6 +31,7 @@ function RV:Build()
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
     f:Hide()
     tinsert(UISpecialFrames, f:GetName())
+    ns.Gamepad:Register(f, "window")
     self.frame = f
 
     local search = CreateFrame("EditBox", "NootropicGMRecipesSearch", f, "SearchBoxTemplate")

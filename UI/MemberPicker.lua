@@ -27,6 +27,7 @@ function MP:Build()
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
     f:Hide()
     tinsert(UISpecialFrames, f:GetName())
+    ns.Gamepad:Register(f, "popup")
     self.frame = f
 
     local search = CreateFrame("EditBox", "NootropicGMMemberPickerSearch", f, "SearchBoxTemplate")

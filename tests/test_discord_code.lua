@@ -68,6 +68,25 @@ local without = DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite
     { since = 0, upto = 1, records = {} })
 assert(not DC.Base64UrlDecode(without:match("^NGM2%.([^.]+)%.")):find("accent", 1, true), "tabard unknown: no line")
 
+-- events made in game and sign-ups, with the version line (3.1): the same example as ngm-hub's test/gameevents.test.ts
+assert(DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite = true }, { name = "M", officer = false, invite = false } },
+    { since = 0, upto = 1, version = "3.1.0", records = {
+        { key = "EG:a1", v = "dungeon;tpb7s0;3c;Rae;;Strat;Bring potions", t = 1795000000, a = "Rae" },
+        { key = "ES:ga1:Ann", v = "healer;Annalt", t = 1795000100, a = "Annalt" },
+    } }) == "NGM2.dXMKRwpPSTpHTQotLTpNCgpzaW5jZQkwCnVwdG8JMQp2ZXIJMy4xLjAKUglFRzphMQl0b3AydjQJUmFlCWR1bmdlb247dHBiN3MwOzNjO1JhZTs7U3RyYXQ7QnJpbmcgcG90aW9ucwpSCUVTOmdhMTpBbm4JdG9wMnh3CUFubmFsdAloZWFsZXI7QW5uYWx0.97692c39")
+
+-- the game's resets and holidays (3.1): the same example as ngm-hub's test/gamecal.test.ts
+local withCal = DC:MakeUpdate("us", "G", { { name = "GM", officer = true, invite = true }, { name = "M", officer = false, invite = false } },
+    { since = 0, upto = 1, records = {}, calendar = { daily = 1795600800, weekly = 1796032800, holidays = {
+        { starts = 1795500000, ends = 1795850000, title = "Call to Arms: Arathi Basin", description = "Bonus honor.\tTwo lines\nhere |cffff0000red|r" },
+        { starts = 1796100000, ends = 1796700000, title = "Darkmoon Faire", description = "" },
+    } } })
+local calBody = DC.Base64UrlDecode(withCal:match("^NGM2%.([^.]+)%."))
+assert(calBody:find("\nreset\ttp1yg0\ttpb7s0\n", 1, true), calBody)
+assert(calBody:find("\nH\ttozso0\ttp7aq8\tCall to Arms: Arathi Basin\tBonus honor. Two lines here /cffff0000red/r\n", 1, true), calBody)
+assert(calBody:sub(-1) == "\t" and calBody:find("\nH\t[%w]+\t[%w]+\tDarkmoon Faire\t$"), calBody)
+assert(withCal == "NGM2.dXMKRwpPSTpHTQotLTpNCgpzaW5jZQkwCnVwdG8JMQpyZXNldAl0cDF5ZzAJdHBiN3MwCkgJdG96c28wCXRwN2FxOAlDYWxsIHRvIEFybXM6IEFyYXRoaSBCYXNpbglCb251cyBob25vci4gVHdvIGxpbmVzIGhlcmUgL2NmZmZmMDAwMHJlZC9yCkgJdHBjbm1vCXRwcGlsYwlEYXJrbW9vbiBGYWlyZQk.4293360f", withCal)
+
 -- only changes: since NGM Peon's word, else the last code less two weeks; "all" sends everything
 local now = 3000000
 local store = {
@@ -163,6 +182,19 @@ assert(pc.region == "us" and pc.guild == "Nootropic" and pc.has == 1794540000, "
 assert(pc.hoursHash == hash(DC.HoursValue({ sharing = 12, counts = counts })), "the grid's hash matches NGM Peon's")
 assert(#pc.records == 2 and pc.records[1].key == "M:Zo\195\171 Ash" and pc.records[1].v == "Marc Priest" and pc.records[2].v == "healer")
 assert(DC:ParsePeon("NGMP1.abc.00000000") == nil)
+-- 3.1: "mine", how far NGM Peon has this computer's own changes
+do
+    local payload = "us\nNootropic\nhas\t10\nmine\t" .. DC.B36(1800000000)
+    local mc = assert(DC:ParsePeon("NGMP1." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)))
+    assert(mc.mine == 1800000000 and mc.has == 36, tostring(mc.mine))
+    -- 3.1: "at", when NGM Peon made it; the next update sends the newest back as "got"
+    local p2 = "us\nNootropic\nhas\t10\nat\tz"
+    assert(assert(DC:ParsePeon("NGMP1." .. DC.Base64Url(p2) .. "." .. DC.Adler32(p2))).at == 35)
+    local withGot = DC:MakeUpdate("us", "Nootropic", { { name = "GM", officer = true, invite = true } }, { since = 0, upto = 36, records = {}, got = 35 })
+    local body = withGot:match("^NGM2%.([^.]+)%.")
+    local b64 = DC.Base64UrlDecode(body)
+    assert(b64:find("\ngot\tz\n", 1, true) or b64:find("\ngot\tz$"), b64)
+end
 
 -- bringing it in: records through the usual rules, NGM Peon's word remembered
 GetGuildInfo = function() return "Nootropic" end
@@ -282,6 +314,10 @@ store = {
     ["RL:Ann Main"] = { v = "healer", t = now - 9, a = "Ann Main" },   -- hers, by her
     ["RL:Zed"] = { v = "tank", t = now - 8, a = "Zed" },               -- someone else's
     ["RL:Ann Alt"] = { v = "tank", t = now - 7, a = "Off" },           -- hers, by someone else
+    ["EG:a1"] = { v = "raid;tozso0;3c;Ann Alt;;Onyxia;", t = now - 6, a = "Ann Alt" },  -- 3.1: her event
+    ["EG:b1"] = { v = "raid;tozso0;3c;Zed;;Zed's raid;", t = now - 6, a = "Zed" },      -- someone else's
+    ["ES:gb1:Ann Main"] = { v = "tank;Ann Alt", t = now - 5, a = "Ann Alt" },          -- her sign-up
+    ["ES:p5:Ann Main"] = { v = "going;", t = now - 5, a = "NGM Peon" },                -- NGM Peon's own copy: never sent back
 }
 local body = function(code) return DC.Base64UrlDecode(code:match("^NGM2%.([^.]+)%.")) end
 guildData = { peon = { made = 5 } }
@@ -304,6 +340,9 @@ local memberBody = body(assert(guildData.desktopCode, "a member's code"))
 assert(memberBody:find("M:Ann Alt", 1, true) and memberBody:find("RL:Ann Main", 1, true), memberBody)
 assert(not memberBody:find("RL:Zed", 1, true) and not memberBody:find("RL:Ann Alt", 1, true), "a member's carries only their own, by them")
 assert(not memberBody:find("\nhours\t") and not memberBody:find("\naccent\t"), "and no When we play or tabard")
+assert(memberBody:find("R\tEG:a1\t", 1, true) and memberBody:find("R\tES:gb1:Ann Main\t", 1, true), "her event and her sign-up go up")
+assert(not memberBody:find("EG:b1", 1, true) and not memberBody:find("ES:p5", 1, true), "not someone else's event, not NGM Peon's own copies")
+assert(gmBody:find("R\tEG:b1\t", 1, true) and not gmBody:find("ES:p5", 1, true), "the Guild Master's carries every event, still not NGM Peon's copies")
 GetGuildInfo = function() return nil end
 DC:SaveForDesktop()
 assert(guildData.desktopCode == nil, "no guild: an old code goes")
@@ -342,6 +381,45 @@ do
     InCombatLockdown = function() return true end
     DC:ReloadAndSync()
     assert(printed[#printed]:find("combat", 1, true), "not in combat")
+    _G.NGMPeonDesktop = nil
+end
+
+-- in sync or not: one rule for what the game sends NGM Peon
+do
+    local store = {
+        ["M:Ann"] = { v = "Bob", t = 100, a = "Ann" },
+        ["RL:Ann"] = { v = "tank", t = 300, a = "Ann" },
+        ["CN:Ann"] = { v = "ann;", t = 300, a = "Ann" },            -- NGM Peon doesn't take it from the game
+        ["M:Bob"] = { v = "", t = 400, a = "NGM Peon" },             -- NGM Peon's own
+        ["GS:peonhas"] = { v = DC.B36(200), t = 1, a = "Gm" },
+    }
+    local peonGuild, guild = true, { peon = {} }
+    ns.Sync = { Get = function(_, k) return store[k] end, Value = function(_, k) return store[k] and store[k].v end,
+        PeonGuild = function() return peonGuild end, Same = function(x, y) return x == y end, PEON = "NGM Peon" }
+    ns.DB = { Guild = function() return guild end }
+    ns.PlayerFullName = function() return "Ann" end
+    assert(DC:PeonHas() == 200, "an officer's GS:peonhas")
+    assert(not DC:NotOnDiscord("M:Ann"), "older than what NGM Peon has: on Discord")
+    assert(DC:NotOnDiscord("RL:Ann"), "newer: not yet")
+    assert(not DC:NotOnDiscord("CN:Ann"), "only what the game sends NGM Peon")
+    assert(not DC:NotOnDiscord("M:Bob"), "NGM Peon's own never")
+    guild.peon.mine = 350
+    assert(not DC:NotOnDiscord("RL:Ann"), "this computer's own changes are in (NGM Desktop: mine)")
+    peonGuild = false
+    guild.peon.mine = nil
+    assert(not DC:NotOnDiscord("RL:Ann"), "without NGM Peon: nothing to say")
+    assert(DC:Reach():find("next log in", 1, true) and not DC:Reach():find("Discord", 1, true))
+    peonGuild = true
+    assert(DC:Reach():find("Discord gets it when an officer", 1, true), DC:Reach())
+    -- sent already: handed to NGM Desktop at the last /reload or logout, not confirmed yet
+    ns.DB.RootOf = function(_, n) return n end
+    guild.desktopAt = 300
+    assert(not DC:Handed(300, "Ann"), "no NGM Desktop: nothing was sent")
+    _G.NGMPeonDesktop = {}
+    assert(DC:Handed(300, "Ann") and not DC:Handed(301, "Ann"), "up to the save")
+    assert(not DC:Handed(200, "Bob"), "a member's NGM Desktop sends only their own")
+    assert(DC:PendingText("Not on Discord yet", { t = 300, a = "Ann" }):find("Sent to Discord", 1, true))
+    assert(DC:PendingText("Not on Discord yet", { t = 301, a = "Ann" }):find("Not on Discord yet", 1, true))
     _G.NGMPeonDesktop = nil
 end
 
