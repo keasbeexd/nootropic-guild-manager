@@ -182,10 +182,65 @@ local EventRules = S.EventRules
 S.EventRules = function() return { lowest = {}, officers = true, keep = 60 } end
 local PeonGuild = S.PeonGuild
 S.PeonGuild = function() return true end
-check("listed while its post stays", E.CancelledShown(gone, NOW, NOW + 3599), true)
-check("gone when its post goes", E.CancelledShown(gone, NOW, NOW + 3600), false)
+check("listed while its post stays", E.Shown(gone, NOW + 3599, NOW), true)
+check("gone when its post goes", E.Shown(gone, NOW + 3600, NOW), false)
+check("a past one: listed until Clear old posts after it ends", E.Shown({ starts = NOW, minutes = 60 }, NOW + 3600 + 3599), true)
+check("then gone", E.Shown({ starts = NOW, minutes = 60 }, NOW + 7200), false)
 S.EventRules = function() return { lowest = {}, officers = true } end
-check("Never: until it would have ended", E.CancelledShown({ starts = NOW, minutes = 60 }, NOW - 999, NOW + 3599), true)
+check("Never: until it ends", E.Shown({ starts = NOW, minutes = 60 }, NOW + 3599) and not E.Shown({ starts = NOW, minutes = 60 }, NOW + 3600), true)
 S.EventRules, S.PeonGuild = EventRules, PeonGuild
 check("closed once started", select(2, E:CanSignUp({ source = "game", id = dung, kind = "dungeon", starts = NOW - 1 })), "Sign-ups are closed: it has started.")
+
+-- NGM Peon's post link (EL): limits, reminder, and a cancelled post with its event
+local L = E.ParseLink("1a", "g9;1,1,3;u;")
+check("link: limits and reminder", L.game .. ":" .. L.limits.dps .. ":" .. L.remind .. ":" .. tostring(L.cancelledAt), "g9:3:30:nil")
+check("link: the 3.1.0 tests' form still reads", E.ParseLink("1a", ";2,,").limits.tank, 2)
+local snap = "raid;" .. b36(NOW + 7200) .. ";3c;2;raids;Nootropic;Ony Night;Bring cloaks"
+local cancelledLink = ";,,;f;" .. b36(NOW - 60) .. ";" .. snap
+check("link: valid with a cancelled post's event", S.ValidValue("EL", cancelledLink), true)
+check("link: refused if the event is broken", S.ValidValue("EL", ";,,;f;" .. b36(NOW - 60) .. ";raid;zz"), false)
+-- cancelled on the dashboard: NGM Peon no longer lists it (no EV), the link carries it
+ns.PlayerFullName = function() return "Me Self-R" end
+rec("Mira Officer-R", "EL:1b", "NGM Peon", cancelledLink)
+local ony
+for _, e in ipairs(E:List()) do if e.title == "Ony Night" then ony = e end end
+check("cancelled on the dashboard: listed, Cancelled", ony and tostring(ony.cancelled) .. ":" .. ony.source .. ":" .. ony.channel, "true:peon:raids")
+check("sign-ups closed", select(2, E:CanSignUp(ony)), "Cancelled: sign-ups are closed.")
+
+-- your sign-up against NGM Peon's copy (holds across /reload)
+S.PeonGuild = function() return true end
+local live = { source = "peon", id = 77, kind = "event", starts = NOW + 3600, minutes = 60 }
+ns.PlayerFullName = function() return "Ann Member-R" end
+guild.sync.guild["ES:p" .. b36(77) .. ":Ann Member-R"] = { v = "going;", t = NOW - 10, a = "Ann Member-R" }
+check("signed up in game, NGM Peon hasn't it: unsent", E:MineUnsent(live), true)
+guild.sync.guild["ES:p" .. b36(77) .. ":Ann Member-R"] = { v = "going;", t = NOW - 9, a = "NGM Peon" }
+check("NGM Peon sent it back (a second newer): sent", E:MineUnsent(live), false)
+guild.sync.guild["ES:p" .. b36(77) .. ":Ann Member-R"] = { v = "", t = NOW - 5, a = "Ann Member-R" }
+check("withdrawn after: unsent", E:MineUnsent(live), true)
+-- NGM Peon's copy reaches the game through guild sync whatever the member's name
+-- (it's newer, so a tie on the author never decides it)
+ns.PlayerFullName = function() return "Me Self-R" end
+T = NOW - 5 -- NGM Peon's copy: a second after hers
+check("NGM Peon's copy replaces hers", rec("Mira Officer-R", "ES:p" .. b36(77) .. ":Ann Member-R", "NGM Peon", ""), "")
+check("and it's what the guild holds", guild.sync.guild["ES:p" .. b36(77) .. ":Ann Member-R"].a, "NGM Peon")
+
+-- reminders, as NGM Peon's: once, to those signed up (not Can't come)
+local printed = {}
+ns.Print = function(_, m) printed[#printed + 1] = m end
+ns.GOLD = ""
+ns.GameCalendar = { Short = function(s) return math.floor(s / 60) .. " min" end }
+local listed = { { source = "peon", id = 78, kind = "event", starts = NOW + 600, minutes = 60, remind = 15, title = "Fishing" } }
+local List, Mine = E.List, E.Mine
+E.List = function() return listed end
+E.Mine = function() return "going" end
+E:Remind() E:Remind()
+check("reminded once", #printed .. ":" .. (printed[1] or ""), "1:Reminder: Fishing|r starts in 10 min.")
+listed[1].starts = NOW + 1200
+E:Remind()
+check("not before its time", #printed, 1)
+E.Mine = function() return "absent" end
+listed[1].starts = NOW + 300
+E:Remind()
+check("not to Can't come", #printed, 1)
+E.List, E.Mine, S.PeonGuild = List, Mine, PeonGuild
 print("OK")

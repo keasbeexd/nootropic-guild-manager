@@ -107,10 +107,15 @@ function E:Take(events)
     end
     local l = Local()
     if l then
+        -- started ones stay while their post does (NGM Peon lists only what's to come)
+        local started = {}
+        for _, ev in ipairs(l) do if ev.starts <= now and E.Shown(ev, now) then started[#started + 1] = ev end end
         wipe(l)
+        for _, ev in ipairs(started) do l[#l + 1] = ev end
         -- kept as sent, so tidied like a shared record: no "|" (the game's
         -- escape character), since titles come from members on Discord
         for _, ev in ipairs(events) do
+            for i = #l, 1, -1 do if l[i].id == ev.id then table.remove(l, i) end end
             local c = {}
             for k, v in pairs(ev) do c[k] = type(v) == "string" and (v:gsub("|", "/")) or v end
             l[#l + 1] = c
@@ -130,46 +135,85 @@ function E:Take(events)
     return #list, added, removed
 end
 
--- A cancelled event made in game stays listed, marked Cancelled, as long
--- as its Discord post does: NGM Peon's "Clear old posts" from when it was
--- cancelled (GS:evranks keep). With Never, or without NGM Peon: until it
--- would have ended.
-function E.CancelledShown(ev, cancelledAt, now)
-    local rules = ns.Sync:PeonGuild() and ns.Sync:EventRules()
-    if rules and rules.keep then return now < (cancelledAt or 0) + rules.keep * 60 end
-    return now < ev.starts + ev.minutes * 60
+-- NGM Peon's post for an event (EL): the event made in game it came from,
+-- its limits, its reminder (minutes before) and, once cancelled, when; a
+-- cancelled post carries the event too (it isn't upcoming any more).
+--   "<EG id>;<tank>,<healer>,<dps>;<remind>;<cancelled>[;<EV value>]"
+function E.ParseLink(id, v)
+    local game, t, h, d, rest = (v or ""):match("^(%w*);(%d*),(%d*),(%d*)(.*)$")
+    if not game then return nil end
+    local out = { game = game ~= "" and game or nil, limits = { tank = tonumber(t), healer = tonumber(h), dps = tonumber(d) } }
+    local remind, at, snap = rest:match("^;(%w*);(%w*);?(.*)$")
+    if remind then
+        out.remind = tonumber(remind, 36)
+        out.cancelledAt = tonumber(at, 36)
+        if out.cancelledAt and snap ~= "" then out.event = E.Parse(id, snap) end
+    end
+    return out
+end
+
+-- Listed as long as its Discord post stays up: NGM Peon's "Clear old
+-- posts" (GS:evranks keep) after it ends, or after it was cancelled. With
+-- Never, or without NGM Peon: until it ends. Sign-ups close at the start.
+function E.Shown(ev, now, cancelledAt)
+    local rules = ns.Sync and ns.Sync.PeonGuild and ns.Sync:PeonGuild() and ns.Sync:EventRules()
+    local keep = rules and rules.keep
+    local ends = ev.starts + ev.minutes * 60
+    if ev.cancelled then
+        if keep then return now < (cancelledAt or now) + keep * 60 end
+        return now < ends
+    end
+    return now < ends + (keep or 0) * 60
 end
 
 function E:List()
     local now, byId, list = ns.DB:Now(), {}, {}
-    for k, rec in pairs((ns.Sync and ns.Sync.Store and ns.Sync:Store("guild")) or {}) do
+    local store = (ns.Sync and ns.Sync.Store and ns.Sync:Store("guild")) or {}
+    for k, rec in pairs(store) do
         if k:sub(1, 3) == "EV:" then
             local ev = E.Parse(k:sub(4), rec.v)
-            if ev and ev.starts > now then byId[k:sub(4)] = ev end
+            if ev then byId[k:sub(4)] = ev end
         end
     end
     -- what this character brought in itself (not an officer: not shared)
     for _, ev in ipairs(Local() or {}) do
         local id = B36(ev.id)
-        if not byId[id] and ev.starts > now then byId[id] = ev end
+        if not byId[id] then byId[id] = ev end
     end
-    -- NGM Peon's post for each (EL): the event made in game it came from, and its limits
-    local store = (ns.Sync and ns.Sync.Store and ns.Sync:Store("guild")) or {}
+    -- NGM Peon's posts (EL), from guild sync and this character's own copies
+    local links = {}
+    for _, src in ipairs({ store, (ns.Sync.PeonOwn and ns.Sync:PeonOwn()) or {} }) do
+        for k in pairs(src) do if k:sub(1, 3) == "EL:" then links[k:sub(4)] = true end end
+    end
+    for id in pairs(links) do
+        local rec = ns.Sync.Plan and ns.Sync:Plan("EL:" .. id) or store["EL:" .. id]
+        local link = rec and E.ParseLink(id, rec.v)
+        if link then
+            if link.cancelledAt and link.event and not byId[id] then byId[id] = link.event end
+            if byId[id] then byId[id].link = link end
+        end
+    end
     local posted = {}
-    for id, ev in pairs(byId) do
+    for _, ev in pairs(byId) do
         ev.source = "peon"
-        local link = ns.Sync.Plan and ns.Sync:Plan("EL:" .. id) or store["EL:" .. id]
-        local game, t, h, d = (link and link.v or ""):match("^(%w*);(%d*),(%d*),(%d*)$")
-        if game then
-            if game ~= "" then
-                ev.game, posted[game] = game, true
-                -- made in game: still edited there, through its EG record
-                local held = store["EG:" .. game] and ns.Sync.ParseGameEvent(store["EG:" .. game].v)
+        local link, cancelledAt = ev.link, nil
+        ev.link = nil
+        if link then
+            ev.limits, ev.remind = link.limits, link.remind
+            if link.cancelledAt then ev.cancelled, cancelledAt = true, link.cancelledAt end
+            if link.game then
+                ev.game, posted[link.game] = link.game, true
+                local grec = store["EG:" .. link.game]
+                local held = grec and ns.Sync.ParseGameEvent(grec.v)
+                if held then ev.creator = held.creator end
                 if held and held.cancelled then
-                    ev.cancelled, ev.creator = true, held.creator
-                    ev.gone = not E.CancelledShown(held, store["EG:" .. game].t, now)
-                elseif held then
-                    held.id, held.source = game, "game"
+                    -- cancelled in game: until NGM Peon has it, Discord doesn't say so yet
+                    ev.cancelledInGame, ev.cancelledBy = true, grec.a
+                    if not ev.cancelled then ev.cancelled, ev.cancelUnsent = true, true end
+                    cancelledAt = cancelledAt or grec.t
+                elseif held and not ev.cancelled then
+                    -- made in game: still edited there, through its EG record
+                    held.id, held.source = link.game, "game"
                     ev.made = held
                     -- changed in game since NGM Peon posted it (it can't be changed
                     -- elsewhere): shown as changed (clocks differ, so by content)
@@ -180,16 +224,16 @@ function E:List()
                     end
                 end
             end
-            ev.limits = { tank = tonumber(t), healer = tonumber(h), dps = tonumber(d) }
         end
-        if not ev.gone then list[#list + 1] = ev end
+        if E.Shown(ev, now, cancelledAt) then list[#list + 1] = ev end
     end
     -- made in game (shared through guild sync); once NGM Peon has posted one, it's listed as NGM Peon's
     for k, rec in pairs(store) do
         if k:sub(1, 3) == "EG:" and not posted[k:sub(4)] then
             local ev = ns.Sync.ParseGameEvent(rec.v)
-            if ev and (ev.cancelled and E.CancelledShown(ev, rec.t, now) or (not ev.cancelled and ev.starts > now)) then
+            if ev and E.Shown(ev, now, rec.t) then
                 ev.id, ev.source, ev.channel, ev.server, ev.coming = k:sub(4), "game", "", "", 0
+                ev.cancelledInGame, ev.cancelledBy = ev.cancelled, rec.a
                 list[#list + 1] = ev
             end
         end
@@ -210,8 +254,14 @@ local function Mark(key) E.unsent[key] = true end
 -- Where a change of yours goes next, for the card: with NGM Desktop at
 -- your next /reload or logout; without it, when an officer's does.
 function E:Carrier()
-    if ns.DiscordCode and ns.DiscordCode:DesktopInstalled() then return "at your next /reload or logout" end
+    if ns.DiscordCode and ns.DiscordCode:DesktopInstalled() then return "at your next /reload or logout, or with Send to Discord" end
     return "when an officer with NGM Desktop reloads or logs out"
+end
+
+-- Said after each change in game: who sees it now, and when Discord does.
+function E:Reach()
+    if not (ns.Sync and ns.Sync:PeonGuild()) then return "Guildmates online see it now; the rest when they next log in." end
+    return "Guildmates online see it now. Discord gets it " .. self:Carrier() .. "."
 end
 
 E.DURATIONS = { 30, 60, 90, 120, 180, 240, 300, 360 } -- minutes, as NGM Peon's form (ngm-hub src/events/model.ts)
@@ -383,8 +433,28 @@ function E:Mine(ev)
     return rec.v:match("^(%l+);(.*)$")
 end
 
--- Is your sign-up for this event still to reach NGM Peon?
-function E:MineUnsent(ev) return self.unsent["ES:" .. E.SignupEvent(ev)] == true end
+-- Is your sign-up for this event still to reach the Discord post? NGM
+-- Peon sends back every sign-up it has ("" for none), a second newer than
+-- the change it took from the game, so its copy replaces yours (newest
+-- wins): yours is unsent while the newest is still your own. Holds across
+-- /reload.
+function E:MineUnsent(ev)
+    if not (ns.Sync and ns.Sync.PeonGuild and ns.Sync:PeonGuild()) then return false end
+    local me = MyMain()
+    local peonName = ns.Sync.PEON or "NGM Peon"
+    local keys = { "ES:" .. E.SignupEvent(ev) .. ":" .. me }
+    if ev.game then keys[2] = "ES:g" .. ev.game .. ":" .. me end
+    local newest
+    for _, src in ipairs({ ns.Sync:Store("guild") or {}, (ns.Sync.PeonOwn and ns.Sync:PeonOwn()) or {} }) do
+        for _, k in ipairs(keys) do
+            local rec = src[k]
+            if rec and (not newest or rec.t > newest.t or (rec.t == newest.t and rec.a == peonName)) then newest = rec end
+        end
+    end
+    if not newest or newest.a == peonName then return false end
+    if ev.source == "game" then return newest.v ~= "" end -- not posted yet: it goes with its event
+    return true
+end
 
 function E:CanSignUp(ev, picked)
     if ev.cancelled then return nil, "Cancelled: sign-ups are closed." end
@@ -442,6 +512,30 @@ function E:Announce()
     g.eventsSeen = seen
 end
 
+-- NGM Peon's reminder, in game too: at the post's reminder time (EL), a
+-- chat line for each event you're signed up for (not Can't come), once.
+function E:Remind()
+    local g = ns.DB:Guild()
+    if not g then return end
+    local now = ns.DB:Now()
+    g.eventsReminded = g.eventsReminded or {}
+    local done = g.eventsReminded
+    for k, at in pairs(done) do if at < now - 86400 then done[k] = nil end end
+    for _, ev in ipairs(self:List()) do
+        if ev.remind and not ev.cancelled and ev.starts > now and now >= ev.starts - ev.remind * 60 then
+            -- keyed by its time too: an event moved later is reminded again, as on Discord
+            local key = ListKey(ev) .. "@" .. ev.starts
+            local part = not done[key] and self:Mine(ev)
+            if part and part ~= "absent" then
+                done[key] = ev.starts
+                local left = ev.starts - now
+                ns:Print(("Reminder: %s%s|r starts in %s."):format(ns.GOLD, ev.title ~= "" and ev.title or "Event", ns.GameCalendar.Short(left)))
+            end
+        end
+    end
+end
+
 function E:Init()
     ns:On("EVENTS_CHANGED", function() E:Announce() end)
+    if C_Timer and C_Timer.NewTicker then C_Timer.NewTicker(30, function() E:Remind() end) end
 end

@@ -46,7 +46,8 @@
       ES:<event>:<member>  a sign-up (3.1): "part;picked" (event "g<EG id>" or
                            "p<NGM Peon id>"; member: the person's main; "" = withdrawn)
       LK:<member>          "1": linked to NGM Peon (3.1; written by NGM Peon only)
-      EL:<NGM Peon id>     its post for an event: "<EG id>;<tank>,<healer>,<dps>" (3.1; NGM Peon only)
+      EL:<NGM Peon id>     its post for an event (3.1; NGM Peon only):
+                           "<EG id>;<tank>,<healer>,<dps>;<remind>;<cancelled at>[;<EV value>]"
       DN:<player>          Do Not Whisper entry ("" = removed)
       RS:<player>          recruitment status (kept 14 days)
       IR:<member>          reminded to install the addon (kept 30 days)
@@ -775,7 +776,11 @@ function S.ValidValue(typ, v)
     elseif typ == "LK" then
         return v == "" or v == "1"
     elseif typ == "EL" then
-        return v == "" or v:match("^%w*;%d*,%d*,%d*$") ~= nil
+        -- "<EG id>;<limits>" (3.1.0 tests), then ";<remind>;<cancelled>", and a cancelled post's event
+        if v == "" or v:match("^%w*;%d*,%d*,%d*$") or v:match("^%w*;%d*,%d*,%d*;%w*;$") then return true end
+        if #v > 900 or v:find("[\t\n]") then return false end
+        local at, snap = v:match("^%w*;%d*,%d*,%d*;%w*;(%w+);(.+)$")
+        return at ~= nil and S.ValidValue("EV", snap)
     elseif typ == "EV" then
         if v == "" then return true end
         if #v > 600 or v:find("[\t\n]") then return false end

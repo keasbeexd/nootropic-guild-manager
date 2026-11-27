@@ -205,7 +205,7 @@ function F:Save()
     end
     self.frame:Hide()
     ns:Fire("EVENTS_CHANGED")
-    ns:Print(self.editing and "Event saved." or ("Event created: " .. ns.GOLD .. fields.title .. "|r. Your guild sees it now" .. (ns.Sync:PeonGuild() and "; NGM Peon posts it with your next update." or ".")))
+    ns:Print((self.editing and "Event saved. " or ("Event created: " .. ns.GOLD .. fields.title .. "|r. ")) .. ns.Events:Reach())
 end
 
 function F:CancelEvent()
@@ -216,6 +216,6 @@ function F:CancelEvent()
         if not ok then ns:Print(why or "That didn't work.") return end
         F.frame:Hide()
         ns:Fire("EVENTS_CHANGED")
-        ns:Print("Event cancelled.")
+        ns:Print("Event cancelled. " .. ns.Events:Reach())
     end)
 end

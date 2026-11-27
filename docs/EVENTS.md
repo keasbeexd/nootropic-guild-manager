@@ -11,10 +11,20 @@ Design for the NGM Addon and NGM Peon (ngm-hub). Decided with the user on
 - **Edit** and **Cancel** on the event's card: your own events; officers
   anyone's (with NGM Peon: its managers). An event made in game stays
   editable in game after NGM Peon posts it.
-- **Cancelled** events stay on the card list, marked Cancelled in red, with
-  sign-ups closed, for as long as their Discord post does: NGM Peon's "Clear
-  old posts", counted from when it was cancelled in game. With Never, or
-  without NGM Peon: until the event would have ended.
+- **The card mirrors the Discord post** (with NGM Peon): "Cancelled:" before
+  the title in red, how long until it starts, the same sign-up lists, and
+  sign-ups closed once it starts or is cancelled. A card stays as long as its
+  post does: NGM Peon's "Clear old posts" after the event ends, or after it
+  was cancelled (on either side). With Never, or without NGM Peon: until the
+  event ends.
+- **Reminders** as NGM Peon's: at the post's reminder time, a chat line for
+  each event you're signed up for (not Can't come), once.
+- **Out of sync, said so:** every change made in game (create, edit, cancel,
+  sign up, change character) says in chat who sees it now and when Discord
+  gets it, and its card keeps an orange "... not on Discord yet" line until
+  NGM Peon has it (Send to Discord does it at once with NGM Desktop). On
+  Discord and the dashboard, the same note the other way: in game after the
+  next update.
 - **Sign up** on every event's card: Tank, Healer, DPS, Tentative, Can't come
   for dungeons and raids; Going, Tentative, Can't come for events. Role limits
   and the bench as NGM Peon's (dungeon 1 / 1 / 3 by default). You sign up as
@@ -55,10 +65,14 @@ Every copy judges each record by these rules, as for all records.
     GS:evranks         who may create, from NGM Peon (above)
     LK:<member>        "1": this character is linked to NGM Peon (written by
                        NGM Peon only; "" = unlinked)
-    EL:<NGM Peon id>   NGM Peon's post for an event: "<EG id>;<tank>,<healer>,<dps>"
+    EL:<NGM Peon id>   NGM Peon's post for an event:
+                       "<EG id>;<tank>,<healer>,<dps>;<remind>;<cancelled>[;<EV value>]"
                        (the event made in game it came from, "" if made on the
-                       dashboard; its role limits, "" = no limit; written by
-                       NGM Peon only)
+                       dashboard; its role limits, "" = no limit; its reminder,
+                       minutes before, and when it was cancelled, base 36, ""
+                       if not; a cancelled post carries its event as an EV
+                       value, since NGM Peon no longer lists it as upcoming;
+                       written by NGM Peon only)
 
 - `EG` may be written by the creator (if allowed to create that kind) and by
   officers; edits keep the creator. Past events stop being editable once
@@ -97,9 +111,13 @@ only their own.
 - Sign-ups on a linked event: in game they're written under NGM Peon's id
   (`ES:p<id>:...`); ones written before the link (`ES:g<EG id>:...`) are
   read with them, newest per member wins.
-- Discord sign-ups come back as `ES:p<id>:<member>` records written by NGM
-  Peon (each linked member's main as the member name), so the game shows who
-  signed up where, whichever side they used. Newest wins on both sides.
+- Every sign-up NGM Peon has comes back as `ES:p<id>:<member>` records
+  written by NGM Peon (each linked member's main as the member name; "" for
+  none, a withdrawal from the game included), at the time it last changed,
+  and a second after the game's for a change that came from the game. So
+  NGM Peon's copy replaces the game's (newest wins, whatever the member's
+  name), and the game knows a sign-up is on Discord exactly when the newest
+  copy is NGM Peon's.
 - `GS:evranks` as an `R` line, and `LK:<member>` for every linked character
   (cleared when they unlink). After linking, in-game sign-ups open with the
   next update from NGM Peon; Discord's buttons work at once.

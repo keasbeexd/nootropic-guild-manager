@@ -13,6 +13,13 @@ local EV = {}
 ns.EventsView = EV
 
 local GRAY = "|cff9d9d9d"
+
+-- a change that isn't on Discord yet, and when Discord gets it
+local function Pending(label, who)
+    local mine = who == nil or who == "" or ns.Sync.Same(who, ns.PlayerFullName())
+    return ns.ORANGE .. label .. "|r " .. GRAY .. "(Discord gets it " .. (mine and ns.Events:Carrier()
+        or "when its maker or an officer with NGM Desktop reloads or logs out") .. ")|r"
+end
 local KIND = { dungeon = "Dungeon", raid = "Raid", event = "Event" }
 local PAD, EDGE, GAP = 14, 4, 16
 
@@ -148,7 +155,8 @@ function EV:FillSignups(c, ev, inner, top)
         if b.LockHighlight then if mine == part then b:LockHighlight() else b:UnlockHighlight() end end
         b:SetScript("OnClick", function()
             local done, err = E:SignUp(ev, part)
-            if not done then ns:Print(err or "That didn't work.") end
+            if not done then ns:Print(err or "That didn't work.")
+            else ns:Print(("Signed up: %s. %s"):format(E.PART_BUTTON[part], E:Reach())) end
             EV:Refresh()
         end)
         W.Tooltip(b, E.PART_BUTTON[part], mine == part and "You're signed up as this." or "Sign up as this.")
@@ -167,7 +175,8 @@ function EV:FillSignups(c, ev, inner, top)
                     checked = function() return (picked == "" and name == mains[1]) or picked == name end,
                     func = function()
                         local done, err = E:SignUp(ev, mine, name == mains[1] and "" or name)
-                        if not done then ns:Print(err or "That didn't work.") end
+                        if not done then ns:Print(err or "That didn't work.")
+                        else ns:Print(("You're coming as %s. %s"):format(ns.ShortName(name), E:Reach())) end
                         EV:Refresh()
                     end }
             end
@@ -245,12 +254,15 @@ function EV:Refresh()
         c:ClearAllPoints()
         c:SetPoint("TOPLEFT", EDGE, -y)
         c:SetWidth(inner)
-        -- cancelled: said first, in red, so it can't be missed
-        c.Title:SetText((ev.cancelled and ("|cff" .. ns.Theme.HEX.red .. ns.Theme.Upper("Cancelled") .. "|r  " .. GRAY) or "")
+        -- cancelled: said first, in red, as the Discord post's title
+        c.Title:SetText((ev.cancelled and ("|cff" .. ns.Theme.HEX.red .. "Cancelled:|r " .. GRAY) or "")
             .. ns.Theme.Upper(ev.title ~= "" and ev.title or "Event") .. (ev.cancelled and "|r" or ""))
         c.Coming:SetText(("%d coming"):format(ev.coming or 0))
         local length = ev.minutes >= 60 and ((ev.minutes / 60) .. " h") or (ev.minutes .. " min")
-        c.When:SetText(("%s  " .. GRAY .. "·|r  %s  " .. GRAY .. "·|r  %s"):format(date("%a %d %b, %H:%M", ev.starts), KIND[ev.kind] or "Event", length))
+        -- and how long until it starts, as the post shows it
+        local rel = ev.starts > now and ("in " .. ns.GameCalendar.Short(ev.starts - now))
+            or (now < ev.starts + ev.minutes * 60 and "started" or "over")
+        c.When:SetText(("%s  " .. GRAY .. "·|r  %s  " .. GRAY .. "·|r  %s  " .. GRAY .. "·|r  %s"):format(date("%a %d %b, %H:%M", ev.starts), KIND[ev.kind] or "Event", length, rel))
         c.Text:SetWidth(inner - 2 * PAD)
         c.Text:SetText(ev.description or "")
         c.Text:SetShown((ev.description or "") ~= "")
@@ -261,27 +273,28 @@ function EV:Refresh()
         local made = ev.source == "game" and ev or ev.made
         local editable = made ~= nil and ns.Events:MayEdit(made)
         c.Where:SetWidth(inner - 2 * PAD - (editable and 80 or 0))
+        local onDiscord = ev.source ~= "game" and (ns.GOLD .. "On Discord|r"
+            .. (ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or "") .. (ev.server ~= "" and (" " .. GRAY .. "on|r " .. ev.server) or "")) or nil
         if ev.cancelled then
-            -- gone with its Discord post ("Clear old posts")
+            -- listed until its Discord post goes ("Clear old posts")
             c.Coming:SetText("")
-            c.Where:SetText(("|cff" .. ns.Theme.HEX.red .. "Cancelled|r " .. GRAY .. "in game by %s|r"):format(ns.ShortName(ev.creator)))
+            local lines = {}
+            if onDiscord then lines[#lines + 1] = onDiscord end
+            if ev.cancelledInGame then lines[#lines + 1] = GRAY .. ("Cancelled in game by %s"):format(ns.ShortName(ev.cancelledBy or ev.creator or "")) .. "|r" end
+            if ev.cancelUnsent then lines[#lines + 1] = Pending("Cancel not on Discord yet", ev.cancelledBy) end
+            c.Where:SetText(table.concat(lines, "\n"))
         elseif ev.source == "game" then
             -- made in game: who made it; with NGM Peon, posted with the next update
             c.Coming:SetText("")
-            -- with NGM Peon: not on Discord until the game's saved data reaches it
-            local status = ""
-            if ns.Sync:PeonGuild() then
-                status = "\n" .. ns.ORANGE .. "Not on Discord yet|r " .. GRAY .. (ns.Sync.Same(ev.creator, ns.PlayerFullName())
-                    and ("(goes " .. ns.Events:Carrier() .. ")") or "(goes when its creator or an officer with NGM Desktop reloads or logs out)") .. "|r"
-            end
-            c.Where:SetText(("Made in game by %s"):format(ns.ShortName(ev.creator)) .. status)
+            c.Where:SetText(("Made in game by %s"):format(ns.ShortName(ev.creator))
+                .. (ns.Sync:PeonGuild() and ("\n" .. Pending("Not on Discord yet", ev.creator)) or ""))
         else
             -- sign-ups are in Discord only: one list per event
             local where = ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or ""
             local server = ev.server ~= "" and (" " .. GRAY .. "on|r " .. ev.server) or ""
             c.Where:SetText(ns.GOLD .. "On Discord|r" .. where .. server
                 .. (ev.made and ("\n" .. GRAY .. ("Made in game by %s"):format(ns.ShortName(ev.made.creator)) .. "|r"
-                    .. (ev.changed and ("\n" .. ns.ORANGE .. "Changes not on Discord yet|r " .. GRAY .. "(go " .. ns.Events:Carrier() .. ")|r") or ""))
+                    .. (ev.changed and ("\n" .. Pending("Changes not on Discord yet", ns.Sync:Get("EG:" .. ev.game) and ns.Sync:Get("EG:" .. ev.game).a)) or ""))
                     or (manager and ("\n" .. GRAY .. "Made on the dashboard: edit it there.|r") or "")))
         end
         c.Edit:SetShown(editable)

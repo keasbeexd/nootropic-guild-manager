@@ -66,11 +66,14 @@ up, new, removed = E:Take(c.events)
 assert(up == 1 and new == 0 and removed == 1, "the old one, cancelled: 1 event removed")
 assert(store["EV:16"] and store["EV:16"].v == E.Value(ev), "shared as EV:<id>")
 assert(store["EV:z"].v == "", "cancelled in Discord: cleared")
--- past events aren't listed, and one that has started isn't "removed"
+-- one that has started stays listed (sign-ups closed) until it ends, as its
+-- Discord post does; it isn't "removed" when NGM Peon stops listing it
 now = ev.starts + 1
-assert(#E:List() == 0)
+assert(#E:List() == 1, "started: still listed")
 up, new, removed = E:Take({})
-assert(up == 0 and new == 0 and removed == 0)
+assert(up == 1 and new == 0 and removed == 0)
+now = ev.starts + ev.minutes * 60
+assert(#E:List() == 0, "over: gone")
 
 -- the records' rules
 assert(loadfile(ROOT .. "/Core/Records.lua"))("NGM", ns)
