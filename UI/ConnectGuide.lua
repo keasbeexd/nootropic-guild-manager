@@ -13,8 +13,8 @@
                                when the guild's chat reaches its Discord
                                (GS:gamechat).
 
-    NGM Desktop isn't a step: without it, a short note under the steps says
-    it's there to help the guild sync faster.
+    NGM Desktop isn't a step: a short note under the steps says it's there
+    to help the guild sync faster.
 
     Opens by itself a little after login when step 2 or 4 is still to do
     (NGM Desktop users too), at most every few days; Not Now and Don't Show
@@ -192,16 +192,12 @@ function CG:Refresh()
         y = y - h - 14
     end
     for i = #steps + 1, #self.rows do self.rows[i]:Hide() end
-    -- not a step: a note that NGM Desktop helps
-    local desktop = ns.DiscordCode:DesktopInstalled()
-    self.tip:SetShown(not desktop)
-    if not desktop then
-        self.tip:ClearAllPoints()
-        self.tip:SetPoint("TOPLEFT", 18, y + 4)
-        self.tip:SetWidth(width)
-        self.tip:SetText("Tip: NGM Desktop helps your guild sync faster. It sends your changes to Discord and brings NGM Peon's news in by itself, at every logout and /reload. Get it from ngmpeon.app, or My settings on NGM Peon's dashboard.")
-        y = y - self.tip:GetStringHeight() - 10
-    end
+    -- not a step: a note that NGM Desktop helps, for everyone
+    self.tip:ClearAllPoints()
+    self.tip:SetPoint("TOPLEFT", 18, y + 4)
+    self.tip:SetWidth(width)
+    self.tip:SetText("Tip: NGM Desktop helps your guild sync faster. It sends your changes to Discord and brings NGM Peon's news in by itself, at every logout and /reload. Get it from ngmpeon.app, or My settings on NGM Peon's dashboard.")
+    y = y - self.tip:GetStringHeight() - 10
     f:SetHeight(-y + 50)
 end
 
