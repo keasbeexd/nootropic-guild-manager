@@ -13,7 +13,7 @@ local W, D = ns.Widgets, ns.Data
 local MV = {}
 ns.MessagesView = MV
 
-local WIDTH, HEIGHT = 720, 520
+local WIDTH, HEIGHT = 720, 556
 local LIST_W = 230
 local ROW_H = 34
 
@@ -115,17 +115,20 @@ function MV:Build()
 
     self:BuildList(f)
     self:BuildEditor(f)
+    self:BuildGuildBar(f)
 
     f:SetScript("OnShow", function() MV:Refresh() end)
     f:SetScript("OnHide", function() if MV.transfer then MV.transfer:Hide() end end)
     ns:On("MESSAGES_CHANGED", function() if f:IsShown() then MV:Refresh() end end)
+    ns:On("GUILD_SETTINGS_CHANGED", function() if f:IsShown() then MV:RefreshGuildBar() end end)
+    ns:On("GUILD_RULES_CHANGED", function() if f:IsShown() then MV:RefreshGuildBar() end end)
     ns:On("RECRUITS_CHANGED", function() if f:IsShown() then ns.Debounce("mvmatch", 0.2, function() MV:RefreshEditorInfo() end) end end)
 end
 
 function MV:BuildList(f)
     local box = CreateFrame("Frame", nil, f, "BackdropTemplate")
     box:SetPoint("TOPLEFT", 12, -62)
-    box:SetPoint("BOTTOMLEFT", 12, 70)
+    box:SetPoint("BOTTOMLEFT", 12, 106)
     box:SetWidth(LIST_W)
     box:SetBackdrop({ bgFile = W.WHITE, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12,
         insets = { left = 3, right = 3, top = 3, bottom = 3 } })
@@ -248,7 +251,7 @@ end
 function MV:BuildEditor(f)
     local e = CreateFrame("Frame", nil, f)
     e:SetPoint("TOPLEFT", LIST_W + 26, -62)
-    e:SetPoint("BOTTOMRIGHT", -14, 12)
+    e:SetPoint("BOTTOMRIGHT", -14, 48)
     self.editor = e
     local EW = WIDTH - LIST_W - 40
 
@@ -408,8 +411,58 @@ function MV:Select(id)
     self:Refresh(true)
 end
 
+-- The guild's messages (3.2, docs/PERMISSIONS.md): which set whispers use,
+-- switching between the guild's and your own (unless the Guild Master
+-- locked it), and sharing yours as the guild's (the Permissions page's row)
+function MV:BuildGuildBar(f)
+    local bar = CreateFrame("Frame", nil, f)
+    bar:SetPoint("BOTTOMLEFT", 16, 12)
+    bar:SetPoint("BOTTOMRIGHT", -16, 12)
+    bar:SetHeight(26)
+    bar.Text = bar:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
+    bar.Text:SetPoint("LEFT", 0, 0)
+    bar.Text:SetPoint("RIGHT", -300, 0)
+    bar.Text:SetJustifyH("LEFT")
+    bar.Switch = W.Button(bar, "", 140, 22, "alt")
+    bar.Switch:SetPoint("RIGHT", -152, 0)
+    bar.Switch:SetScript("OnClick", function()
+        ns.Messages:SetOwn(ns.Messages:UsingGuild())
+        MV:RefreshGuildBar()
+    end)
+    bar.Share = W.Button(bar, "Share as the Guild's", 146, 22)
+    bar.Share:SetPoint("RIGHT", 0, 0)
+    bar.Share:SetScript("OnClick", function()
+        W.Confirm("Share your messages (and Default message) as the guild's? Everyone's whispers start from them" .. (ns.Messages:Locked() and ", and must use them." or "."), function()
+            local ok, err = ns.Messages:Publish()
+            ns:Print(ok and ("Shared as the guild's messages. " .. ns.DiscordCode:Reach()) or ("|cffff2020" .. (err or "That didn't work.") .. "|r"))
+            MV:RefreshGuildBar()
+        end)
+    end)
+    W.Tooltip(bar.Share, "Share as the guild's", "Your messages, in this order, and your Default message become the guild's (the Guild Master's Permissions say who may).")
+    self.guildBar = bar
+end
+
+function MV:RefreshGuildBar()
+    local bar, MS = self.guildBar, ns.Messages
+    if not bar then return end
+    local set, locked, using = MS:GuildSet(), MS:Locked(), MS:UsingGuild()
+    if not set then
+        bar.Text:SetText("Your whispers use your messages. The guild has no shared ones yet.")
+    elseif locked then
+        bar.Text:SetText("|cffffd100Your whispers use the guild's messages|r: the Guild Master set it for everyone. Yours are kept for later.")
+    elseif using then
+        bar.Text:SetText("|cffffd100Your whispers use the guild's messages.|r You can write your own instead.")
+    else
+        bar.Text:SetText("Your whispers use your own messages, not the guild's.")
+    end
+    bar.Switch:SetShown(set ~= nil and not locked)
+    bar.Switch:SetText(using and "Use My Own" or "Use the Guild's")
+    bar.Share:SetShown(ns.DB:HasPerm("rmsg"))
+end
+
 function MV:Refresh(loadTexts)
     if not self.frame then return end
+    self:RefreshGuildBar()
     local rules = ns.Messages:Rules()
     if self.selected and not ns.Messages:Get(self.selected) then self.selected = nil end
     if not self.selected and rules[1] then

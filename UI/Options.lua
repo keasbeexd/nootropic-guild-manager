@@ -327,6 +327,8 @@ function O:BuildMain()
             .. (box:GetText() == "" and "  (empty: the default text is used)" or ""))
     end
     box:HookScript("OnTextChanged", function(eb, user)
+        -- the guild's text is read-only here: it's changed by sharing yours
+        if user and ns.InstallReminder:UsingGuild() then eb:SetText(ns.InstallReminder:GuildText()) return end
         if user then ns.InstallReminder:SetText(eb:GetText()) end
         update()
     end)
@@ -339,6 +341,25 @@ function O:BuildMain()
         box:ClearFocus()
     end)
     count:SetPoint("LEFT", default, "RIGHT", 10, 0)
+    -- the guild's text (3.2, docs/PERMISSIONS.md)
+    self.reminderGuild = L:Text(("x"):rep(120), "NGMFontDimSmall", 4)
+    local gy = L:Row(26)
+    local switch = W.Button(L.panel, "", 130, 22, "alt")
+    switch:SetPoint("TOPLEFT", 18, gy)
+    switch:SetScript("OnClick", function()
+        ns.InstallReminder:SetOwn(ns.InstallReminder:UsingGuild())
+        box:SetText(ns.InstallReminder:Text())
+        O:Refresh()
+    end)
+    local share = W.Button(L.panel, "Share as the Guild's", 150, 22)
+    share:SetPoint("LEFT", switch, "RIGHT", 8, 0)
+    share:SetScript("OnClick", function()
+        local ok, err = ns.InstallReminder:Publish()
+        ns:Print(ok and "Shared as the guild's install reminder text." or ("|cffff2020" .. (err or "That didn't work.") .. "|r"))
+        O:Refresh()
+    end)
+    W.Tooltip(share, "Share as the guild's", "Your text becomes the guild's install reminder (the Guild Master's Permissions say who may).")
+    self.reminderSwitch, self.reminderShare = switch, share
     L:Space(4)
 
     L:Header("Minimap Button")
@@ -799,6 +820,15 @@ function O:Refresh()
     self.learnCheck:SetChecked(ns.Profile:LearnEnabled())
     self.shareRecipesCheck:SetChecked(ns.Sharing:Get("recipes"))
     if not self.reminderBox:HasFocus() then self.reminderBox:SetText(ns.InstallReminder:Text()) end
+    local IR = ns.InstallReminder
+    local guildText, locked, using = IR:GuildText(), IR:Locked(), IR:UsingGuild()
+    self.reminderGuild:SetText(not guildText and "The guild has no shared text yet."
+        or locked and "Using the guild's text: the Guild Master set it for everyone."
+        or using and "Using the guild's text. You can use your own instead."
+        or "Using your own text, not the guild's.")
+    self.reminderSwitch:SetShown(guildText ~= nil and not locked)
+    self.reminderSwitch:SetText(using and "Use My Own" or "Use the Guild's")
+    self.reminderShare:SetShown(ns.DB:HasPerm("imsg"))
     self.minimapCheck:SetChecked(not s.minimap.hide)
     for _, b in ipairs(self.clickPickers) do b:SetText(D:MinimapActionLabel(s.minimap[b.key])) end
     self.syncStatus:SetText((ns.GOLD .. "Sync:|r ") .. select(2, ns.Sync:Health()))
