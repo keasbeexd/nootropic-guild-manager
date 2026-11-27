@@ -1,4 +1,4 @@
-# Permissions, guild rules and the ban list (3.2, draft for sign-off)
+# Permissions, guild rules and the ban list (3.2)
 
 What the Guild Master can lock down, how every copy of the NGM Addon (and
 NGM Peon) keeps to it, and the ban list. Ships in 3.2.0 with `/ngm bug`.
@@ -45,6 +45,7 @@ widen it.
 | Members | Write the install reminder text | Only me | `GS:imsg` | every copy |
 | Members | Ban and unban players | Officers | `BN` | every copy |
 | Members | See the ban list | Officers | `BN` (shown) | in the NGM Addon |
+| Members | See ban reasons | Officers | `BN` reason (shown) | in the NGM Addon |
 | Officers | See the Audit tab | Officers | `A` | officers only, narrower |
 | Hall of Fame | Hide someone from it | Officers | `HX` | every copy |
 | Hall of Fame | Announce champions in guild chat | Officers | `HA` | every copy |
@@ -62,8 +63,9 @@ still write their own. The install reminder text works the same way
 
 **Feature switches** (on/off for the whole guild, not by rank): Recruiting,
 Play Together, Hall of Fame, the Guild Feed's level-up lines, install
-reminders, Get Connected. Off, the feature is hidden for everyone, and its
-shared changes are refused.
+reminders, Get Connected. Off, the feature is hidden for everyone and its
+copies stop sending for it; what's already shared is kept, so turning it
+back on loses nothing.
 
 All rules are `GS:perm_<key>` (rank numbers, as the three existing ones) and
 `GS:feat_<key>` (`0` off), written by the Guild Master only (every copy
@@ -108,9 +110,9 @@ person, not one name.
   character's permanent game ID (GUID), so a rename doesn't get around it.
   A name the game can't put an ID to yet (someone never seen) is banned by
   name until it can.
-- **Records:** `BN:<character>` = `time;by;guid;main` (shared with the
-  guild, so every recruiter is warned) and `BR:<character>` = the reason
-  (officer channel: officers only). Removing writes `""`.
+- **Records:** `BN:<character>` = `time;by;guid;main;reason`, shared with
+  the guild so every recruiter is warned; the reason shows only to ranks
+  allowed to see ban reasons (a permission row). Removing writes `""`.
 - **Warnings**, big, on screen and in chat:
   - **at invite:** the moment the game confirms an invite to a banned
     character ("You have invited ... to join your guild": the game's own
@@ -124,12 +126,10 @@ person, not one name.
 - **The Ban List window**, like Do Not Whisper's: everyone banned, with all
   their characters, when, by whom and why (for those who may see it),
   searchable, with Remove.
-- **With NGM Peon:** a ban of a member who linked keeps a one-way
-  fingerprint of their Battle.net account (a keyed hash: it can't be turned
-  back into the account), so any character on that account is flagged if
-  they ever link again, and that reaches the game. To have it at ban time,
-  NGM Peon would keep that fingerprint for every linked member (the privacy
-  page says so). Optionally, `/ngm link` refuses a banned account.
+- **NGM Addon only.** NGM Peon keeps no ban data (banned players are often
+  outside the guild, and NGM Peon keeps nothing about those) and no account
+  fingerprint: no privacy change. It only gets the rules about who may ban
+  and see the list.
 
 ## NGM Peon
 
@@ -157,12 +157,11 @@ on an older version when a rule depends on it.
 3. NGM Addon: the Permissions page, feature switches, messages, the Guild
    Info code.
 4. NGM Addon: the ban list.
-5. NGM Peon: rules in, the Permissions tab, the ban fingerprint.
+5. NGM Peon: rules in, the Permissions tab.
 6. One test build; then 3.2.0 with `/ngm bug`.
 
-## Still open
+## Decided at sign-off (27 November 2026)
 
-1. The ban list in 3.2 with the rest, or 3.3 on its own?
-2. Ban reasons: officers only (as above), or everyone who may see the list?
-3. NGM Peon keeping an account fingerprint for every linked member (for
-   bans), and refusing `/ngm link` from a banned account: yes or no?
+- The ban list ships in 3.2 with everything else.
+- Who sees ban reasons is a permission row like the rest.
+- No privacy changes: NGM Peon keeps no ban data and no account fingerprint.
