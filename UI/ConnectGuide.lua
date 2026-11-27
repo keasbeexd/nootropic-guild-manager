@@ -5,14 +5,16 @@
 
       1. NGM Addon             done (you're reading this)
       2. Link with NGM Peon    /ngm link in Discord (LK records, from NGM Peon)
-      3. NGM Desktop           optional: sends and brings in by itself
-      4. Discord in WoW        Options, Social, Discord: so guild chat shows in
+      3. Discord in WoW        Options, Social, Discord: so guild chat shows in
                                Discord as you. Addons can't read it (C_Discord
                                is Blizzard's only), so NGM Peon tells: it sees
                                the guild chat Blizzard posts, as the player's
                                own account once connected (DX records). Only
                                when the guild's chat reaches its Discord
                                (GS:gamechat).
+
+    NGM Desktop isn't a step: without it, a short note under the steps says
+    it's there to help the guild sync faster.
 
     Opens by itself a little after login when step 2 or 4 is still to do
     (NGM Desktop users too), at most every few days; Not Now and Don't Show
@@ -71,7 +73,7 @@ function CG:OpenSocial()
     end
 end
 
--- The steps, each { title, state = "done" | "todo" | "optional" | "unknown", text, button = { label, fn } }
+-- The steps, each { title, state = "done" | "todo" | "unknown", text, button = { label, fn } }
 function CG:Steps()
     local steps = {}
     steps[#steps + 1] = { title = "NGM Addon", state = "done", text = "Installed." }
@@ -79,10 +81,6 @@ function CG:Steps()
     steps[#steps + 1] = { title = "Link with NGM Peon", state = linked and "done" or "todo",
         text = linked and "Your characters are linked: on Discord they count as you, and you can sign up for events here."
             or "In your guild's Discord, type " .. ns.GOLD .. "/ngm link|r and sign in with Battle.net. It shows here after the next update from NGM Peon." }
-    local desktop = ns.DiscordCode:DesktopInstalled()
-    steps[#steps + 1] = { title = "NGM Desktop", state = desktop and "done" or "optional",
-        text = desktop and "Installed: your changes go to Discord, and NGM Peon's news comes in, at every logout and /reload."
-            or "Recommended: from " .. ns.GOLD .. "ngmpeon.app|r. It sends your changes to Discord and brings NGM Peon's news in by itself, at every logout and /reload." }
     if GuildChatOnDiscord() then
         local dx = self:DiscordInWoW()
         steps[#steps + 1] = { title = "Discord in WoW", state = dx == "1" and "done" or dx == "0" and "todo" or "unknown",
@@ -104,7 +102,7 @@ function CG:Needed()
     return false
 end
 
-local LABEL = { done = GREEN .. "Done|r", todo = ORANGE .. "To do|r", optional = GRAY .. "Optional|r", unknown = GRAY .. "Not seen yet|r" }
+local LABEL = { done = GREEN .. "Done|r", todo = ORANGE .. "To do|r", unknown = GRAY .. "Not seen yet|r" }
 
 function CG:Build()
     local f = CreateFrame("Frame", "NootropicGMConnect", UIParent, "BasicFrameTemplateWithInset")
@@ -130,6 +128,8 @@ function CG:Build()
     self.intro:SetJustifyH("LEFT")
     self.intro:SetText("Your guild uses NGM Peon on Discord. These steps put your game and Discord together:")
     self.rows = {}
+    self.tip = f:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
+    self.tip:SetJustifyH("LEFT")
     self.later = W.Button(f, "Not Now", 110, 24, "alt")
     self.later:SetPoint("BOTTOMRIGHT", -16, 14)
     self.later:SetScript("OnClick", function()
@@ -192,6 +192,16 @@ function CG:Refresh()
         y = y - h - 14
     end
     for i = #steps + 1, #self.rows do self.rows[i]:Hide() end
+    -- not a step: a note that NGM Desktop helps
+    local desktop = ns.DiscordCode:DesktopInstalled()
+    self.tip:SetShown(not desktop)
+    if not desktop then
+        self.tip:ClearAllPoints()
+        self.tip:SetPoint("TOPLEFT", 18, y + 4)
+        self.tip:SetWidth(width)
+        self.tip:SetText("Tip: NGM Desktop helps your guild sync faster. It sends your changes to Discord and brings NGM Peon's news in by itself, at every logout and /reload. Get it from ngmpeon.app, or My settings on NGM Peon's dashboard.")
+        y = y - self.tip:GetStringHeight() - 10
+    end
     f:SetHeight(-y + 50)
 end
 

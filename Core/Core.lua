@@ -382,7 +382,7 @@ local function PrintHelp()
     ns:Print("  |cffffffff/ngm minimap|r  - show or hide the minimap button")
     ns:Print("  |cffffffff/ngm options|r  - open the options")
     ns:Print("  |cffffffff/ngm events|r  - the guild's upcoming events from NGM Peon and where to sign up, plus the game's resets and holidays")
-    ns:Print("  |cffffffff/ngm connect|r  - Get Connected: linking with NGM Peon, NGM Desktop and Discord in WoW, and where each stands")
+    ns:Print("  |cffffffff/ngm connect|r  - Get Connected: linking with NGM Peon and Discord in WoW, and where each stands")
     ns:Print(ns.GOLD .. "NGM Peon|r (your guild's Discord, ngmpeon.app):")
     ns:Print("  |cffffffff/ngm link|r  - in Discord, not here: link your characters for your rank role")
     if gm then ns:Print("  |cffffffff/ngm discord setup|r  - once: the code for /ngm-guild setup in Discord") end
