@@ -187,6 +187,13 @@ do
     local payload = "us\nNootropic\nhas\t10\nmine\t" .. DC.B36(1800000000)
     local mc = assert(DC:ParsePeon("NGMP1." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)))
     assert(mc.mine == 1800000000 and mc.has == 36, tostring(mc.mine))
+    -- 3.1: "at", when NGM Peon made it; the next update sends the newest back as "got"
+    local p2 = "us\nNootropic\nhas\t10\nat\tz"
+    assert(assert(DC:ParsePeon("NGMP1." .. DC.Base64Url(p2) .. "." .. DC.Adler32(p2))).at == 35)
+    local withGot = DC:MakeUpdate("us", "Nootropic", { { name = "GM", officer = true, invite = true } }, { since = 0, upto = 36, records = {}, got = 35 })
+    local body = withGot:match("^NGM2%.([^.]+)%.")
+    local b64 = DC.Base64UrlDecode(body)
+    assert(b64:find("\ngot\tz\n", 1, true) or b64:find("\ngot\tz$"), b64)
 end
 
 -- bringing it in: records through the usual rules, NGM Peon's word remembered

@@ -125,6 +125,8 @@ function DC:MakeUpdate(region, guild, ranks, update)
     lines[#lines + 1] = "upto\t" .. B36(update.upto)
     -- 3.1: which NGM Addon made it, so NGM Peon only sends 3.1's records to copies that take them
     if update.version then lines[#lines + 1] = "ver\t" .. update.version end
+    -- 3.1: how far this game has NGM Peon's news, so its dashboard can say what isn't in game yet
+    if update.got and update.got > 0 then lines[#lines + 1] = "got\t" .. B36(update.got) end
     if update.hours then lines[#lines + 1] = "hours\t" .. DC.HoursValue(update.hours) end
     -- the tabard's colours, for NGM Peon's accent (left out while unknown)
     if update.tabard and update.tabard.bg and update.tabard.border then
@@ -282,7 +284,7 @@ function DC:ForMyGuild(mode)
     local bg, border, emblem
     if ns.Accent then bg, border, emblem = ns.Accent:Tabard() end
     local tabard = (bg and border) and { bg = bg, border = border, emblem = emblem } or nil
-    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard, calendar = self:Calendar(), version = ns.version })
+    local code = self:MakeUpdate(region, guild, ranks, { since = since, upto = upto, hours = hours, records = records, tabard = tabard, calendar = self:Calendar(), version = ns.version, got = self:PeonGot() })
     g.peon.made = upto
     if gm then g.peon.ranks = self.RankSignature(ranks) end
     return code, nil, since == 0, #records, since
@@ -291,7 +293,8 @@ end
 ------------------------------------------------------------------------
 -- The code from NGM Peon (/ngm peon): NGMP1.<base64url>.<adler-32>
 --   region, guild, has<TAB>t, [hours<TAB>hash], [mine<TAB>t (3.1: how far NGM
---   Peon has this computer's own changes)], R<TAB>key<TAB>t<TAB>author<TAB>value
+--   Peon has this computer's own changes)], [at<TAB>t (3.1: when it was made;
+--   the next NGM2 sends the newest back as got)], R<TAB>key<TAB>t<TAB>author<TAB>value
 --   (records: M main/alt, RL Tank/Healer/DPS, CN a linked member's @Discord name,
 --   HW a month's Hall of Fame champions, GS:peon = "1": NGM Peon crowns them)
 -- (ngm-hub's src/records/addoncode.ts makes it). Its records are taken as
@@ -329,7 +332,10 @@ function DC:ParsePeon(code)
     local out = { region = lines[1], guild = lines[2], records = {}, events = {} }
     for i = 3, #lines do
         local f = ns.Split(lines[i], "\t")
-        if f[1] == "mine" then
+        if f[1] == "at" then
+            -- 3.1: when NGM Peon made this code
+            out.at = tonumber(f[2] or "", 36)
+        elseif f[1] == "mine" then
             -- 3.1: how far NGM Peon has this computer's own changes (NGM Desktop)
             out.mine = tonumber(f[2] or "", 36)
         elseif f[1] == "has" then
@@ -415,6 +421,12 @@ function DC:ApplyPeon(code)
     g.peon = g.peon or {}
     if not g.peon.has or c.has > g.peon.has then g.peon.has = c.has end
     if c.mine and c.mine > (g.peon.mine or 0) then g.peon.mine = c.mine end
+    -- how far the game has NGM Peon's news (sent back in the next update);
+    -- officers share it, so the guild's next update says it too
+    if c.at and c.at > (g.peon.got or 0) then g.peon.got = c.at end
+    if c.at and ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peongot") and c.at > (tonumber(ns.Sync:Value("GS:peongot") or "", 36) or 0) then
+        ns.Sync:Set("GS:peongot", B36(c.at))
+    end
     -- how far NGM Peon has the guild's changes: officers share it, so every
     -- copy can say what isn't on Discord yet (DC:NotOnDiscord)
     if ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peonhas") and c.has > (tonumber(ns.Sync:Value("GS:peonhas") or "", 36) or 0) then
@@ -629,6 +641,13 @@ function DC:PeonHas()
     local g = ns.DB:Guild() or {}
     local p = g.peon or {}
     return math.max(p.has or 0, p.mine or 0, tonumber(ns.Sync:Value("GS:peonhas") or "", 36) or 0)
+end
+
+-- How far this game has NGM Peon's news: its own, or an officer's shared one.
+function DC:PeonGot()
+    local g = ns.DB:Guild() or {}
+    local shared = ns.Sync.Value and ns.Sync:Value("GS:peongot")
+    return math.max((g.peon or {}).got or 0, tonumber(shared or "", 36) or 0)
 end
 
 -- What the game sends NGM Peon (DC:Changes): mains and alts, Tank / Healer
