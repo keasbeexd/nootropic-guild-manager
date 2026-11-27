@@ -285,10 +285,7 @@ function EV:Refresh()
             c.Where:SetText(("Made in game by %s"):format(ns.ShortName(ev.creator))
                 .. (ns.Sync:PeonGuild() and ("\n" .. Pending("Not on Discord yet", ev.creator)) or ""))
         else
-            -- sign-ups are in Discord only: one list per event
-            local where = ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or ""
-            local server = ev.server ~= "" and (" " .. GRAY .. "on|r " .. ev.server) or ""
-            c.Where:SetText(ns.GOLD .. "On Discord|r" .. where .. server
+            c.Where:SetText(onDiscord
                 .. (ev.made and ("\n" .. GRAY .. ("Made in game by %s"):format(ns.ShortName(ev.made.creator)) .. "|r"
                     .. (ev.changed and ("\n" .. Pending("Changes not on Discord yet", ns.Sync:Get("EG:" .. ev.game) and ns.Sync:Get("EG:" .. ev.game).a)) or ""))
                     or (manager and ("\n" .. GRAY .. "Made on the dashboard: edit it there.|r") or "")))

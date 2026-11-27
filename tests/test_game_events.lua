@@ -191,6 +191,15 @@ check("Never: until it ends", E.Shown({ starts = NOW, minutes = 60 }, NOW + 3599
 S.EventRules, S.PeonGuild = EventRules, PeonGuild
 check("closed once started", select(2, E:CanSignUp({ source = "game", id = dung, kind = "dungeon", starts = NOW - 1 })), "Sign-ups are closed: it has started.")
 
+-- NGM Peon's records only through an officer's copy: a character called "Ngm Peon" can't speak for it
+ns.PlayerFullName = function() return "Me Self-R" end
+ns.Roster.byName["Ngm Peon"] = { rankIndex = 4 }
+check("a guildmate named Ngm Peon can't write NGM Peon's links", rec("Ngm Peon", "LK:Ann Member-R", "NGM Peon", "1"), nil)
+check("nor pass them on as a member", rec("Bob Member-R", "EL:1z", "NGM Peon", ";1,1,3;;"), nil)
+check("an officer can", rec("Mira Officer-R", "EL:1z", "NGM Peon", ";1,1,3;;"), ";1,1,3;;")
+check("a sign-up's character has no escape codes", S.ValidValue("ES", "tank;|Hurl:x|h[Click]|h"), false)
+check("a plain name is fine", S.ValidValue("ES", "tank;Bob Alt-R"), true)
+
 -- NGM Peon's post link (EL): limits, reminder, and a cancelled post with its event
 local L = E.ParseLink("1a", "g9;1,1,3;u;")
 check("link: limits and reminder", L.game .. ":" .. L.limits.dps .. ":" .. L.remind .. ":" .. tostring(L.cancelledAt), "g9:3:30:nil")

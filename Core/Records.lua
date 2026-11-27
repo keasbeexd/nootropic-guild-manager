@@ -701,6 +701,10 @@ end
 function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     if def.scope == "officer" then return true end -- officer channel: officers only, by the game
     local sender, author = ctx.sender, rec.a
+    -- NGM Peon's records come into the game only through an officer's copy
+    -- (its code); a character that happens to be called "Ngm Peon" can't
+    -- speak for it
+    if Same(author, S.PEON) and (Same(sender, S.PEON) or not self:KnownOfficer(sender)) then return false end
     -- anyone may put someone on the Do Not Whisper list; taking them off
     -- needs the recruit permission
     if typ == "DN" and (rec.v or "") == "" then
@@ -774,7 +778,8 @@ function S.ValidValue(typ, v)
     elseif typ == "ES" then
         if v == "" then return true end
         local part, picked = v:match("^(%l+);([^;]*)$")
-        return S.PARTS[part or ""] == true and #(picked or "") <= 60
+        -- picked: a character's name (no escape codes, separators or line breaks)
+        return S.PARTS[part or ""] == true and #(picked or "") <= 60 and not picked:find("[|,;\t\n\r]")
     elseif typ == "LK" then
         return v == "" or v == "1"
     elseif typ == "EL" then
@@ -785,7 +790,7 @@ function S.ValidValue(typ, v)
         return at ~= nil and S.ValidValue("EV", snap)
     elseif typ == "EV" then
         if v == "" then return true end
-        if #v > 600 or v:find("[\t\n]") then return false end
+        if #v > 600 or v:find("[\t\n|]") then return false end
         local kind, starts, minutes, coming = v:match("^(%l+);(%w+);(%w+);(%w+);")
         return (kind == "dungeon" or kind == "raid" or kind == "event") and tonumber(starts, 36) ~= nil
             and tonumber(minutes, 36) ~= nil and tonumber(coming, 36) ~= nil
