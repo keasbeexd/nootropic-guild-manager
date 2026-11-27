@@ -726,7 +726,7 @@ function S:PermitsAuthor(typ, author, member, rest, rec)
     if typ == "BN" then return self:Allowed(author, "ban") end
     if typ == "GS" then
         rest = rest or ""
-        if rest:sub(1, 5) == "perm_" or rest:sub(1, 5) == "feat_" or rest == "officers" or rest == "recruiters" then return IsGuildMaster(author) end
+        if rest:sub(1, 5) == "perm_" or rest:sub(1, 5) == "feat_" or rest:sub(1, 5) == "lock_" or rest == "officers" or rest == "recruiters" then return IsGuildMaster(author) end
         if rest:sub(1, 4) == "rmsg" then return self:Allowed(author, "rmsg") end
         if rest:sub(1, 4) == "imsg" then return self:Allowed(author, "imsg") end
     end
@@ -787,7 +787,7 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
         -- officers may pass on anyone's; the author must still have been allowed
         return self:MayWriteEvent(author, rec.v, (self:Store("guild") or {})[ctx.key])
     end
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest:sub(1, 5) == "feat_" or rest == "officers" or rest == "recruiters"
+    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest:sub(1, 5) == "feat_" or rest:sub(1, 5) == "lock_" or rest == "officers" or rest == "recruiters"
         or rest:sub(1, 4) == "rmsg" or rest:sub(1, 4) == "imsg") then
         -- (who may author it: PermitsAuthor, above)
         return Same(sender, author) or self:KnownOfficer(sender)

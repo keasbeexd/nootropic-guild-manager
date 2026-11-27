@@ -302,8 +302,96 @@ function MS:Matches(rule, p)
     return true
 end
 
+------------------------------------------------------------------------
+-- The guild's messages (3.2, docs/PERMISSIONS.md): whoever may write them
+-- shares a set; with "Everyone uses the guild's messages" (GS:lock_rmsg,
+-- the Guild Master's) everyone uses it, otherwise it's where everyone
+-- starts and they may write their own (Settings().ownMessages).
+--   GS:rmsgs    "<useRules 0/1>;<count>"
+--   GS:rmsg_d   the Default message
+--   GS:rmsg_<n> one rule: "name;on;classes;races;min;max;guild;zones;text"
+--               (classes and races comma lists, text last)
+------------------------------------------------------------------------
+local function Flat(s) return (tostring(s or ""):gsub("[\r\n]+", " "):gsub(";", ",")) end
+
+local function RuleValue(rule)
+    local cls, races = {}, {}
+    for c in pairs(rule.classes or {}) do cls[#cls + 1] = c end
+    for race in pairs(rule.races or {}) do races[#races + 1] = race end
+    table.sort(cls) table.sort(races)
+    return table.concat({ Flat(rule.name), rule.enabled and "1" or "0", table.concat(cls, ","), table.concat(races, ","),
+        tostring(rule.minLevel or 1), tostring(rule.maxLevel or ns.Recruit:MaxLevel()), Flat(rule.guild or "any"),
+        Flat(rule.zones), (tostring(rule.text or ""):gsub("[\r\n]+", " ")) }, ";")
+end
+
+local function ParseRule(v, id)
+    local f = {}
+    for part in (v .. ";"):gmatch("([^;]*);") do f[#f + 1] = part end
+    if #f < 9 then return nil end
+    local rule = { id = id, name = f[1], enabled = f[2] == "1", classes = {}, races = {},
+        minLevel = tonumber(f[5]) or 1, maxLevel = tonumber(f[6]) or ns.Recruit:MaxLevel(), guild = f[7] ~= "" and f[7] or "any",
+        zones = f[8], text = table.concat(f, ";", 9), shared = true }
+    for c in f[3]:gmatch("[^,]+") do rule.classes[c] = true end
+    for race in f[4]:gmatch("[^,]+") do rule.races[race] = true end
+    return rule
+end
+
+-- The guild's set: { useRules, default, rules }, or nil when there's none
+function MS:GuildSet()
+    local head = ns.Sync:Value("GS:rmsgs")
+    if not head or head == "" then return nil end
+    local useRules, count = head:match("^(%d);(%d+)$")
+    if not useRules then return nil end
+    local set = { useRules = useRules == "1", default = ns.Sync:Value("GS:rmsg_d") or "", rules = {} }
+    for n = 1, math.min(tonumber(count), 50) do
+        local rule = ParseRule(ns.Sync:Value("GS:rmsg_" .. n) or "", -n)
+        if rule then set.rules[#set.rules + 1] = rule end
+    end
+    return set
+end
+
+function MS:Locked() return ns.DB:Rule("lock_rmsg") == "1" end
+
+-- Are this character's whispers using the guild's messages?
+function MS:UsingGuild()
+    if not self:GuildSet() then return false end
+    return self:Locked() or not (Settings() or {}).ownMessages
+end
+
+function MS:SetOwn(on)
+    local r = Settings()
+    if not r or self:Locked() then return end
+    r.ownMessages = on or nil
+    Changed()
+end
+
+-- Share your messages as the guild's (the rmsg permission)
+function MS:Publish()
+    if not ns.DB:HasPerm("rmsg") then return nil, "Your rank can't write the guild's messages." end
+    local r = Settings()
+    if not r then return nil, "Not in a guild." end
+    local rules = r.rules or {}
+    if #rules > 50 then return nil, "Up to 50 messages can be shared." end
+    local old = self:GuildSet()
+    for n, rule in ipairs(rules) do ns.Sync:Set("GS:rmsg_" .. n, RuleValue(rule)) end
+    for n = #rules + 1, old and #old.rules or 0 do ns.Sync:Set("GS:rmsg_" .. n, "") end
+    ns.Sync:Set("GS:rmsg_d", (tostring(r.default or ""):gsub("[\r\n]+", " ")))
+    ns.Sync:Set("GS:rmsgs", (r.useRules and "1" or "0") .. ";" .. #rules)
+    Changed()
+    return true
+end
+
 -- The message for a player: text, rule (nil = Default message).
 function MS:Pick(p)
+    if self:UsingGuild() then
+        local set = self:GuildSet()
+        if set.useRules then
+            for _, rule in ipairs(set.rules) do
+                if self:Matches(rule, p) then return rule.text, rule end
+            end
+        end
+        return set.default ~= "" and set.default or D.DEFAULT_WHISPER, nil
+    end
     local r = Settings()
     if not r then return "", nil end
     if r.useRules then

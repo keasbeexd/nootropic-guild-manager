@@ -24,7 +24,7 @@ local PATTERN = "NGM:(%w+)"
 local function RawRules()
     local out = {}
     for key, rec in pairs((ns.Sync.Store and ns.Sync:Store("guild")) or {}) do
-        local name = key:match("^GS:(perm_.+)$") or key:match("^GS:(feat_.+)$")
+        local name = key:match("^GS:(perm_.+)$") or key:match("^GS:(feat_.+)$") or key:match("^GS:(lock_.+)$")
         if name and (rec.v or "") ~= "" then out[name] = rec.v end
     end
     return out

@@ -22,9 +22,38 @@ IR.DEFAULT = "Hi $first! Our guild uses Nootropic Guild Manager, a free addon: s
     .. "who's on near your level, guild profiles and our Hall of Fame. Get it on CurseForge, Wago or WowUp "
     .. "(search Nootropic Guild Manager), then type /ngm."
 
-function IR:Text()
+-- The guild's text (3.2, docs/PERMISSIONS.md): GS:imsg, by whoever may
+-- write it; with GS:lock_imsg (the Guild Master's) everyone uses it,
+-- otherwise it's where everyone starts (Settings().ownReminder: their own).
+function IR:GuildText()
+    local t = ns.Sync:Value("GS:imsg")
+    return (t and t ~= "") and t or nil
+end
+
+function IR:Locked() return ns.DB:Rule("lock_imsg") == "1" end
+
+function IR:UsingGuild()
+    return self:GuildText() ~= nil and (self:Locked() or not ns.DB:Settings().ownReminder)
+end
+
+function IR:SetOwn(on)
+    if self:Locked() then return end
+    ns.DB:Settings().ownReminder = on or nil
+end
+
+function IR:Publish()
+    if not ns.DB:HasPerm("imsg") then return nil, "Your rank can't write the guild's reminder text." end
+    return ns.Sync:Set("GS:imsg", (self:OwnText():gsub("[\r\n]+", " ")))
+end
+
+function IR:OwnText()
     local t = ns.DB:Settings().installReminder
     return (t and t ~= "") and t or self.DEFAULT
+end
+
+function IR:Text()
+    if self:UsingGuild() then return self:GuildText() end
+    return self:OwnText()
 end
 
 function IR:SetText(text)

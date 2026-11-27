@@ -295,6 +295,12 @@ end
 
 function DB:FeatureOn(key) return self:Rule("feat_" .. key) ~= "0" end
 
+-- "Everyone uses the guild's ..." (rmsg: recruitment messages, imsg: the install reminder text)
+function DB:SetLock(key, on)
+    if not self:IsGuildMaster() then return nil, "Only the Guild Master can change this." end
+    return ns.Sync:Set("GS:lock_" .. key, on and "1" or "")
+end
+
 function DB:SetFeature(key, on)
     if not self:IsGuildMaster() then return nil, "Only the Guild Master can change this." end
     return ns.Sync:Set("GS:feat_" .. key, on and "" or "0")
