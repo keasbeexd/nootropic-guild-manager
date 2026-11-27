@@ -134,7 +134,7 @@ function CG:Build()
     self.later = W.Button(f, "Not Now", 110, 24, "alt")
     self.later:SetPoint("BOTTOMRIGHT", -16, 14)
     self.later:SetScript("OnClick", function() f:Hide() end)
-    self.never = W.Button(f, "Don't Show Again", 150, 24, "alt")
+    self.never = W.Button(f, "Don't Show Again", 170, 24, "alt")
     self.never:SetPoint("RIGHT", self.later, "LEFT", -8, 0)
     self.never:SetScript("OnClick", function()
         ns.DB:Settings().connectOff = ns.version or "?"
@@ -199,11 +199,33 @@ function CG:Refresh()
     f:SetHeight(-y + 50)
 end
 
+CG.NEVER_WAIT = 5 -- seconds before Don't Show Again can be pressed: time to see what it is
+
+-- Don't Show Again, counting down to when it can be pressed
+function CG:HoldNever()
+    local b, left = self.never, self.NEVER_WAIT
+    if self.neverTicker then self.neverTicker:Cancel() end
+    b:Disable()
+    b:SetText(("Don't Show Again (%d)"):format(left))
+    local function Ready()
+        b:SetText("Don't Show Again")
+        b:Enable()
+    end
+    if not (C_Timer and C_Timer.NewTicker) then Ready() return end
+    self.neverTicker = C_Timer.NewTicker(1, function()
+        left = left - 1
+        if left > 0 then b:SetText(("Don't Show Again (%d)"):format(left)) return end
+        if CG.neverTicker then CG.neverTicker:Cancel() CG.neverTicker = nil end
+        Ready()
+    end, self.NEVER_WAIT)
+end
+
 function CG:Open()
     if InCombatLockdown and InCombatLockdown() then return end
     if not self.frame then self:Build() end
     self:Refresh()
     self.frame:Show()
+    self:HoldNever()
 end
 
 -- Turned off with Don't Show Again on this version? (a new version asks again)
