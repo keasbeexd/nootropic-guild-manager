@@ -390,6 +390,7 @@ function O:BuildMain()
     local connect = W.Button(L.panel, "Get Connected", 140, 24, "alt")
     connect:SetPoint("LEFT", open, "RIGHT", 8, 0)
     connect:SetScript("OnClick", function() ns.ConnectGuide:Open() end)
+    self.connectButton = connect -- shown only in guilds using NGM Peon (O:Refresh)
     W.Tooltip(connect, "Get Connected", "With NGM Peon: linking your characters and Discord in WoW, and where each stands.")
     L:Text((ns.GOLD .. "Commands|r\n")
         .. "|cffffffff/ngm|r open or close     |cffffffff/ngm find <text>|r search the roster     |cffffffff/ngm recruit|r recruiting\n"
@@ -715,6 +716,7 @@ function O:Refresh()
         pick[1]:SetText(ns.GuildFeed:SoundName(ns.GuildFeed:SoundKey(pick[1].feed)))
         SetUsable(pick[1], pick[2]) -- no line, no sound
     end
+    if self.connectButton then self.connectButton:SetShown(ns.Sync.PeonGuild and ns.Sync:PeonGuild() or false) end
     self.communitiesCheck:SetChecked(s.communitiesButton ~= false)
     self.blizzRosterCheck:SetChecked(s.blizzRoster ~= false)
     self.learnCheck:SetChecked(ns.Profile:LearnEnabled())

@@ -52,4 +52,10 @@ assert(not CG:Silenced())
 -- without NGM Peon: never opens by itself
 plan, peon = {}, false
 assert(not CG:Needed())
+-- nor opens on request: an addon-only guild has nothing to connect
+local said
+ns.Print = function(_, m) said = m end
+InCombatLockdown = function() return false end
+CG:Open()
+assert(said and said:find("guilds using NGM Peon", 1, true) and not CG.frame, said)
 print("OK")

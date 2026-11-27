@@ -222,6 +222,11 @@ end
 
 function CG:Open()
     if InCombatLockdown and InCombatLockdown() then return end
+    -- only for guilds using NGM Peon: an addon-only guild has nothing to connect
+    if not (ns.Sync.PeonGuild and ns.Sync:PeonGuild()) then
+        ns:Print("Get Connected is for guilds using NGM Peon on Discord (ngmpeon.app). Your guild uses the NGM Addon on its own: nothing to connect.")
+        return
+    end
     if not self.frame then self:Build() end
     self:Refresh()
     self.frame:Show()
