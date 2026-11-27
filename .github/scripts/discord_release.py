@@ -44,6 +44,20 @@ def changelog_section(text: str, version: str) -> str:
     return notes
 
 
+def headlines(notes: str) -> str:
+    """Just each entry's bold header ("- **Works with a controller.**"), or
+    its first sentence when it has none: the full notes are on the What's
+    new page, linked under it."""
+    out = []
+    for line in notes.splitlines():
+        m = re.match(r"^(\s*[-*] )\*\*(.+?)\*\*", line)
+        if m:
+            out.append(f"{m.group(1)}**{m.group(2)}**")
+        elif re.match(r"^\s*[-*] ", line):
+            out.append(re.split(r"(?<=[.!?])\s", line, maxsplit=1)[0])
+    return "\n".join(out)
+
+
 def is_feature_release(version: str) -> bool:
     """2.10.0, 3.0.0, 3.0 (not 2.9.1): the ones worth a ping."""
     parts = version.split(".")
@@ -73,7 +87,7 @@ def payload(version: str, notes: str, repo: str, tag: str, ping_roles: list[str]
             "color": 0xC79C3E,
             "fields": [{
                 "name": "Get it",
-                "value": f"[CurseForge]({CURSEFORGE}) · [Wago]({WAGO}){wowi_link()} · [GitHub]({release})\n"
+                "value": f"[CurseForge]({CURSEFORGE}) · [Wago]({WAGO}){wowi_link()} · [GitHub]({release}) · [What's new](https://ngmpeon.app/changelog#addon)\n"
                          "WowUp and the CurseForge app pick it up automatically.",
             }],
         }],
@@ -101,7 +115,7 @@ def main() -> int:
         return 0
     version = tag[1:]
     with open("CHANGELOG.md", encoding="utf-8") as f:
-        notes = changelog_section(f.read(), version)
+        notes = headlines(changelog_section(f.read(), version))
     # one role ID, or several separated by commas: each is pinged
     roles = [r.strip() for r in os.environ.get("DISCORD_ANNOUNCE_ROLE_ID", "").split(",") if r.strip()]
     if any(not re.fullmatch(r"\d{17,20}", r) for r in roles):
