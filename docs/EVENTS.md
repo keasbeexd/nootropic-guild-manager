@@ -89,7 +89,8 @@ which 3.0 skips by record type) or extra fields on existing lines.
 **Game to NGM Peon (NGM2, NGM Desktop or `/ngm discord`):** `EG` and `ES`
 records join M, RL and JN in the `R` lines, under the update code's trust
 rule: an officer's or the Guild Master's code carries everyone's, a member's
-only their own.
+only their own. A `got` line says how far the game has NGM Peon's news, so
+the dashboard can say what isn't in game yet.
 
 - `EG`: NGM Peon posts it in the kind's channel (Event Settings) with its
   default limits, or edits or cancels the post it made for it. It checks the
@@ -121,26 +122,30 @@ only their own.
 - `GS:evranks` as an `R` line, and `LK:<member>` for every linked character
   (cleared when they unlink). After linking, in-game sign-ups open with the
   next update from NGM Peon; Discord's buttons work at once.
+- `EL` also carries the post's reminder (the game reminds those signed up at
+  the same time) and, once cancelled, when; a cancelled post isn't upcoming,
+  so its `EL` carries the event itself, sent while the post is up.
+- `at` (when the code was made) and, through NGM Desktop, `mine` (how far
+  NGM Peon has that computer's own changes): with `has`, these tell each side
+  what the other has (docs/ARCHITECTURE.md, NGM Peon).
 
 Each event is edited where it was made: events made on the dashboard show
-"Made on the dashboard: edit it there" in game instead of Edit and Cancel,
-and events made in game show "Made in game: edit it there" on the
+"Made on the dashboard: edit it there" in game where Edit would be (to
+managers), and events made in game show "Made in game: edit it there" on the
 dashboard's Create Events tab.
 
 ## The window
 
-The Upcoming Events tab gets Create; cards get Sign up, Change character,
-Edit and Cancel; the form is a popup window. Both are registered with the
-gamepad interface (docs/CONTROLLER.md) and use the game's own dropdowns and
-edit boxes, so smart navigation finds them.
+The Upcoming Events tab gets Create Event and Send to Discord; cards get the
+sign-up buttons, Change character and Edit (Cancel Event is in the form); the
+form is a popup window. Both are registered with the gamepad interface
+(docs/CONTROLLER.md) and use buttons, steppers and edit boxes, so smart
+navigation finds them.
 
-## Order of work
+## Status
 
-1. Records `EG`, `ES`, `GS:evranks` and their rules, with tests (sync sim).
-2. Upcoming Events: list `EG` events, the form, Edit and Cancel.
-3. Sign-ups: buttons, limits and bench, Change character.
-4. NGM Peon: `EG`/`ES` in NGM2; posting, editing, cancelling; sign-ups both
-   ways; `GS:evranks` and the `E` link field; tests on both sides with a
-   shared code.
-5. One test zip for the whole of 3.1 (controller, resets and holidays,
-   events) in game, then NGM Peon deployed before the tag.
+Built in 3.1.0, on both sides, with tests: records and rules, the form,
+sign-ups, NGM Peon posting, editing, cancelling and sign-ups both ways,
+cards that mirror the Discord post, reminders, and the in-step notes. NGM
+Peon is deployed before the NGM Addon's tag (an older NGM Peon refuses the
+new NGM2 lines).

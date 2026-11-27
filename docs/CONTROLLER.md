@@ -44,7 +44,7 @@ Typing: an edit box takes focus on A. Text then needs a keyboard or the system's
 
 ## Steps
 
-1. **Windows join the gamepad interface** (`UI/Gamepad.lua`, done). All nine windows register: the main window, profile, Do Not Whisper, Who Can Craft, recruiting messages, the welcome tour, and the member picker, NGM Peon paste and NGM Peon setup popups. Needs an in-game check.
+1. **Windows join the gamepad interface** (`UI/Gamepad.lua`, done). All nine windows register: the main window, profile, Do Not Whisper, Who Can Craft, recruiting messages, the welcome tour, and the member picker, NGM Peon paste and NGM Peon setup popups. Checked in game (3.1.0); since then the event form, Get Connected and the confirm window joined too.
 2. **In-game audit, tab by tab, with a controller.** Note what can't be reached or does the wrong thing. Likely suspects:
    - list rows that only react to right-click
    - the resize grip and dragging (ignore them)
