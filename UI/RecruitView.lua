@@ -698,6 +698,10 @@ function RCV:BuildPanel(page, inset)
     view:SetPoint("LEFT", replyBtn, "RIGHT", 6, 0)
     view:SetScript("OnClick", function() ns.DNWView:Open() end)
     W.Tooltip(view, "Do Not Whisper list", "Who is on it for good, and who was whispered in the last 14 days (with the time left). Shared with everyone in the guild using the NGM Addon.")
+    local bans = W.Button(panel, "Ban List", 90, 22, "alt")
+    bans:SetPoint("LEFT", view, "RIGHT", 6, 0)
+    bans:SetScript("OnClick", function() ns.BanView:Open() end)
+    W.Tooltip(bans, "Ban list", "Everyone banned from the guild. Banned players are skipped here, and anyone who invites one gets a warning.")
     self.panelLast = replyBtn
 
     -- Grow the scroll area to fit (the preview's height changes with the text).

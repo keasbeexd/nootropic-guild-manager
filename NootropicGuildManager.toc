@@ -26,6 +26,7 @@ Core\Sync.lua
 Services\Roster.lua
 Services\BugReport.lua
 Services\GuildRules.lua
+Services\Bans.lua
 Services\Comm.lua
 Services\Messages.lua
 Services\Recruit.lua
@@ -59,6 +60,7 @@ UI\OverviewView.lua
 UI\HallOfFameView.lua
 UI\RecruitView.lua
 UI\DNWView.lua
+UI\BanView.lua
 UI\RecipesView.lua
 UI\InvitePrompt.lua
 UI\DiscordCodeView.lua

@@ -131,6 +131,13 @@ function GR:AddMenu(owner, root, contextData)
         local b = root:CreateButton(remind.text, remind.func)
         if remind.disabled and b.SetEnabled then b:SetEnabled(false) end
     end
+    if ns.DB:HasPerm("ban") and e.rankIndex ~= 0 and full ~= ns.PlayerFullName() then
+        if ns.Bans:IsBanned(full) then
+            root:CreateButton("Unban", function() ns.Bans:Unban(full) ns:Print(e.short .. " is no longer banned.") end)
+        else
+            root:CreateButton("Ban from the guild...", function() ns.BanView:AskBan(full) end)
+        end
+    end
     if ns.DB:CanEditLinks() then
         local sub = root:CreateButton("Main / Alt")
         local cur = ns.Roster.byName[full]
