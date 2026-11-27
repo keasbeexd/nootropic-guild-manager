@@ -197,6 +197,10 @@ ns.Roster.byName["Ngm Peon"] = { rankIndex = 4 }
 check("a guildmate named Ngm Peon can't write NGM Peon's links", rec("Ngm Peon", "LK:Ann Member-R", "NGM Peon", "1"), nil)
 check("nor pass them on as a member", rec("Bob Member-R", "EL:1z", "NGM Peon", ";1,1,3;;"), nil)
 check("an officer can", rec("Mira Officer-R", "EL:1z", "NGM Peon", ";1,1,3;;"), ";1,1,3;;")
+check("Discord in WoW: NGM Peon's, through an officer", rec("Mira Officer-R", "DX:Ann Member-R", "NGM Peon", "1"), "1")
+check("never from the member", rec("Ann Member-R", "DX:Ann Member-R", "Ann Member-R", "0"), "1")
+check("only 1, 0 or nothing", S.ValidValue("DX", "yes"), false)
+check("its own sync lane (3.0 copies don't compare it)", S.LaneOf("DX:Ann Member-R"), "plans")
 check("a sign-up's character has no escape codes", S.ValidValue("ES", "tank;|Hurl:x|h[Click]|h"), false)
 check("a plain name is fine", S.ValidValue("ES", "tank;Bob Alt-R"), true)
 

@@ -69,5 +69,6 @@ UI\MainFrame.lua
 UI\MinimapButton.lua
 UI\Options.lua
 UI\Welcome.lua
+UI\ConnectGuide.lua
 UI\Communities.lua
 UI\WhoWhisper.lua

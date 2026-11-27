@@ -388,7 +388,7 @@ function DC:ApplyPeon(code)
         -- mains, roles, Discord names, champions, and the setting that NGM Peon crowns them
         -- 3.1: links to NGM Peon, who may create events, posts' links and Discord sign-ups
         local wanted = typ == "M" or typ == "RL" or typ == "CN" or (typ == "HW" and r.key:match("^HW:%d%d%d%d%d%d$")) or r.key == "GS:peon"
-            or typ == "LK" or typ == "EL" or typ == "ES" or r.key == "GS:evranks"
+            or typ == "LK" or typ == "DX" or typ == "EL" or typ == "ES" or r.key == "GS:evranks" or r.key == "GS:gamechat"
         if not wanted then
             out.refused = out.refused + 1
         else
