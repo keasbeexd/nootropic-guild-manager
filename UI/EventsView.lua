@@ -121,7 +121,7 @@ function EV:FillSignups(c, ev, inner, top)
             coming = coming + (tonumber(f.name:match("%((%d+)")) or 0)
         end
     end
-    if ev.source == "game" then c.Coming:SetText(("%d coming"):format(coming)) end
+    if ev.source == "game" and not ev.cancelled then c.Coming:SetText(("%d coming"):format(coming)) end
     c.Signups:ClearAllPoints()
     c.Signups:SetPoint("TOPLEFT", PAD, -(top + 8))
     c.Signups:SetWidth(inner - 2 * PAD)
@@ -245,7 +245,9 @@ function EV:Refresh()
         c:ClearAllPoints()
         c:SetPoint("TOPLEFT", EDGE, -y)
         c:SetWidth(inner)
-        c.Title:SetText(ns.Theme.Upper(ev.title ~= "" and ev.title or "Event"))
+        -- cancelled: said first, in red, so it can't be missed
+        c.Title:SetText((ev.cancelled and ("|cff" .. ns.Theme.HEX.red .. ns.Theme.Upper("Cancelled") .. "|r  " .. GRAY) or "")
+            .. ns.Theme.Upper(ev.title ~= "" and ev.title or "Event") .. (ev.cancelled and "|r" or ""))
         c.Coming:SetText(("%d coming"):format(ev.coming or 0))
         local length = ev.minutes >= 60 and ((ev.minutes / 60) .. " h") or (ev.minutes .. " min")
         c.When:SetText(("%s  " .. GRAY .. "·|r  %s  " .. GRAY .. "·|r  %s"):format(date("%a %d %b, %H:%M", ev.starts), KIND[ev.kind] or "Event", length))
@@ -259,7 +261,11 @@ function EV:Refresh()
         local made = ev.source == "game" and ev or ev.made
         local editable = made ~= nil and ns.Events:MayEdit(made)
         c.Where:SetWidth(inner - 2 * PAD - (editable and 80 or 0))
-        if ev.source == "game" then
+        if ev.cancelled then
+            -- gone with its Discord post ("Clear old posts")
+            c.Coming:SetText("")
+            c.Where:SetText(("|cff" .. ns.Theme.HEX.red .. "Cancelled|r " .. GRAY .. "in game by %s|r"):format(ns.ShortName(ev.creator)))
+        elseif ev.source == "game" then
             -- made in game: who made it; with NGM Peon, posted with the next update
             c.Coming:SetText("")
             -- with NGM Peon: not on Discord until the game's saved data reaches it

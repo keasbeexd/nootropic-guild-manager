@@ -9,7 +9,12 @@ Design for the NGM Addon and NGM Peon (ngm-hub). Decided with the user on
   date and time (your own), length, description. The same lengths as NGM
   Peon's form.
 - **Edit** and **Cancel** on the event's card: your own events; officers
-  anyone's (with NGM Peon: its managers).
+  anyone's (with NGM Peon: its managers). An event made in game stays
+  editable in game after NGM Peon posts it.
+- **Cancelled** events stay on the card list, marked Cancelled in red, with
+  sign-ups closed, for as long as their Discord post does: NGM Peon's "Clear
+  old posts", counted from when it was cancelled in game. With Never, or
+  without NGM Peon: until the event would have ended.
 - **Sign up** on every event's card: Tank, Healer, DPS, Tentative, Can't come
   for dungeons and raids; Going, Tentative, Can't come for events. Role limits
   and the bench as NGM Peon's (dungeon 1 / 1 / 3 by default). You sign up as
@@ -21,10 +26,11 @@ Design for the NGM Addon and NGM Peon (ngm-hub). Decided with the user on
 ## Who may create
 
 - **With NGM Peon** (the guild has `GS:peon`): NGM Peon's Event Settings, sent
-  to the game as `GS:evranks` = `dungeon=<rank>;raid=<rank>;event=<rank>;officers=<0|1>`
+  to the game as `GS:evranks` = `dungeon=<rank>;raid=<rank>;event=<rank>;officers=<0|1>;keep=<minutes|->`
   (the lowest rank that may create that kind, `-` = managers only; officers:
   whether the dashboard's "Officers can change settings" makes them
-  managers). Managers always may: the Guild Master, officers if that's on.
+  managers; keep: "Clear old posts" in minutes, `-` = Never, so a cancelled
+  event leaves the game with its post). Managers always may: the Guild Master, officers if that's on.
   (Discord's Manage Server permission also makes a manager on the dashboard;
   the game can't see it, so those people create on the dashboard.) A member
   has at most 10 upcoming events of their own, as on the dashboard. The

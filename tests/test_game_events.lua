@@ -120,7 +120,7 @@ ns.PlayerFullName = function() return "Ann Member-R" end
 check("a member may not edit it", select(2, E:Edit(id, { starts = NOW + 7200, minutes = 60, title = "Mine" })), "Only its creator or an officer can change it.")
 ns.PlayerFullName = function() return "Gm Boss-R" end
 check("cancelled", (E:Cancel(id)), true)
-check("and gone from the list", (function() for _, e in ipairs(E:List()) do if e.id == id then return true end end return false end)(), false)
+check("and listed as Cancelled (until its post would go)", (function() for _, e in ipairs(E:List()) do if e.id == id then return tostring(e.cancelled) end end return "gone" end)(), "true")
 
 -- sign-ups, as NGM Peon's post: a dungeon (1 / 1 / 3), first come first in, the rest on the bench
 ns.DB.GetAltsOf = function(_, main) return main == "Bob Member-R" and { "Bob Alt-R" } or {} end
@@ -170,5 +170,22 @@ check("sign-ups from before the link still count", E:Fields(strat[1])[1].value, 
 -- a Discord sign-up (NGM Peon's copy, newer) wins over the in-game one for the same member
 rec("Mira Officer-R", "ES:p16:Rae Raider-R", "NGM Peon", "healer;")
 check("newest per member wins, whichever side", E:Fields(strat[1])[2].value, "Rae Raider")
+-- cancelled in game: marked, closed, and gone with its Discord post ("Clear old posts")
+ns.PlayerFullName = function() return "Gm Boss-R" end
+assert(E:Cancel(dung))
+local function find() for _, e in ipairs(E:List()) do if e.game == dung or (e.source == "game" and e.id == dung) then return e end end end
+local gone = find()
+check("cancelled: still listed, marked", gone and tostring(gone.cancelled), "true")
+check("cancelled: not editable", E:MayEdit(gone.made or gone), false)
+check("cancelled: sign-ups closed", select(2, E:CanSignUp(gone)), "Cancelled: sign-ups are closed.")
+local EventRules = S.EventRules
+S.EventRules = function() return { lowest = {}, officers = true, keep = 60 } end
+local PeonGuild = S.PeonGuild
+S.PeonGuild = function() return true end
+check("listed while its post stays", E.CancelledShown(gone, NOW, NOW + 3599), true)
+check("gone when its post goes", E.CancelledShown(gone, NOW, NOW + 3600), false)
+S.EventRules = function() return { lowest = {}, officers = true } end
+check("Never: until it would have ended", E.CancelledShown({ starts = NOW, minutes = 60 }, NOW - 999, NOW + 3599), true)
+S.EventRules, S.PeonGuild = EventRules, PeonGuild
 check("closed once started", select(2, E:CanSignUp({ source = "game", id = dung, kind = "dungeon", starts = NOW - 1 })), "Sign-ups are closed: it has started.")
 print("OK")

@@ -601,6 +601,7 @@ function S:EventRules()
     local out = { lowest = {}, officers = false }
     for k, r in v:gmatch("(%l+)=([^;]*)") do
         if k == "officers" then out.officers = r == "1"
+        elseif k == "keep" then out.keep = tonumber(r) -- "Clear old posts" in minutes; nil: Never
         elseif r ~= "-" then out.lowest[k] = tonumber(r) end
     end
     return out

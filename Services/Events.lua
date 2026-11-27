@@ -121,13 +121,23 @@ function E:Take(events)
     for _, ev in ipairs(list) do
         local id = ListKey(ev)
         after[id] = true
-        if not before[id] then added = added + 1 end
+        if not before[id] and not ev.cancelled then added = added + 1 end
     end
     local removed = 0
     -- gone from NGM Peon while still to come (one that has started isn't "removed")
     for id, starts in pairs(before) do if not after[id] and starts > now then removed = removed + 1 end end
     ns:Fire("EVENTS_CHANGED")
     return #list, added, removed
+end
+
+-- A cancelled event made in game stays listed, marked Cancelled, as long
+-- as its Discord post does: NGM Peon's "Clear old posts" from when it was
+-- cancelled (GS:evranks keep). With Never, or without NGM Peon: until it
+-- would have ended.
+function E.CancelledShown(ev, cancelledAt, now)
+    local rules = ns.Sync:PeonGuild() and ns.Sync:EventRules()
+    if rules and rules.keep then return now < (cancelledAt or 0) + rules.keep * 60 end
+    return now < ev.starts + ev.minutes * 60
 end
 
 function E:List()
@@ -155,7 +165,10 @@ function E:List()
                 ev.game, posted[game] = game, true
                 -- made in game: still edited there, through its EG record
                 local held = store["EG:" .. game] and ns.Sync.ParseGameEvent(store["EG:" .. game].v)
-                if held and not held.cancelled then
+                if held and held.cancelled then
+                    ev.cancelled, ev.creator = true, held.creator
+                    ev.gone = not E.CancelledShown(held, store["EG:" .. game].t, now)
+                elseif held then
                     held.id, held.source = game, "game"
                     ev.made = held
                     -- changed in game since NGM Peon posted it (it can't be changed
@@ -169,13 +182,13 @@ function E:List()
             end
             ev.limits = { tank = tonumber(t), healer = tonumber(h), dps = tonumber(d) }
         end
-        list[#list + 1] = ev
+        if not ev.gone then list[#list + 1] = ev end
     end
     -- made in game (shared through guild sync); once NGM Peon has posted one, it's listed as NGM Peon's
     for k, rec in pairs(store) do
         if k:sub(1, 3) == "EG:" and not posted[k:sub(4)] then
             local ev = ns.Sync.ParseGameEvent(rec.v)
-            if ev and not ev.cancelled and ev.starts > now then
+            if ev and (ev.cancelled and E.CancelledShown(ev, rec.t, now) or (not ev.cancelled and ev.starts > now)) then
                 ev.id, ev.source, ev.channel, ev.server, ev.coming = k:sub(4), "game", "", "", 0
                 list[#list + 1] = ev
             end
@@ -251,7 +264,7 @@ local function Held(id)
 end
 
 function E:MayEdit(ev)
-    if not ev or ev.source ~= "game" then return false end
+    if not ev or ev.source ~= "game" or ev.cancelled then return false end
     local me = ns.PlayerFullName()
     return ns.Sync.Same(me, ev.creator) or ns.Sync:EventManager(me)
 end
@@ -374,6 +387,7 @@ end
 function E:MineUnsent(ev) return self.unsent["ES:" .. E.SignupEvent(ev)] == true end
 
 function E:CanSignUp(ev, picked)
+    if ev.cancelled then return nil, "Cancelled: sign-ups are closed." end
     if ev.starts <= ns.DB:Now() then return nil, "Sign-ups are closed: it has started." end
     if ns.Sync:PeonGuild() and not ns.Sync:Linked((picked and picked ~= "") and picked or MyMain()) then
         return nil, "Link your characters to sign up: type /ngm link in Discord."
@@ -413,7 +427,7 @@ function E:Announce()
     local told = 0
     for _, ev in ipairs(list) do
         local id = ListKey(ev)
-        if not seen[id] then
+        if not seen[id] and not ev.cancelled then
             seen[id] = ev.starts
             if on and not first and told < 5 then
                 told = told + 1
