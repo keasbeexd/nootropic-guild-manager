@@ -52,6 +52,8 @@
       EL:<NGM Peon id>     its post for an event (3.1; NGM Peon only):
                            "<EG id>;<tank>,<healer>,<dps>;<remind>;<cancelled at>[;<EV value>]"
       DN:<player>          Do Not Whisper entry ("" = removed)
+      BN:<player>          banned (3.2, docs/PERMISSIONS.md): "time;by;guid;main;reason"
+                           ("" = unbanned); the ban permission writes it
       RS:<player>          recruitment status (kept 14 days)
       IR:<member>          reminded to install the addon (kept 30 days)
       GS:<name>            guild setting (GS:peonhas: how far NGM Peon has the guild's
@@ -88,6 +90,7 @@ S.TYPES = {
     L  = { scope = "officer", officer = true, label = "Officer log" },
     A  = { scope = "officer", officer = true, noAudit = true, label = "Audit" },
     DN = { scope = "guild",   anyone = true, label = "Do Not Whisper" },
+    BN = { scope = "guild",   label = "Ban list" },
     RS = { scope = "guild",   anyone = true, noAudit = true, ttl = 14 * 86400, label = "Recruitment status" },
     AV = { scope = "guild",   selfOnly = true, noAudit = true, label = "Addon version" },
     GS = { scope = "guild",   officer = true, label = "Guild setting" },
@@ -626,6 +629,7 @@ end
 -- Managers: the Guild Master; officers (with NGM Peon: if its settings make them managers).
 function S:EventManager(name)
     if IsGuildMaster(name) then return true end
+    if ns.DB.PermRanks and ns.DB:PermRanks("ev_manage") then return self:Allowed(name, "ev_manage") end -- the Guild Master's rule
     if not self:KnownOfficer(name) then return false end
     if not self:PeonGuild() then return true end
     local rules = self:EventRules()
@@ -635,6 +639,7 @@ end
 -- May `name` create an event of this kind? Without NGM Peon: the Guild
 -- Master and officers. With it: its Event Settings, as on the dashboard.
 function S:MayCreateEvent(name, kind)
+    if ns.DB.PermRanks and ns.DB:PermRanks("ev_" .. kind) then return self:Allowed(name, "ev_" .. kind) end -- the Guild Master's rule
     if self:EventManager(name) then return true end
     if not self:PeonGuild() then return false end
     local rules, e = self:EventRules(), RosterEntry(name)
@@ -684,32 +689,65 @@ function S:MayAuthor(name, typ, member, rest)
     end
     if def.anyone then return RosterEntry(name) ~= nil end
     if def.selfOnly then return Same(name, member) end
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers" or rest == "recruiters") then return IsGuildMaster(name) end
-    if def.self and Same(name, member) and self:RankMay(name, "ownprofile") then return true end
+    local permits = self:PermitsAuthor(typ, name, member, rest, nil)
+    if typ == "GS" and permits ~= nil then return permits end
+    if typ == "HX" or typ == "HA" or typ == "BN" then return permits == true end
+    if def.self and Same(name, member) and self:Allowed(name, "ownprofile") then return true end
     local e = RosterEntry(name)
     if e and e.rankIndex == 0 then return true end
     local perm = def.scope == "guild" and ns.DB.PERM_BY_TYPE[typ]
-    if perm then
-        local set = ns.DB:PermRanks(perm)
-        if set then return e ~= nil and set[e.rankIndex] == true end
-        local pdef = ns.DB:PermDef(perm)
-        if pdef and pdef.everyone then return e ~= nil end
-    end
+    if perm then return self:Allowed(name, perm) end
     if def.officer then return self:KnownOfficer(name) end
     return false
 end
 
+-- Who may do each permission while the Guild Master hasn't set it, and the
+-- officer-only ones that can only be narrowed (docs/PERMISSIONS.md). Unlisted:
+-- officers. The one list every copy (and DB.PERMS, the page) goes by.
+S.PERM_DEFAULT = { ownprofile = "everyone", signup = "everyone", recruit = "recruiters", rmsg = "gm",
+    dnw_add = "everyone", dnw_remove = "recruiters", remind = "everyone", imsg = "gm" }
+S.PERM_NARROW = { audit = true, peonnews = true, peoncode = true }
+
+-- What the Guild Master's permissions (docs/PERMISSIONS.md) say about a
+-- record's author: true or false, or nil when no permission covers it (the
+-- type's own rules decide). Checked whoever sends it, so an officer passing
+-- a change on can't get round a rule its author is under.
+function S:PermitsAuthor(typ, author, member, rest, rec)
+    local v = rec and rec.v or ""
+    if typ == "ES" then
+        if author == S.PEON or v == "" then return nil end -- NGM Peon's copy; withdrawing is always allowed
+        return self:Allowed(author, "signup")
+    end
+    if typ == "RS" then return self:Allowed(author, "recruit") end
+    if typ == "DN" then return self:Allowed(author, v == "" and "dnw_remove" or "dnw_add") end
+    if typ == "IR" then return self:Allowed(author, "remind") end
+    if typ == "HX" then return self:Allowed(author, "hofhide") end
+    if typ == "HA" then return self:Allowed(author, "hofannounce") end
+    if typ == "BN" then return self:Allowed(author, "ban") end
+    if typ == "GS" then
+        rest = rest or ""
+        if rest:sub(1, 5) == "perm_" or rest:sub(1, 5) == "feat_" or rest == "officers" or rest == "recruiters" then return IsGuildMaster(author) end
+        if rest:sub(1, 4) == "rmsg" then return self:Allowed(author, "rmsg") end
+        if rest:sub(1, 4) == "imsg" then return self:Allowed(author, "imsg") end
+    end
+    return nil
+end
+
 -- May `name` (a guildmate) do what the Guild Master allows for `perm`?
-function S:RankMay(name, perm)
+-- (docs/PERMISSIONS.md; the same rule as DB:HasPerm, for anyone)
+function S:Allowed(name, perm)
     local e = RosterEntry(name)
     if not e then return false end
     if e.rankIndex == 0 then return true end
-    local set = ns.DB:PermRanks(perm)
-    if set then return set[e.rankIndex] == true end
-    local pdef = ns.DB:PermDef(perm)
-    if pdef and pdef.everyone then return true end
+    local set = ns.DB.PermRanks and ns.DB:PermRanks(perm)
+    if set then return set[e.rankIndex] == true and (not S.PERM_NARROW[perm] or self:KnownOfficer(name)) end
+    local default = S.PERM_DEFAULT[perm] or "officers"
+    if default == "everyone" then return true end
+    if default == "recruiters" then return self:MayRecruitName(name) end
+    if default == "gm" then return false end
     return self:KnownOfficer(name)
 end
+
 
 function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     if def.scope == "officer" then return true end -- officer channel: officers only, by the game
@@ -718,10 +756,12 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     -- (its code); a character that happens to be called "Ngm Peon" can't
     -- speak for it
     if Same(author, S.PEON) and (Same(sender, S.PEON) or not self:KnownOfficer(sender)) then return false end
+    -- the Guild Master's permissions hold for the author, whoever passes it on
+    if self:PermitsAuthor(typ, author, member, rest, rec) == false then return false end
     -- anyone may put someone on the Do Not Whisper list; taking them off
     -- needs the recruit permission
     if typ == "DN" and (rec.v or "") == "" then
-        return self:MayRecruitName(author) and (Same(sender, author) or self:KnownOfficer(sender))
+        return Same(sender, author) or self:KnownOfficer(sender)
     end
     -- install reminders say who sent them: only that person (or an officer
     -- passing it on) may send one, so nobody can block reminders for the
@@ -747,8 +787,10 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
         -- officers may pass on anyone's; the author must still have been allowed
         return self:MayWriteEvent(author, rec.v, (self:Store("guild") or {})[ctx.key])
     end
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers" or rest == "recruiters") then
-        return IsGuildMaster(author) and (Same(sender, author) or self:KnownOfficer(sender))
+    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest:sub(1, 5) == "feat_" or rest == "officers" or rest == "recruiters"
+        or rest:sub(1, 4) == "rmsg" or rest:sub(1, 4) == "imsg") then
+        -- (who may author it: PermitsAuthor, above)
+        return Same(sender, author) or self:KnownOfficer(sender)
     end
     if Same(sender, author) then return self:MayAuthor(author, typ, member, rest) end
     -- passing on someone else's record: officers only, and self-only
@@ -783,6 +825,12 @@ function S.ValidValue(typ, v)
         return v == "" or (#v <= 40 and not v:find("[,:\t]"))
     elseif typ == "HB" then
         return v == "" or (not v:find("[\t\n|]") and v:match("^%d%d%d%d%d%d;") ~= nil)
+    elseif typ == "BN" then
+        -- time;by;guid;main;reason: no escape codes, separators only where they belong
+        if v == "" then return true end
+        if #v > 400 or v:find("[|\t\n]") then return false end
+        local t, by, guid, main = v:match("^(%d+);([^;]*);([^;]*);([^;]*);")
+        return t ~= nil and #by <= 60 and #main <= 60 and (guid == "" or guid:match("^Player%-[%w%-]+$") ~= nil)
     elseif typ == "EG" then
         if #v > 600 or v:find("[\t\n|]") then return false end
         local kind, starts, minutes, creator, state = v:match("^(%l+);(%w+);(%w+);([^;]+);(x?);")
@@ -1099,6 +1147,10 @@ function S:Materialize(typ, key, member, rec)
     elseif typ == "EV" or typ == "EG" or typ == "ES" or typ == "LK" or typ == "DX" or typ == "EL" then
         -- events are about the guild, not a member (Services/Events.lua)
         ns.Debounce("eventschanged", 0.5, function() ns:Fire("EVENTS_CHANGED") end)
+        return
+    elseif typ == "BN" then
+        -- bans are about people who may be outside the guild: no member record
+        ns.Debounce("banschanged", 0.1, function() ns:Fire("BANS_CHANGED") end)
         return
     elseif typ == "DN" or typ == "RS" then
         -- Do Not Whisper entries are about people outside the guild: no member record

@@ -213,25 +213,96 @@ end
 -- Guild-wide settings (shared; officers change them)
 ------------------------------------------------------------------------
 ------------------------------------------------------------------------
--- Permissions: the Guild Master picks which ranks may do each of these
--- (Options > Officers > Permissions). GS:perm_<key> = "" (the default:
--- officers, the ranks the game marks Officer; everyone for ownprofile)
--- or rank numbers "1,3,4" ("-" = nobody but the Guild Master). The Guild Master (rank 0) always may, and only they change
--- these. Officer-only data (officer log, audit, officer stats) can't be
--- handed out: the game only delivers it to officer ranks.
+-- Permissions (docs/PERMISSIONS.md): the Guild Master picks which ranks may
+-- do each of these, on the Permissions page, and only they change them.
+-- GS:perm_<key> = "" (the default) or rank numbers "1,3,4" ("-" = nobody
+-- but the Guild Master). The Guild Master (rank 0) always may.
+-- Who may while it's unset (S.PERM_DEFAULT: everyone, officers, recruiters
+-- = the game's Invite Member ranks, or gm = only the Guild Master), and the
+-- officer-only ones (S.PERM_NARROW: the game only delivers that data to
+-- officers, so the Guild Master can narrow them, never widen them), are in
+-- Core/Records.lua: the one list every copy goes by.
+-- Every copy checks shared changes against these (S:Allowed); what only
+-- happens on a player's own computer is gated in the NGM Addon.
+-- Feature switches: GS:feat_<key> = "0" turns a feature off for the guild.
 ------------------------------------------------------------------------
 DB.PERMS = {
-    { key = "links",     label = "Link mains and alts",               hint = "Mark alts, change mains, unlink." },
-    { key = "ownprofile", label = "Edit their own profile",           everyone = true,
-      hint = "Spec, roles, professions and contact info on their own characters. What their addon reports by itself (version, professions it reads, usual play hours) isn't affected." },
-    { key = "profiles",  label = "Edit other guildmates' profiles",   hint = "Spec, roles, professions and contact info on anyone's profile (their own included)." },
+    { group = "Profiles", key = "links", label = "Link mains and alts",
+      hint = "Mark alts, change mains, unlink." },
+    { group = "Profiles", key = "ownprofile", label = "Edit their own profile",
+      hint = "Spec, roles, professions and contact info on their own characters. What their NGM Addon reports by itself (version, professions it reads, usual play hours) isn't affected." },
+    { group = "Profiles", key = "profiles", label = "Edit other guildmates' profiles",
+      hint = "Spec, roles, professions and contact info on anyone's profile (their own included)." },
+    { group = "Events", key = "ev_dungeon", label = "Create dungeons", event = "dungeon",
+      hint = "Events made in game. With NGM Peon, the same on the dashboard." },
+    { group = "Events", key = "ev_raid", label = "Create raids", event = "raid",
+      hint = "Events made in game. With NGM Peon, the same on the dashboard." },
+    { group = "Events", key = "ev_event", label = "Create events", event = "event",
+      hint = "Guild nights and other events made in game. With NGM Peon, the same on the dashboard." },
+    { group = "Events", key = "ev_manage", label = "Edit or cancel anyone's events",
+      hint = "Everyone may edit and cancel the events they made." },
+    { group = "Events", key = "signup", label = "Sign up for events",
+      hint = "In game and, with NGM Peon, with the Discord post's buttons." },
+    { group = "Recruiting", key = "recruit", label = "Use the recruiting tools",
+      hint = "Recruitment whispers, the button on /who results and the Invite prompt. Whispers happen on each player's own computer, so a changed copy of the NGM Addon could still send them; what they record is checked by everyone." },
+    { group = "Recruiting", key = "rmsg", label = "Write the guild's recruitment messages",
+      hint = "The messages everyone's recruitment whispers start from (or must use, with Everyone uses the guild's messages)." },
+    { group = "Recruiting", key = "dnw_add", label = "Add to Do Not Whisper",
+      hint = "Put someone on the guild's Do Not Whisper list." },
+    { group = "Recruiting", key = "dnw_remove", label = "Take off Do Not Whisper",
+      hint = "Take someone off the guild's Do Not Whisper list." },
+    { group = "Members", key = "remind", label = "Send install reminders",
+      hint = "Whisper a guildmate to install the NGM Addon." },
+    { group = "Members", key = "imsg", label = "Write the install reminder text",
+      hint = "The text everyone's install reminders start from (or must use, with Everyone uses the guild's text)." },
+    { group = "Members", key = "ban", label = "Ban and unban players",
+      hint = "Put someone (with all their characters) on the guild's ban list, or take them off." },
+    { group = "Members", key = "banlist", label = "See the ban list",
+      hint = "The Ban List window. Everyone is still warned when they invite someone banned." },
+    { group = "Members", key = "banreason", label = "See ban reasons",
+      hint = "Why someone was banned, in the Ban List and the warnings." },
+    { group = "Officers", key = "audit", label = "See the Audit tab",
+      hint = "Officer data: the game only gives it to ranks it marks Officer, so this can only be narrowed." },
+    { group = "Hall of Fame", key = "hofhide", label = "Hide someone from the Hall of Fame",
+      hint = "Leave a guildmate off the boards." },
+    { group = "Hall of Fame", key = "hofannounce", label = "Announce champions in guild chat",
+      hint = "The monthly champions line in guild chat." },
+    { group = "NGM Peon", key = "peonnews", label = "Bring in NGM Peon's news for the guild",
+      hint = "Their game passes NGM Peon's news on to everyone. Only officers' copies are trusted with it, so this can only be narrowed." },
+    { group = "NGM Peon", key = "peoncode", label = "Make codes for NGM Peon",
+      hint = "/ngm discord, and NGM Desktop sending the whole guild's changes." },
 }
 DB.PERM_BY_TYPE = { M = "links",
     MS = "profiles", RL = "profiles", MP = "profiles", CN = "profiles" }
 
--- { [rankIndex] = true }, or nil for the default (officers).
+-- Feature switches (the whole guild, on unless the Guild Master turned them off)
+DB.FEATURES = {
+    { key = "recruit", label = "Recruiting", hint = "The Recruitment tab, whispers, the /who button and the Invite prompt." },
+    { key = "together", label = "Play Together", hint = "The Play Together tab." },
+    { key = "fame", label = "Hall of Fame", hint = "The Hall of Fame tab and champions." },
+    { key = "levelups", label = "Level-ups in chat", hint = "The Guild Feed's level-up lines." },
+    { key = "reminders", label = "Install reminders", hint = "Whispering guildmates to install the NGM Addon." },
+    { key = "connect", label = "Get Connected", hint = "The checklist that opens by itself (with NGM Peon)." },
+}
+
+-- The rules as every copy uses them: the Guild Master's, as long as they
+-- match the Guild Info's code (Services/GuildRules.lua), else the last ones
+-- that did.
+function DB:Rule(name)
+    if ns.GuildRules then return ns.GuildRules:Value(name) end
+    return ns.Sync:Value("GS:" .. name)
+end
+
+function DB:FeatureOn(key) return self:Rule("feat_" .. key) ~= "0" end
+
+function DB:SetFeature(key, on)
+    if not self:IsGuildMaster() then return nil, "Only the Guild Master can change this." end
+    return ns.Sync:Set("GS:feat_" .. key, on and "" or "0")
+end
+
+-- { [rankIndex] = true }, or nil for the default.
 function DB:PermRanks(key)
-    local v = ns.Sync:Value("GS:perm_" .. key)
+    local v = self:Rule("perm_" .. key)
     if not v or v == "" then return nil end
     local set = {}
     for n in v:gmatch("%d+") do set[tonumber(n)] = true end
@@ -247,16 +318,18 @@ function DB:PermDef(key)
     for _, p in ipairs(self.PERMS) do if p.key == key then return p end end
 end
 
+-- May you do `key`? (the same rule every copy applies: S:Allowed)
 function DB:HasPerm(key)
     if not IsInGuild() then return false end
     local rank = self:MyRankIndex()
     if rank == 0 then return true end
     local set = self:PermRanks(key)
-    if not set then
-        local def = self:PermDef(key)
-        return (def and def.everyone) and true or ns.IsOfficer()
-    end
-    return rank ~= nil and set[rank] == true
+    if set then return rank ~= nil and set[rank] == true and (not ns.Sync.PERM_NARROW[key] or ns.IsOfficer()) end
+    local default = ns.Sync.PERM_DEFAULT[key] or "officers"
+    if default == "everyone" then return true end
+    if default == "recruiters" then return ns.Sync:MayRecruit() end
+    if default == "gm" then return false end
+    return ns.IsOfficer()
 end
 
 -- set = { [rankIndex] = true } or nil for the default (officers).
@@ -271,9 +344,9 @@ function DB:SetPermRanks(key, set)
 end
 
 -- The default's name: "Everyone" or "Officers".
+local DEFAULT_TEXT = { everyone = "Everyone", officers = "Officers", recruiters = "Ranks that may invite", gm = "Only the Guild Master" }
 function DB:PermDefaultText(key)
-    local def = self:PermDef(key)
-    return (def and def.everyone) and "Everyone" or "Officers"
+    return DEFAULT_TEXT[ns.Sync.PERM_DEFAULT[key] or "officers"]
 end
 
 -- "Officers (default)", "Guild Master only" or "Veteran, Officer".
