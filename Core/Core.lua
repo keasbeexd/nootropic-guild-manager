@@ -231,10 +231,11 @@ function ns.Safe(fn, where)
         local ok, err = pcall(fn, ...)
         if not ok then
             local msg = tostring(err)
+            if ns.BugReport then ns.BugReport:Note("error", (where or "a handler") .. ": " .. msg) end
             if not reported[msg] then
                 reported[msg] = true
                 ns:Print(("|cffff2020error in %s:|r %s"):format(where or "a handler", msg))
-                ns:Print("Please send that line to the NGM Addon's author. Everything else keeps working.")
+                ns:Print("Everything else keeps working. Type |cffffffff/ngm bug|r for a report to send us.")
             end
         end
     end
@@ -329,6 +330,7 @@ ns:RegisterEvent("PLAYER_GUILD_UPDATE", function() ns.Debounce("officercheck", 0
 
 ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.Theme:LoadTheme() -- the guild's colours, before any window is built
+    ns.BugReport:Init() -- first: it notes what goes wrong from here on
     ns.Roster:Init()
     ns.Sync:Init()
     ns.RosterLog:Init()
@@ -382,6 +384,7 @@ local function PrintHelp()
     ns:Print("  |cffffffff/ngm minimap|r  - show or hide the minimap button")
     ns:Print("  |cffffffff/ngm options|r  - open the options")
     ns:Print("  |cffffffff/ngm events|r  - the guild's upcoming events from NGM Peon and where to sign up, plus the game's resets and holidays")
+    ns:Print("  |cffffffff/ngm bug|r  - a report of what went wrong, to copy into a bug report (nothing personal)")
     if ns.Sync.PeonGuild and ns.Sync:PeonGuild() then ns:Print("  |cffffffff/ngm connect|r  - Get Connected: linking with NGM Peon and Discord in WoW, and where each stands") end
     ns:Print(ns.GOLD .. "NGM Peon|r (your guild's Discord, ngmpeon.app):")
     ns:Print("  |cffffffff/ngm link|r  - in Discord, not here: link your characters for your rank role")
@@ -407,6 +410,10 @@ SlashCmdList.NOOTROPICGM = function(msg)
     elseif cmd == "find" or cmd == "search" then
         ns.UI:Show()
         ns.UI:SetSearch(rest)
+    elseif cmd == "bug" and rest:lower() == "log" then
+        ns.BugReport:TaintLog()
+    elseif cmd == "bug" or cmd == "report" then
+        ns.BugReport:Open()
     elseif cmd == "diag" then
         local me = ns.PlayerFullName()
         ns:Print(("Version %s, playing as %s%s. Sync: %s."):format(ns.version, me,

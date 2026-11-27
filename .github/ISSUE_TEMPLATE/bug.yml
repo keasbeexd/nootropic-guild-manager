@@ -32,7 +32,7 @@ body:
     id: version
     attributes:
       label: Addon version
-      description: In the bottom corner of the NGM window, or from /ngm diag. Leave empty if the problem isn't in game.
+      description: In the bottom corner of the NGM window (/ngm bug says it too). Leave empty if the problem isn't in game.
       placeholder: "3.0.0"
   - type: textarea
     id: what
@@ -50,10 +50,10 @@ body:
         1. Open the Upcoming Events tab
         2. ...
   - type: textarea
-    id: diag
+    id: report
     attributes:
-      label: /ngm diag
-      description: For problems in game, type /ngm diag and paste what it prints in chat.
+      label: /ngm bug
+      description: For problems in game, type /ngm bug, press Ctrl+C in the window it opens, and paste it here. It says what went wrong (and anything the game blocked), with nothing personal.
       render: text
   - type: textarea
     id: shots

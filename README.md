@@ -360,6 +360,7 @@ A note on trust: every copy of the NGM Addon checks each change it receives agai
 | `/ngm craft <name>` | who in the guild can craft it (the Who Can Craft? window) |
 | `/ngm recruit` | open the Recruitment tab |
 | `/ngm options` | open the options |
+| `/ngm bug` | a report of what went wrong (anything the game blocked, the NGM Addon's own errors, versions, which options are on), to copy into a bug report; nothing personal. `/ngm bug log` tries to turn on the game's own detailed log |
 | `/ngm diag` | report what the Guild & Communities shortcut, the guild roster hooks and the /who whisper buttons and the Invite prompt can see, and which name and version the NGM Addon uses for you |
 | `/ngm sync` | sync now and show sync stats |
 | `/ngm reload` | With NGM Desktop installed: Reload and Sync (a `/reload` that sends your changes to NGM Peon and brings its news in) |

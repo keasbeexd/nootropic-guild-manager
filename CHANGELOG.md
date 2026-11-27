@@ -2,6 +2,10 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.1.1
+
+- **`/ngm bug`: a report to send us.** If something goes wrong, `/ngm bug` opens a short report to copy into a bug report: your versions, which options are on, the other addons you run, and what went wrong. When the game blocks the NGM Addon ("Interface action failed because of an AddOn"), it notes which action and where, and chat points to `/ngm bug`. Nothing personal goes in it, and nothing is sent anywhere by itself.
+
 ## 3.1.0
 
 - **Works with a controller.** In the game's gamepad mode, the NGM Addon's windows join the game's own controller navigation: the D-pad moves between buttons, lists and boxes, A clicks, B closes, and the triggers switch between open windows. Fuller controller support (shoulder buttons for tabs, row menus, search) is coming in a later version.
