@@ -97,6 +97,7 @@ end
 -- Worth opening by itself: with NGM Peon, linking or Discord in WoW still to do
 function CG:Needed()
     if not (ns.Sync.PeonGuild and ns.Sync:PeonGuild()) then return false end
+    if ns.DB.FeatureOn and not ns.DB:FeatureOn("connect") then return false end -- off for the guild
     for _, s in ipairs(self:Steps()) do
         if s.state == "todo" then return true end
     end

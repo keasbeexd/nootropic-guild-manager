@@ -140,7 +140,7 @@ function F:OnRoster()
     for _, e in ipairs(members) do now[e.full] = e.level end
     if last then
         local s = ns.DB:Settings()
-        if s.levelUps ~= false then
+        if s.levelUps ~= false and ns.DB:FeatureOn("levelups") then
             local me, told = ns.PlayerFullName(), 0
             for _, e in ipairs(F.Changes(members, last)) do
                 if e.full ~= me and told < F.MAX_LINES then

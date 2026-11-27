@@ -31,7 +31,7 @@ local code = DC:ForMyGuild("setup")
 assert(code and code:find("^NGM1%."), tostring(code))
 gm = false
 local none, why = DC:ForMyGuild()
-assert(none == nil and why:find("Guild Master or an officer"), why)
+assert(none == nil and why:find("make codes for NGM Peon", 1, true), why)
 -- an officer: never the setup code
 ns.IsOfficer = function() return true end
 none, why = DC:ForMyGuild("setup")

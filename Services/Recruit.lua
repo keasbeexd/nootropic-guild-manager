@@ -631,11 +631,12 @@ function RC:ClickOnly() return self.clickOnly end
 -- guildmate invited, can't be ticked: one whisper from the guild is enough.
 -- Ranks the Guild Master allows to recruit (everyone by default).
 -- The game's Invite setting for your rank (Guild Control).
+-- From 3.2 the Guild Master's Permissions page decides (by default, as
+-- before: the game's Invite Member ranks), and Recruiting can be off for
+-- the whole guild (docs/PERMISSIONS.md).
 function RC:MayRecruit()
     if not IsInGuild() then return false end
-    if IsGuildLeader and IsGuildLeader() then return true end
-    if CanGuildInvite then return CanGuildInvite() and true or false end
-    return ns.IsOfficer()
+    return ns.DB:FeatureOn("recruit") and ns.DB:HasPerm("recruit")
 end
 
 function RC:CanSelect(p)
@@ -898,6 +899,10 @@ end
 
 function RC:AddDNW(full, reply)
     if not full or not ns.DB:Guild() then return end
+    if not ns.DB:HasPerm("dnw_add") then
+        ns:Print("|cffff2020Your rank can't add people to the Do Not Whisper list (Permissions).|r")
+        return
+    end
     local text = ns.Sync.Clean(reply or ""):gsub(";", ","):sub(1, 80)
     local ok = ns.Sync:Set(DNKey(full), ("%d;%s"):format(ns.DB:Now(), text))
     Changed()
@@ -905,8 +910,8 @@ function RC:AddDNW(full, reply)
 end
 
 function RC:RemoveDNW(full)
-    if not self:MayRecruit() then
-        ns:Print("|cffff2020Only ranks the Guild Master lets recruit can take people off the Do Not Whisper list.|r")
+    if not ns.DB:HasPerm("dnw_remove") then
+        ns:Print("|cffff2020Your rank can't take people off the Do Not Whisper list (Permissions).|r")
         return
     end
     if self:IsDNW(full) then

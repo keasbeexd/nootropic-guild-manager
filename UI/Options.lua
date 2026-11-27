@@ -483,16 +483,35 @@ end
 ------------------------------------------------------------------------
 function O:PermMenu(owner, key)
     local DB = ns.DB
+    local narrow = ns.Sync.PERM_NARROW[key]
+    local function Set(set)
+        local ok, err = DB:SetPermRanks(key, set)
+        if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
+        O:Refresh()
+    end
     local items = { { text = "Who may do this", isTitle = true } }
     items[#items + 1] = { text = DB:PermDefaultText(key) .. " (default)", radio = true,
-        tooltip = { title = DB:PermDefaultText(key), text = DB:PermDef(key).everyone and "Every rank." or "The ranks the game marks Officer (Guild Control)." },
-        checked = function() return DB:PermRanks(key) == nil end,
-        func = function()
-            local ok, err = DB:SetPermRanks(key, nil)
-            if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
-            O:Refresh()
-        end }
+        checked = function() return DB:PermRanks(key) == nil end, func = function() Set(nil) end }
+    if not narrow then
+        -- every rank
+        items[#items + 1] = { text = "Everyone", radio = true,
+            checked = function()
+                local set = DB:PermRanks(key)
+                if not set then return false end
+                for _, r in ipairs(DB:GuildRanks()) do if r.index ~= 0 and not set[r.index] then return false end end
+                return true
+            end,
+            func = function()
+                local set = {}
+                for _, r in ipairs(DB:GuildRanks()) do if r.index ~= 0 then set[r.index] = true end end
+                Set(set)
+            end }
+    end
+    items[#items + 1] = { text = "Only me (the Guild Master)", radio = true,
+        checked = function() local set = DB:PermRanks(key) return set ~= nil and next(set) == nil end,
+        func = function() Set({}) end }
     items[#items + 1] = { divider = true }
+    items[#items + 1] = { text = narrow and "These officer ranks" or "These ranks", isTitle = true }
     for _, r in ipairs(DB:GuildRanks()) do
         local gm = r.index == 0
         items[#items + 1] = {
@@ -515,45 +534,101 @@ function O:PermMenu(owner, key)
     W.ShowMenu(owner, items)
 end
 
-function O:BuildPermControls(L)
-    L:Header("Permissions  |cff9d9d9d(Guild Master, whole guild)|r")
-    L:Text("Choose which ranks may do each of these. By default everyone may edit their own profile and the rest is for officers. Pick ranks to hand it to them instead; the Guild Master always can.")
-    L:Text("Who's an officer and who may recruit follow the game's own rank settings (Guild Control: Officer, and Invite Member). The Officer Log and the Audit always stay with officers.", "NGMFontDimSmall")
+------------------------------------------------------------------------
+-- Permissions page (3.2, docs/PERMISSIONS.md): who may do what, the whole
+-- guild; only the Guild Master changes it, everyone sees what their rank may do
+------------------------------------------------------------------------
+function O:BuildPermissions()
+    local outer, L = NewPage("permissions", "Permissions", "Who may do what in the guild. Only the Guild Master changes these.")
+    self.rulesStatus = L:Text(("x"):rep(160), "NGMFontTextSmall", 4)
+    local y = L:Row(26)
+    self.rulesCopy = W.Button(L.panel, "Copy the line", 130, 22, "alt")
+    self.rulesCopy:SetPoint("TOPLEFT", 18, y)
+    self.rulesCopy:SetScript("OnClick", function() W.Copy(ns.GuildRules:Line()) end)
+    W.Tooltip(self.rulesCopy, "The Guild Info line", "Paste it anywhere in the Guild Info (Guild & Communities, Guild Info). Every copy of the NGM Addon checks its rules against it.")
+    L:Space(6)
     self.permRows = {}
+    local group
     for _, perm in ipairs(ns.DB.PERMS) do
-        local y = L:Row(28)
+        if perm.group ~= group then
+            group = perm.group
+            L:Header(group)
+        end
+        local ry = L:Row(28)
         local label = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontText")
-        label:SetPoint("TOPLEFT", 20, y - 4)
-        label:SetWidth(240)
+        label:SetPoint("TOPLEFT", 20, ry - 4)
+        label:SetWidth(250)
         label:SetJustifyH("LEFT")
         label:SetText(perm.label)
-        local btn = W.Button(L.panel, "", 200, 22)
-        btn:SetPoint("TOPLEFT", 270, y)
-        btn:SetScript("OnClick", function(self) O:PermMenu(self, perm.key) end)
+        local btn = W.Button(L.panel, "", 210, 22)
+        btn:SetPoint("TOPLEFT", 276, ry)
+        btn:SetScript("OnClick", function(b) O:PermMenu(b, perm.key) end)
         W.Tooltip(btn, perm.label, perm.hint)
-        self.permRows[#self.permRows + 1] = { key = perm.key, btn = btn }
+        local you = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
+        you:SetPoint("LEFT", btn, "RIGHT", 8, 0)
+        self.permRows[#self.permRows + 1] = { key = perm.key, btn = btn, you = you }
+        -- the locks sit with what they lock
+        if perm.key == "rmsg" then
+            self.lockRmsg = L:Check("Everyone uses the guild's recruitment messages", "On: nobody can use their own. Off: the guild's are where everyone starts, and they may write their own.",
+                function(on) local ok, err = ns.DB:SetLock("rmsg", on) if not ok and err then ns:Print(err) end O:Refresh() end)
+        elseif perm.key == "imsg" then
+            self.lockImsg = L:Check("Everyone uses the guild's install reminder text", "On: nobody can use their own text. Off: the guild's is where everyone starts.",
+                function(on) local ok, err = ns.DB:SetLock("imsg", on) if not ok and err then ns:Print(err) end O:Refresh() end)
+        end
     end
-    self.permNote = L:Text("")
-    L:Space(10)
+    L:Header("Features, for the whole guild")
+    L:Text("Off, a feature is hidden for everyone in the guild. What's already shared is kept, so turning it back on loses nothing.", "NGMFontDimSmall")
+    self.featureChecks = {}
+    for _, f in ipairs(ns.DB.FEATURES) do
+        self.featureChecks[f.key] = L:Check(f.label, f.hint, function(on)
+            local ok, err = ns.DB:SetFeature(f.key, on)
+            if not ok and err then ns:Print(err) end
+            O:Refresh()
+        end)
+    end
+    L:Text("Who's an officer and who may invite follow the game's own rank settings (Guild Control: Officer, and Invite Member). Officer data (the Officer Log, the Audit) only ever reaches officer ranks: those rows can only be narrowed.", "NGMFontDimSmall")
+    L:Finish()
+    return outer
 end
 
 function O:RefreshPermControls()
-    local gm = ns.DB:IsGuildMaster()
-    for _, row in ipairs(self.permRows or {}) do
-        row.btn:SetText(ns.DB:PermText(row.key))
+    if not self.permRows then return end
+    local DB, GR = ns.DB, ns.GuildRules
+    local gm = DB:IsGuildMaster()
+    for _, row in ipairs(self.permRows) do
+        row.btn:SetText(DB:PermText(row.key))
         row.btn:SetEnabled(gm)
-        row.btn:SetAlpha(gm and 1 or 0.6)
+        row.btn:SetAlpha(gm and 1 or 0.7)
+        row.you:SetText(gm and "" or (DB:HasPerm(row.key) and "|cff6cbf5ayou may|r" or "you may not"))
     end
-    if self.permNote then
-        self.permNote:SetText(gm and "" or "|cffff2020Only the Guild Master can change permissions.|r")
+    for key, cb in pairs(self.featureChecks or {}) do
+        cb:SetChecked(DB:FeatureOn(key))
+        cb:SetEnabled(gm)
     end
+    for _, pair in ipairs({ { self.lockRmsg, "rmsg" }, { self.lockImsg, "imsg" } }) do
+        if pair[1] then pair[1]:SetChecked(DB:Rule("lock_" .. pair[2]) == "1") pair[1]:SetEnabled(gm) end
+    end
+    -- the Guild Info code
+    local text, showCopy
+    if gm then
+        if GR.pasteLine then
+            text, showCopy = "|cffff8000Put this line in the Guild Info|r (the game didn't let the NGM Addon do it): |cffffffff" .. GR:Line() .. "|r. Every copy checks the rules against it.", true
+        else
+            text = "|cff6cbf5aIn the Guild Info:|r " .. GR:Line() .. ". Every copy checks your rules against it, so nobody can change them but you."
+        end
+    elseif GR:Stale() then
+        text = "|cffff8000Guild rules not up to date:|r they don't match the Guild Info yet, so the last ones that did are used. Fetching the Guild Master's from guildmates."
+    else
+        text = GR:Code() and "|cff6cbf5aIn step with the Guild Info.|r Only the Guild Master can change these." or "Only the Guild Master can change these."
+    end
+    self.rulesStatus:SetText(text)
+    self.rulesCopy:SetShown(showCopy == true)
 end
 
 function O:BuildOfficers()
     local outer, L = NewPage("officers", "Officers", "For the ranks the game marks Officer.")
     self.officerNote = L:Text("|cffff2020Only officers can change these.|r")
-
-    self:BuildPermControls(L)
+    L:Text("Who may do what (officers included) is on the Permissions page.", "NGMFontDimSmall")
 
     L:Header("Audit History  |cff9d9d9d(your copy)|r")
     L:Text("How long to keep the record of who changed what. Older entries are deleted.")
@@ -679,12 +754,14 @@ function O:Build()
     self:BuildMain()
     self.subPages = {
         { key = "recruiting", frame = self:BuildRecruiting() },
+        { key = "permissions", frame = self:BuildPermissions() },
         { key = "officers", frame = self:BuildOfficers() },
         { key = "about", frame = self:BuildAbout() },
     }
     ns:On("SETTINGS_CHANGED", function() if O:AnyShown() then O:Refresh() end end)
     ns:On("BRAND_CHANGED", function() if O:AnyShown() then O:Refresh() end end)
     ns:On("GUILD_SETTINGS_CHANGED", function() if O:AnyShown() then O:Refresh() end end)
+    ns:On("GUILD_RULES_CHANGED", function() if O:AnyShown() then O:Refresh() end end)
     ns:On("OFFICER_CHANGED", function() if O:AnyShown() then O:Refresh() end end)
     ns:On("RECRUITS_CHANGED", function()
         if O.pages.recruiting and O.pages.recruiting:IsShown() then O:RefreshRecruiting() end

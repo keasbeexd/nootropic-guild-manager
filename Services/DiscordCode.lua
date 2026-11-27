@@ -259,8 +259,8 @@ function DC:ForMyGuild(mode)
     if not gm and mode == "setup" then
         return nil, "Only the Guild Master can make the setup code: only their game sees every rank's settings."
     end
-    if not gm and not (ns.IsOfficer and ns.IsOfficer()) then
-        return nil, "Only the Guild Master or an officer can make codes for NGM Peon. Ask one of them (Sync tab, step 2)."
+    if not gm and not (ns.IsOfficer and ns.IsOfficer() and (not ns.DB.HasPerm or ns.DB:HasPerm("peoncode"))) then
+        return nil, "Your rank can't make codes for NGM Peon (the Guild Master's Permissions). Ask someone who can (Sync tab, step 2)."
     end
     local region = self:Region()
     if not region then return nil, "NGM Peon serves the US and EU regions only, for now." end

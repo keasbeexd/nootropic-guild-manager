@@ -445,6 +445,7 @@ end
 
 function E:CanSignUp(ev, picked)
     if ev.cancelled then return nil, "Cancelled: sign-ups are closed." end
+    if ns.DB.HasPerm and not ns.DB:HasPerm("signup") then return nil, "Your rank can't sign up for events (the Guild Master's Permissions)." end
     if ev.starts <= ns.DB:Now() then return nil, "Sign-ups are closed: it has started." end
     if ns.Sync:PeonGuild() and not ns.Sync:Linked((picked and picked ~= "") and picked or MyMain()) then
         return nil, "Link your characters to sign up: type /ngm link in Discord."

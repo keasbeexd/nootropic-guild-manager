@@ -755,7 +755,7 @@ function S:SenderAllowed(typ, member, rest, def, rec, ctx)
     -- NGM Peon's records come into the game only through an officer's copy
     -- (its code); a character that happens to be called "Ngm Peon" can't
     -- speak for it
-    if Same(author, S.PEON) and (Same(sender, S.PEON) or not self:KnownOfficer(sender)) then return false end
+    if Same(author, S.PEON) and (Same(sender, S.PEON) or not self:KnownOfficer(sender) or not self:Allowed(sender, "peonnews")) then return false end
     -- the Guild Master's permissions hold for the author, whoever passes it on
     if self:PermitsAuthor(typ, author, member, rest, rec) == false then return false end
     -- anyone may put someone on the Do Not Whisper list; taking them off

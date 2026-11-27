@@ -92,6 +92,8 @@ local function Who(by) return (by == ns.PlayerFullName()) and "You" or ns.ShortN
 -- Can you remind `e` right now? true, or false and why (for menus and tooltips).
 function IR:Can(e)
     if not e then return false, "Unknown member." end
+    if not ns.DB:FeatureOn("reminders") then return false, "Install reminders are off for the guild." end
+    if not ns.DB:HasPerm("remind") then return false, "Your rank can't send install reminders (Permissions)." end
     if e.isSelf then return false, "That's you." end
     if e.hasAddon then return false, "Already uses the NGM Addon." end
     local t, by = self:Reminded(e.full)
@@ -140,7 +142,7 @@ end
 -- Menu items for a member (Find tab and the game's roster), or nil when
 -- they already use the addon.
 function IR:MenuItem(e)
-    if not e or e.hasAddon or e.isSelf then return nil end
+    if not e or e.hasAddon or e.isSelf or not ns.DB:FeatureOn("reminders") then return nil end
     local ok, why = self:Can(e)
     return { text = "Remind to install the NGM Addon", disabled = not ok,
              tooltip = { title = "Remind to install the NGM Addon", text = self:Preview(e) },
