@@ -182,6 +182,12 @@ assert(pc.region == "us" and pc.guild == "Nootropic" and pc.has == 1794540000, "
 assert(pc.hoursHash == hash(DC.HoursValue({ sharing = 12, counts = counts })), "the grid's hash matches NGM Peon's")
 assert(#pc.records == 2 and pc.records[1].key == "M:Zo\195\171 Ash" and pc.records[1].v == "Marc Priest" and pc.records[2].v == "healer")
 assert(DC:ParsePeon("NGMP1.abc.00000000") == nil)
+-- 3.1: "mine", how far NGM Peon has this computer's own changes
+do
+    local payload = "us\nNootropic\nhas\t10\nmine\t" .. DC.B36(1800000000)
+    local mc = assert(DC:ParsePeon("NGMP1." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)))
+    assert(mc.mine == 1800000000 and mc.has == 36, tostring(mc.mine))
+end
 
 -- bringing it in: records through the usual rules, NGM Peon's word remembered
 GetGuildInfo = function() return "Nootropic" end
@@ -369,6 +375,35 @@ do
     DC:ReloadAndSync()
     assert(printed[#printed]:find("combat", 1, true), "not in combat")
     _G.NGMPeonDesktop = nil
+end
+
+-- in sync or not: one rule for what the game sends NGM Peon
+do
+    local store = {
+        ["M:Ann"] = { v = "Bob", t = 100, a = "Ann" },
+        ["RL:Ann"] = { v = "tank", t = 300, a = "Ann" },
+        ["CN:Ann"] = { v = "ann;", t = 300, a = "Ann" },            -- NGM Peon doesn't take it from the game
+        ["M:Bob"] = { v = "", t = 400, a = "NGM Peon" },             -- NGM Peon's own
+        ["GS:peonhas"] = { v = DC.B36(200), t = 1, a = "Gm" },
+    }
+    local peonGuild, guild = true, { peon = {} }
+    ns.Sync = { Get = function(_, k) return store[k] end, Value = function(_, k) return store[k] and store[k].v end,
+        PeonGuild = function() return peonGuild end, Same = function(x, y) return x == y end, PEON = "NGM Peon" }
+    ns.DB = { Guild = function() return guild end }
+    ns.PlayerFullName = function() return "Ann" end
+    assert(DC:PeonHas() == 200, "an officer's GS:peonhas")
+    assert(not DC:NotOnDiscord("M:Ann"), "older than what NGM Peon has: on Discord")
+    assert(DC:NotOnDiscord("RL:Ann"), "newer: not yet")
+    assert(not DC:NotOnDiscord("CN:Ann"), "only what the game sends NGM Peon")
+    assert(not DC:NotOnDiscord("M:Bob"), "NGM Peon's own never")
+    guild.peon.mine = 350
+    assert(not DC:NotOnDiscord("RL:Ann"), "this computer's own changes are in (NGM Desktop: mine)")
+    peonGuild = false
+    guild.peon.mine = nil
+    assert(not DC:NotOnDiscord("RL:Ann"), "without NGM Peon: nothing to say")
+    assert(DC:Reach():find("next log in", 1, true) and not DC:Reach():find("Discord", 1, true))
+    peonGuild = true
+    assert(DC:Reach():find("Discord gets it when an officer", 1, true), DC:Reach())
 end
 
 print(a); print("OK")

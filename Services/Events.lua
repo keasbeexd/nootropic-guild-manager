@@ -251,18 +251,9 @@ E.unsent = {}
 function E:Unsent() return next(self.unsent) ~= nil end
 local function Mark(key) E.unsent[key] = true end
 
--- Where a change of yours goes next, for the card: with NGM Desktop at
--- your next /reload or logout; without it, when an officer's does.
-function E:Carrier()
-    if ns.DiscordCode and ns.DiscordCode:DesktopInstalled() then return "at your next /reload or logout, or with Send to Discord" end
-    return "when an officer with NGM Desktop reloads or logs out"
-end
-
--- Said after each change in game: who sees it now, and when Discord does.
-function E:Reach()
-    if not (ns.Sync and ns.Sync:PeonGuild()) then return "Guildmates online see it now; the rest when they next log in." end
-    return "Guildmates online see it now. Discord gets it " .. self:Carrier() .. "."
-end
+-- When a change reaches Discord, and the line said after one (Services/DiscordCode.lua)
+function E:Carrier() return ns.DiscordCode:Carrier() end
+function E:Reach() return ns.DiscordCode:Reach() end
 
 E.DURATIONS = { 30, 60, 90, 120, 180, 240, 300, 360 } -- minutes, as NGM Peon's form (ngm-hub src/events/model.ts)
 E.MAX_TITLE, E.MAX_DESCRIPTION = 100, 400

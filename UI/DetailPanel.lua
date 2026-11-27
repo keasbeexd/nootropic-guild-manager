@@ -1105,6 +1105,7 @@ function DP:BuildAltSection(parent)
     s.Primary = W.Button(s, "Mark as Alt", 140, 22)
     s.Secondary = W.Button(s, "Add Alt", 140, 22)
     s.Tertiary = W.Button(s, "Unlink", 140, 22, "bad")
+    s.Pending = Para(s, "NGMFontTextSmall")
     self.alt = s
 end
 
@@ -1114,7 +1115,8 @@ function DP:PickMainFor(full)
         exclude = { [full] = true },
         onPick = function(main)
             local ok, err = ns.DB:SetMain(full, main)
-            if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
+            if not ok and err then ns:Print("|cffff2020" .. err .. "|r")
+            elseif ok then ns:Print(("%s is now an alt of %s. %s"):format(ns.ShortName(full), ns.ShortName(main), ns.DiscordCode:Reach())) end
         end,
     })
 end
@@ -1127,7 +1129,8 @@ function DP:PickAltFor(main)
         exclude = exclude,
         onPick = function(alt)
             local ok, err = ns.DB:SetMain(alt, main)
-            if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
+            if not ok and err then ns:Print("|cffff2020" .. err .. "|r")
+            elseif ok then ns:Print(("%s is now an alt of %s. %s"):format(ns.ShortName(alt), ns.ShortName(main), ns.DiscordCode:Reach())) end
         end,
     })
 end
@@ -1164,9 +1167,13 @@ function DP:RefreshAlts(e)
         s.Primary:SetText("Change Main")
         s.Primary:SetScript("OnClick", function() DP:PickMainFor(full) end)
         s.Secondary:SetText("Make This Main")
-        s.Secondary:SetScript("OnClick", function() ns.DB:MakeMain(full) end)
+        local function Said(ok, err, what)
+            if not ok and err then ns:Print("|cffff2020" .. err .. "|r")
+            elseif ok then ns:Print(what .. " " .. ns.DiscordCode:Reach()) end
+        end
+        s.Secondary:SetScript("OnClick", function() local ok, err = ns.DB:MakeMain(full) Said(ok, err, ns.ShortName(full) .. " is now the main.") end)
         s.Tertiary:SetText("Unlink")
-        s.Tertiary:SetScript("OnClick", function() ns.DB:ClearMain(full) end)
+        s.Tertiary:SetScript("OnClick", function() local ok, err = ns.DB:ClearMain(full) Said(ok, err, ns.ShortName(full) .. " is no longer an alt.") end)
         s.Tertiary:Show()
     else
         y = -42
@@ -1209,6 +1216,20 @@ function DP:RefreshAlts(e)
         s.Tertiary:ClearAllPoints()
         s.Tertiary:SetPoint("TOPLEFT", 0, y)
         y = y - 24
+    end
+    -- with NGM Peon: a change here not on Discord yet (theirs or an alt's)
+    local pendingBy
+    for _, who in ipairs({ e.isAlt and e.main or full, unpack(e.isAlt and {} or e.alts or {}) }) do
+        local key = "M:" .. who
+        if ns.DiscordCode:NotOnDiscord(key) then pendingBy = ns.Sync:Get(key).a break end
+    end
+    if not pendingBy and ns.DiscordCode:NotOnDiscord("M:" .. full) then pendingBy = ns.Sync:Get("M:" .. full).a end
+    s.Pending:SetShown(pendingBy ~= nil)
+    if pendingBy then
+        s.Pending:ClearAllPoints()
+        s.Pending:SetPoint("TOPLEFT", 0, y - 2)
+        s.Pending:SetText(ns.DiscordCode:PendingText("Not on Discord yet", pendingBy))
+        y = y - 6 - s.Pending:GetStringHeight()
     end
     s:SetHeight(-y)
 end
@@ -1254,16 +1275,25 @@ function DP:BuildRoleSection(parent)
             for key in pairs(e.roles or {}) do set[key] = true end
             set[r.key] = self:GetChecked() and true or nil
             local ok, err = ns.DB:SetRoles(e.full, set)
-            if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
+            if not ok and err then ns:Print("|cffff2020" .. err .. "|r")
+            elseif ok then ns:Print(("Roles saved for %s. %s"):format(ns.ShortName(e.full), ns.DiscordCode:Reach())) end
         end)
         s.checks[r.key] = cb
     end
     W.Tooltip(s.checks.tank, "Tank", "Tick every role this character plays.")
+    s.Pending = Para(s, "NGMFontTextSmall")
+    s.Pending:SetPoint("TOPLEFT", 0, -48)
     self.role = s
 end
 
 function DP:RefreshRoles(e)
-    for key, cb in pairs(self.role.checks) do cb:SetChecked(e.roles and e.roles[key] or false) end
+    local s = self.role
+    for key, cb in pairs(s.checks) do cb:SetChecked(e.roles and e.roles[key] or false) end
+    -- with NGM Peon: not on Discord yet (its Tank / Healer / DPS roles follow these)
+    local pending = ns.DiscordCode:NotOnDiscord("RL:" .. e.full)
+    s.Pending:SetShown(pending)
+    if pending then s.Pending:SetText(ns.DiscordCode:PendingText("Not on Discord yet", ns.Sync:Get("RL:" .. e.full).a)) end
+    s:SetHeight(48 + (pending and (s.Pending:GetStringHeight() + 4) or 0))
 end
 
 function DP:ShowSpecMenu(owner)

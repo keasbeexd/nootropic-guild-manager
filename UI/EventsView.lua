@@ -15,11 +15,7 @@ ns.EventsView = EV
 local GRAY = "|cff9d9d9d"
 
 -- a change that isn't on Discord yet, and when Discord gets it
-local function Pending(label, who)
-    local mine = who == nil or who == "" or ns.Sync.Same(who, ns.PlayerFullName())
-    return ns.ORANGE .. label .. "|r " .. GRAY .. "(Discord gets it " .. (mine and ns.Events:Carrier()
-        or "when its maker or an officer with NGM Desktop reloads or logs out") .. ")|r"
-end
+local function Pending(label, who) return ns.DiscordCode:PendingText(label, who) end
 local KIND = { dungeon = "Dungeon", raid = "Raid", event = "Event" }
 local PAD, EDGE, GAP = 14, 4, 16
 

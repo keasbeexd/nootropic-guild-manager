@@ -290,7 +290,8 @@ end
 
 ------------------------------------------------------------------------
 -- The code from NGM Peon (/ngm peon): NGMP1.<base64url>.<adler-32>
---   region, guild, has<TAB>t, [hours<TAB>hash], R<TAB>key<TAB>t<TAB>author<TAB>value
+--   region, guild, has<TAB>t, [hours<TAB>hash], [mine<TAB>t (3.1: how far NGM
+--   Peon has this computer's own changes)], R<TAB>key<TAB>t<TAB>author<TAB>value
 --   (records: M main/alt, RL Tank/Healer/DPS, CN a linked member's @Discord name,
 --   HW a month's Hall of Fame champions, GS:peon = "1": NGM Peon crowns them)
 -- (ngm-hub's src/records/addoncode.ts makes it). Its records are taken as
@@ -328,7 +329,10 @@ function DC:ParsePeon(code)
     local out = { region = lines[1], guild = lines[2], records = {}, events = {} }
     for i = 3, #lines do
         local f = ns.Split(lines[i], "\t")
-        if f[1] == "has" then
+        if f[1] == "mine" then
+            -- 3.1: how far NGM Peon has this computer's own changes (NGM Desktop)
+            out.mine = tonumber(f[2] or "", 36)
+        elseif f[1] == "has" then
             out.has = tonumber(f[2] or "", 36)
             -- the newest NGM on GitHub, as NGM Peon last checked (NGM Peon adds it)
             out.release = f[3] ~= "" and f[3] or nil
@@ -410,6 +414,12 @@ function DC:ApplyPeon(code)
     local g = ns.DB:Guild() or {}
     g.peon = g.peon or {}
     if not g.peon.has or c.has > g.peon.has then g.peon.has = c.has end
+    if c.mine and c.mine > (g.peon.mine or 0) then g.peon.mine = c.mine end
+    -- how far NGM Peon has the guild's changes: officers share it, so every
+    -- copy can say what isn't on Discord yet (DC:NotOnDiscord)
+    if ns.Sync.CanWrite and ns.Sync:CanWrite("GS:peonhas") and c.has > (tonumber(ns.Sync:Value("GS:peonhas") or "", 36) or 0) then
+        ns.Sync:Set("GS:peonhas", B36(c.has))
+    end
     g.peon.hoursHash = c.hoursHash
     g.peon.joins = c.joins
     -- NGM Peon's Hall of Fame: an officer shares it with the guild (HB:<period>);
@@ -608,6 +618,56 @@ end
 -- saves NGM's update for the app to send and loads the app's newest news.
 -- Only with the app installed, never in combat.
 function DC:DesktopInstalled() return type(_G.NGMPeonDesktop) == "table" end
+
+------------------------------------------------------------------------
+-- In sync or not: one rule for everything the game sends NGM Peon
+------------------------------------------------------------------------
+-- How far NGM Peon has the guild's changes from the game, as far as this
+-- copy knows: its own code's, an officer's (GS:peonhas), or this
+-- computer's own changes (NGM Desktop: "mine").
+function DC:PeonHas()
+    local g = ns.DB:Guild() or {}
+    local p = g.peon or {}
+    return math.max(p.has or 0, p.mine or 0, tonumber(ns.Sync:Value("GS:peonhas") or "", 36) or 0)
+end
+
+-- What the game sends NGM Peon (DC:Changes): mains and alts, Tank / Healer
+-- / DPS, events made in game and sign-ups.
+DC.TAKES = { M = true, RL = true, EG = true, ES = true }
+
+-- Is this change still to reach NGM Peon (and so Discord)? With NGM Peon
+-- only; NGM Peon's own records never are.
+function DC:NotOnDiscord(key)
+    if not (ns.Sync.PeonGuild and ns.Sync:PeonGuild()) then return false end
+    local typ = key:match("^(%u+):")
+    local rec = ns.Sync:Get(key)
+    if not (typ and self.TAKES[typ] and rec) or rec.a == (ns.Sync.PEON or "NGM Peon") then return false end
+    return (rec.t or 0) > self:PeonHas()
+end
+
+-- When a change of yours reaches Discord: with NGM Desktop at your next
+-- /reload or logout; without it, when an officer's does.
+function DC:Carrier()
+    if self:DesktopInstalled() then return "at your next /reload or logout, or with Send to Discord" end
+    return "when an officer with NGM Desktop reloads or logs out"
+end
+
+-- The orange line under something changed in game that isn't on Discord
+-- yet, and when Discord gets it (`author`: who changed it; nil = you).
+function DC:PendingText(label, author)
+    local mine = author == nil or author == "" or ns.Sync.Same(author, ns.PlayerFullName())
+    return ns.ORANGE .. label .. "|r |cff9d9d9d(Discord gets it " .. (mine and self:Carrier()
+        or "when its maker or an officer with NGM Desktop reloads or logs out") .. ")|r"
+end
+
+-- Said after each change in game: who sees it, and when Discord does.
+-- Guild sync sends changes together after a few seconds (S.BATCH_DELAY);
+-- guildmates offline get them from whoever's online when they log in.
+function DC:Reach()
+    local guild = "Guildmates online get it within a minute; the rest when they next log in."
+    if not (ns.Sync.PeonGuild and ns.Sync:PeonGuild()) then return guild end
+    return guild .. " Discord gets it " .. self:Carrier() .. "."
+end
 function DC:ReloadAndSync()
     if not self:DesktopInstalled() then
         ns:Print("Reload and Sync needs NGM Desktop (ngmpeon.app). Without it, use the dashboard's Sync tab.")

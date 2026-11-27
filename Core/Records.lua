@@ -51,7 +51,9 @@
       DN:<player>          Do Not Whisper entry ("" = removed)
       RS:<player>          recruitment status (kept 14 days)
       IR:<member>          reminded to install the addon (kept 30 days)
-      GS:<name>            guild setting; GS:perm_* (who may do what),
+      GS:<name>            guild setting (GS:peonhas: how far NGM Peon has the guild's
+                           changes, from an officer's copy, so every copy can say
+                           what isn't on Discord yet); GS:perm_* (who may do what),
                            GS:officers and GS:recruiters (rank names, from the
                            game's rank settings) only from the Guild Master
       L:<member>:<id>      officer log entry                 (officer scope)
