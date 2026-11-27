@@ -48,8 +48,15 @@ local function Linked()
     return false
 end
 
--- "1" connected, "0" not yet, nil not seen
+-- "1" connected, "0" not yet, nil not seen. The game's own answer first
+-- (C_Discord.IsUserOAuthed: restricted only in combat and the like, so out
+-- of combat it may answer; if it won't, NGM Peon's DX records say).
 function CG:DiscordInWoW()
+    local D = rawget(_G, "C_Discord")
+    if D and D.IsUserOAuthed and not (InCombatLockdown and InCombatLockdown()) then
+        local ok, yes = pcall(D.IsUserOAuthed)
+        if ok and type(yes) == "boolean" and not (issecretvalue and issecretvalue(yes)) then return yes and "1" or "0" end
+    end
     local state
     for _, n in ipairs(Mine()) do
         local rec = ns.Sync:Plan("DX:" .. n)
