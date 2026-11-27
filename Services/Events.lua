@@ -151,7 +151,22 @@ function E:List()
         local link = ns.Sync.Plan and ns.Sync:Plan("EL:" .. id) or store["EL:" .. id]
         local game, t, h, d = (link and link.v or ""):match("^(%w*);(%d*),(%d*),(%d*)$")
         if game then
-            if game ~= "" then ev.game, posted[game] = game, true end
+            if game ~= "" then
+                ev.game, posted[game] = game, true
+                -- made in game: still edited there, through its EG record
+                local held = store["EG:" .. game] and ns.Sync.ParseGameEvent(store["EG:" .. game].v)
+                if held and not held.cancelled then
+                    held.id, held.source = game, "game"
+                    ev.made = held
+                    -- changed in game since NGM Peon posted it (it can't be changed
+                    -- elsewhere): shown as changed (clocks differ, so by content)
+                    if held.title ~= ev.title or held.starts ~= ev.starts or held.minutes ~= ev.minutes
+                        or (held.description or "") ~= (ev.description or "") then
+                        ev.title, ev.description, ev.starts, ev.minutes = held.title, held.description, held.starts, held.minutes
+                        ev.changed = true
+                    end
+                end
+            end
             ev.limits = { tank = tonumber(t), healer = tonumber(h), dps = tonumber(d) }
         end
         list[#list + 1] = ev

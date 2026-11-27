@@ -155,6 +155,16 @@ rec("Mira Officer-R", "EL:16", "NGM Peon", dung .. ";2,1,3")
 local strat = {}
 for _, e in ipairs(E:List()) do if e.title == "Strat" then strat[#strat + 1] = e end end
 check("listed once, as NGM Peon's", #strat .. ":" .. strat[1].source .. ":" .. tostring(strat[1].game), "1:peon:" .. dung)
+check("still edited in game, through its EG", strat[1].made and (strat[1].made.id .. ":" .. strat[1].made.source .. ":" .. strat[1].made.title), dung .. ":game:Strat")
+check("a member who did not make it may not", E:MayEdit(strat[1].made), false)
+check("not changed since NGM Peon posted it", tostring(strat[1].changed), "nil")
+ns.PlayerFullName = function() return "Gm Boss-R" end
+assert(E:Edit(dung, { starts = NOW + 3600, minutes = 60, title = "Strat Live" }))
+local live
+for _, e in ipairs(E:List()) do if e.game == dung then live = e end end
+check("changed in game: shown as changed until NGM Peon has it", live.title .. ":" .. tostring(live.changed), "Strat Live:true")
+assert(E:Edit(dung, { starts = NOW + 3600, minutes = 60, title = "Strat" }))
+ns.PlayerFullName = function() return "Bob Alt-R" end
 check("with the post's limits", E:Fields(strat[1])[1].name, "Tanks (2/2)")
 check("sign-ups from before the link still count", E:Fields(strat[1])[1].value, "Rae Raider, Gm Boss")
 -- a Discord sign-up (NGM Peon's copy, newer) wins over the in-game one for the same member

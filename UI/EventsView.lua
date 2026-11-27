@@ -255,7 +255,9 @@ function EV:Refresh()
         c.Where:ClearAllPoints()
         c.Where:SetPoint("TOPLEFT", c.Text:IsShown() and c.Text or c.When, "BOTTOMLEFT", 0, -8)
         c.Where:SetWidth(inner - 2 * PAD)
-        local editable = ev.source == "game" and ns.Events:MayEdit(ev)
+        -- made in game (NGM Peon's post of one too): edited in game
+        local made = ev.source == "game" and ev or ev.made
+        local editable = made ~= nil and ns.Events:MayEdit(made)
         c.Where:SetWidth(inner - 2 * PAD - (editable and 80 or 0))
         if ev.source == "game" then
             -- made in game: who made it; with NGM Peon, posted with the next update
@@ -272,10 +274,12 @@ function EV:Refresh()
             local where = ev.channel ~= "" and (" " .. GRAY .. "·|r #" .. ev.channel) or ""
             local server = ev.server ~= "" and (" " .. GRAY .. "on|r " .. ev.server) or ""
             c.Where:SetText(ns.GOLD .. "On Discord|r" .. where .. server
-                .. (manager and ("\n" .. GRAY .. "Made on the dashboard: edit it there.|r") or ""))
+                .. (ev.made and ("\n" .. GRAY .. ("Made in game by %s"):format(ns.ShortName(ev.made.creator)) .. "|r"
+                    .. (ev.changed and ("\n" .. ns.ORANGE .. "Changes not on Discord yet|r " .. GRAY .. "(go " .. ns.Events:Carrier() .. ")|r") or ""))
+                    or (manager and ("\n" .. GRAY .. "Made on the dashboard: edit it there.|r") or "")))
         end
         c.Edit:SetShown(editable)
-        c.Edit:SetScript("OnClick", function() ns.EventForm:Open(ev) end)
+        c.Edit:SetScript("OnClick", function() ns.EventForm:Open(made) end)
         local h = PAD + c.Title:GetStringHeight() + 6 + c.When:GetStringHeight()
             + (c.Text:IsShown() and (6 + c.Text:GetStringHeight()) or 0) + 8 + c.Where:GetStringHeight()
         h = h + EV:FillSignups(c, ev, inner, h) + math.max(PAD, editable and 30 or 0)
