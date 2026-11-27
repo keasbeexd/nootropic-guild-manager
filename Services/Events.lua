@@ -251,10 +251,6 @@ E.unsent = {}
 function E:Unsent() return next(self.unsent) ~= nil end
 local function Mark(key) E.unsent[key] = true end
 
--- When a change reaches Discord, and the line said after one (Services/DiscordCode.lua)
-function E:Carrier() return ns.DiscordCode:Carrier() end
-function E:Reach() return ns.DiscordCode:Reach() end
-
 E.DURATIONS = { 30, 60, 90, 120, 180, 240, 300, 360 } -- minutes, as NGM Peon's form (ngm-hub src/events/model.ts)
 E.MAX_TITLE, E.MAX_DESCRIPTION = 100, 400
 

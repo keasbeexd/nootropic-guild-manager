@@ -574,6 +574,9 @@ end
 
 -- Keeps one of NGM Peon's records for this character only (newest wins).
 function S:KeepPeonOwn(key, rec)
+    -- tidied as S:Intake tidies everything from the wire (no escape codes or control characters)
+    if type(key) ~= "string" or key:find("[|%c]") or type(rec) ~= "table" or not tonumber(rec.t) then return false end
+    rec = { v = (Clean(rec.v):gsub("[%z\1-\30\127]", " ")), t = tonumber(rec.t), a = rec.a }
     local typ = key:match("^(%u+):")
     if not (typ and S.OWN_PEON[typ] and rec.a == S.PEON) then return false end
     if typ == "GS" and key ~= "GS:peon" and key ~= "GS:evranks" and key ~= "GS:gamechat" then return false end

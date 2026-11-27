@@ -152,7 +152,7 @@ function EV:FillSignups(c, ev, inner, top)
         b:SetScript("OnClick", function()
             local done, err = E:SignUp(ev, part)
             if not done then ns:Print(err or "That didn't work.")
-            else ns:Print(("Signed up: %s. %s"):format(E.PART_BUTTON[part], E:Reach())) end
+            else ns:Print(("Signed up: %s. %s"):format(E.PART_BUTTON[part], ns.DiscordCode:Reach())) end
             EV:Refresh()
         end)
         W.Tooltip(b, E.PART_BUTTON[part], mine == part and "You're signed up as this." or "Sign up as this.")
@@ -172,7 +172,7 @@ function EV:FillSignups(c, ev, inner, top)
                     func = function()
                         local done, err = E:SignUp(ev, mine, name == mains[1] and "" or name)
                         if not done then ns:Print(err or "That didn't work.")
-                        else ns:Print(("You're coming as %s. %s"):format(ns.ShortName(name), E:Reach())) end
+                        else ns:Print(("You're coming as %s. %s"):format(ns.ShortName(name), ns.DiscordCode:Reach())) end
                         EV:Refresh()
                     end }
             end
@@ -186,7 +186,7 @@ function EV:FillSignups(c, ev, inner, top)
         c.Notice:ClearAllPoints()
         c.Notice:SetPoint("TOPLEFT", PAD, -(y + 28))
         c.Notice:SetWidth(inner - 2 * PAD)
-        c.Notice:SetText("Your sign-up reaches the Discord post " .. E:Carrier() .. ".")
+        c.Notice:SetText("Your sign-up reaches the Discord post " .. ns.DiscordCode:Carrier() .. ".")
         c.Notice:Show()
         return (y - top) + 28 + c.Notice:GetStringHeight()
     end
