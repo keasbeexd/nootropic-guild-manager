@@ -332,6 +332,7 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.Theme:LoadTheme() -- the guild's colours, before any window is built
     ns.BugReport:Init() -- first: it notes what goes wrong from here on
     ns.Roster:Init()
+    ns.GuildRules:Init()
     ns.Sync:Init()
     ns.RosterLog:Init()
     ns.Recipes:Init()
