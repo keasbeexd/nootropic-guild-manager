@@ -228,12 +228,13 @@ end
 ------------------------------------------------------------------------
 -- Right-click menus on player names (Menu.ModifyMenu, the official way)
 ------------------------------------------------------------------------
--- FRIEND is the menu for names in chat (whispers included); the others are
--- unit frames. Enemy players can't join, so they're left out.
-local MENUS = {
-    "MENU_UNIT_FRIEND", "MENU_UNIT_PLAYER", "MENU_UNIT_TARGET", "MENU_UNIT_PARTY",
-    "MENU_UNIT_RAID_PLAYER", "MENU_UNIT_CHAT_ROSTER",
-}
+-- Names in chat only: FRIEND is the menu for names in chat (whispers
+-- included), CHAT_ROSTER a channel's member list. Never the unit frames'
+-- menus (target, player, party, raid): those carry protected actions (Set
+-- Focus and the like), and an addon's entry there can get them blocked
+-- ("Interface action failed because of an AddOn" on right-clicking a
+-- portrait).
+local MENUS = { "MENU_UNIT_FRIEND", "MENU_UNIT_CHAT_ROSTER" }
 
 -- A player's name from the menu, or nil. Bosses and other NPCs are left
 -- out, and so is any name the game hands out as a secret value (it does for

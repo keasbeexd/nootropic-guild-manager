@@ -365,28 +365,6 @@ end
 ------------------------------------------------------------------------
 -- Read mode: contact
 ------------------------------------------------------------------------
--- A box with the text selected, to copy with Ctrl+C.
-StaticPopupDialogs.NOOTROPICGM_COPY = {
-    text = "Press Ctrl+C to copy, then Escape.",
-    button1 = CLOSE or "Close",
-    hasEditBox = true,
-    editBoxWidth = 240,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-    OnShow = function(self, data)
-        local box = self.editBox or self.EditBox
-        if box and data then
-            box:SetText(data.text or "")
-            box:HighlightText()
-            box:SetFocus()
-        end
-    end,
-    EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
-    EditBoxOnEnterPressed = function(self) self:GetParent():Hide() end,
-}
-
 -- Discord name (click to copy).
 function DP:BuildContactBox(parent)
     local s = NewSection(parent)
@@ -396,7 +374,7 @@ function DP:BuildContactBox(parent)
     s.Discord = TextLink(s, function()
         local e = DP.entry
         local discord = e and ns.Profile:Contact(e.full)
-        if discord and discord ~= "" then StaticPopup_Show("NOOTROPICGM_COPY", nil, nil, { text = (discord:gsub("^@+", "")) }) end
+        if discord and discord ~= "" then W.Copy((discord:gsub("^@+", ""))) end
     end)
     s.Discord:SetPoint("LEFT", s.Label, "RIGHT", 6, 0)
     W.Tooltip(s.Discord, "Discord", "Click to copy.")

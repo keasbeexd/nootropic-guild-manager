@@ -351,7 +351,7 @@ function O:BuildMain()
     L:Space(8)
 
     L:Header("Reset")
-    y = L:Row(32)
+    local y = L:Row(32)
     local resetWin = W.Button(L.panel, "Window Size and Position", 190, 24, "alt")
     resetWin:SetPoint("TOPLEFT", 18, y)
     resetWin:SetScript("OnClick", function()
