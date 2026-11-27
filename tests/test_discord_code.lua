@@ -212,7 +212,7 @@ assert(got.players == 1 and got.characters == 0 and got.names == 0, "counted by 
 assert(sent[1] == "M:Zo\195\171 Ash" and guildData.peon.has == 1794540000)
 -- a Discord name (CN) is taken too; other kinds aren't
 do
-    local payload = "us\nNootropic\nhas\t" .. DC.B36(1794540000) .. "\nhours\t" .. DC.B36(pc.hoursHash) .. "\nR\tCN:Marc Priest\t" .. DC.B36(1794600005) .. "\tMarc Priest\tkeasbeexd;\nR\tGS:perm_links\t" .. DC.B36(1794600005) .. "\tMarc Priest\t0"
+    local payload = "us\nNootropic\nhas\t" .. DC.B36(1794540000) .. "\nhours\t" .. DC.B36(pc.hoursHash) .. "\nR\tCN:Marc Priest\t" .. DC.B36(1794600005) .. "\tMarc Priest\tkeasbeexd;\nR\tGS:officers\t" .. DC.B36(1794600005) .. "\tMarc Priest\t0"
     local code = "NGMP1." .. DC.Base64Url(payload) .. "." .. DC.Adler32(payload)
     local got2 = assert(DC:ApplyPeon(code))
     assert(got2.taken == 1 and got2.refused == 1, ("%d %d"):format(got2.taken, got2.refused))
