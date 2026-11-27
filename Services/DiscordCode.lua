@@ -671,10 +671,27 @@ function DC:Carrier()
     return "when an officer with NGM Desktop reloads or logs out"
 end
 
--- The orange line under something changed in game that isn't on Discord
--- yet, and when Discord gets it (`author`: who changed it; nil = you).
-function DC:PendingText(label, author)
-    local mine = author == nil or author == "" or ns.Sync.Same(author, ns.PlayerFullName())
+-- Was this change handed to NGM Desktop already? The game saves at /reload
+-- and logout, and NGM Desktop sends it then (SaveForDesktop notes when);
+-- NGM Peon's confirmation comes back with the news, at the /reload after.
+-- A member's NGM Desktop sends only their own changes; an officer's, all.
+function DC:Handed(t, author)
+    local g = ns.DB:Guild() or {}
+    if not (t and g.desktopAt and t <= g.desktopAt and self:DesktopInstalled()) then return false end
+    if (ns.IsOfficer and ns.IsOfficer()) or (ns.DB.IsGuildMaster and ns.DB:IsGuildMaster()) then return true end
+    local me = ns.PlayerFullName()
+    return author == nil or author == "" or ns.Sync.Same(ns.DB:RootOf(author) or author, ns.DB:RootOf(me) or me)
+end
+
+-- The line under something changed in game that NGM Peon hasn't confirmed:
+-- sent already (NGM Desktop has it), or not on Discord yet and when it goes.
+-- rec: the changed record ({ t, a }); nil: yours, just now.
+function DC:PendingText(label, rec)
+    local author = rec and rec.a
+    if rec and self:Handed(rec.t, author) then
+        return "|cff6cbf5aSent to Discord|r |cff9d9d9d(confirmed here at your next /reload)|r"
+    end
+    local mine = author == nil or author == "" or ns.Sync.Same(ns.DB:RootOf(author) or author, ns.DB:RootOf(ns.PlayerFullName()) or ns.PlayerFullName())
     return ns.ORANGE .. label .. "|r |cff9d9d9d(Discord gets it " .. (mine and self:Carrier()
         or "when its maker or an officer with NGM Desktop reloads or logs out") .. ")|r"
 end
@@ -696,7 +713,9 @@ function DC:ReloadAndSync()
         ns:Print("Not in combat. Try again after the fight.")
         return
     end
-    ReloadUI()
+    ns:Print("Reloading: NGM Desktop sends your changes to NGM Peon now.")
+    local reload = (C_UI and C_UI.Reload) or ReloadUI
+    if not (reload and pcall(reload)) then ns:Print("The game didn't reload. Type |cffffffff/reload|r instead: it does the same.") end
 end
 
 -- At logout and /reload: the code for the app, or nothing (an old one goes).
@@ -705,6 +724,8 @@ function DC:SaveForDesktop()
     if not g then return end
     local ok, code = pcall(self.ForDesktop, self)
     g.desktopCode = ok and code or nil
+    -- everything up to now goes with it (DC:Handed)
+    if g.desktopCode then g.desktopAt = ns.DB:Now() end
 end
 
 function DC:Init()

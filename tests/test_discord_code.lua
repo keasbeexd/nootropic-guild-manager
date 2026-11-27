@@ -411,6 +411,16 @@ do
     assert(DC:Reach():find("next log in", 1, true) and not DC:Reach():find("Discord", 1, true))
     peonGuild = true
     assert(DC:Reach():find("Discord gets it when an officer", 1, true), DC:Reach())
+    -- sent already: handed to NGM Desktop at the last /reload or logout, not confirmed yet
+    ns.DB.RootOf = function(_, n) return n end
+    guild.desktopAt = 300
+    assert(not DC:Handed(300, "Ann"), "no NGM Desktop: nothing was sent")
+    _G.NGMPeonDesktop = {}
+    assert(DC:Handed(300, "Ann") and not DC:Handed(301, "Ann"), "up to the save")
+    assert(not DC:Handed(200, "Bob"), "a member's NGM Desktop sends only their own")
+    assert(DC:PendingText("Not on Discord yet", { t = 300, a = "Ann" }):find("Sent to Discord", 1, true))
+    assert(DC:PendingText("Not on Discord yet", { t = 301, a = "Ann" }):find("Not on Discord yet", 1, true))
+    _G.NGMPeonDesktop = nil
 end
 
 print(a); print("OK")

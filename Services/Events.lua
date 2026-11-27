@@ -439,8 +439,8 @@ function E:MineUnsent(ev)
         end
     end
     if not newest or newest.a == peonName then return false end
-    if ev.source == "game" then return newest.v ~= "" end -- not posted yet: it goes with its event
-    return true
+    if ev.source == "game" then return newest.v ~= "", newest end -- not posted yet: it goes with its event
+    return true, newest
 end
 
 function E:CanSignUp(ev, picked)

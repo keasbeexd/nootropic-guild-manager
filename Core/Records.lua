@@ -556,6 +556,11 @@ end
 ------------------------------------------------------------------------
 -- Events made in game and sign-ups (3.1, docs/EVENTS.md)
 ------------------------------------------------------------------------
+-- NGM Peon's bookkeeping, kept as guild settings so every copy has it: not
+-- something anyone changed, so not in Audit
+S.QUIET_SETTINGS = { ["GS:peonat"] = true, ["GS:peonhas"] = true, ["GS:peongot"] = true,
+    ["GS:evranks"] = true, ["GS:gamechat"] = true, ["GS:peon"] = true }
+
 S.PARTS = { tank = true, healer = true, dps = true, going = true, tentative = true, absent = true }
 S.EVENT_KINDS = { "dungeon", "raid", "event" }
 
@@ -984,7 +989,7 @@ function S:Apply(key, rec, ctx)
     self.storeVersion = self.storeVersion + 1
     self:Materialize(typ, key, member, rec)
     -- (GS:peonat is only when NGM Peon's code was last brought in: not an audit entry)
-    if not def.noAudit and key ~= "GS:peonat" and not ctx.migration and ns.IsOfficer() then
+    if not def.noAudit and not S.QUIET_SETTINGS[key] and not ctx.migration and ns.IsOfficer() then
         self:Audit(typ, key, member, cur, rec)
     end
     self.stats.applied = self.stats.applied + 1

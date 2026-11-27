@@ -1196,12 +1196,12 @@ function DP:RefreshAlts(e)
         y = y - 24
     end
     -- with NGM Peon: a change here not on Discord yet (theirs or an alt's)
-    local pendingBy
-    for _, who in ipairs({ e.isAlt and e.main or full, unpack(e.isAlt and {} or e.alts or {}) }) do
-        local key = "M:" .. who
-        if ns.DiscordCode:NotOnDiscord(key) then pendingBy = ns.Sync:Get(key).a break end
+    local pendingBy -- the record not confirmed yet
+    local family = { full }
+    if e.isAlt then family[2] = e.main else for _, a in ipairs(e.alts or {}) do family[#family + 1] = a end end
+    for _, who in ipairs(family) do
+        if ns.DiscordCode:NotOnDiscord("M:" .. who) then pendingBy = ns.Sync:Get("M:" .. who) break end
     end
-    if not pendingBy and ns.DiscordCode:NotOnDiscord("M:" .. full) then pendingBy = ns.Sync:Get("M:" .. full).a end
     s.Pending:SetShown(pendingBy ~= nil)
     if pendingBy then
         s.Pending:ClearAllPoints()
@@ -1270,7 +1270,7 @@ function DP:RefreshRoles(e)
     -- with NGM Peon: not on Discord yet (its Tank / Healer / DPS roles follow these)
     local pending = ns.DiscordCode:NotOnDiscord("RL:" .. e.full)
     s.Pending:SetShown(pending)
-    if pending then s.Pending:SetText(ns.DiscordCode:PendingText("Not on Discord yet", ns.Sync:Get("RL:" .. e.full).a)) end
+    if pending then s.Pending:SetText(ns.DiscordCode:PendingText("Not on Discord yet", ns.Sync:Get("RL:" .. e.full))) end
     s:SetHeight(48 + (pending and (s.Pending:GetStringHeight() + 4) or 0))
 end
 

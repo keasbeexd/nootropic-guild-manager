@@ -15,7 +15,7 @@ ns.EventsView = EV
 local GRAY = "|cff9d9d9d"
 
 -- a change that isn't on Discord yet, and when Discord gets it
-local function Pending(label, who) return ns.DiscordCode:PendingText(label, who) end
+local function Pending(label, rec) return ns.DiscordCode:PendingText(label, rec) end
 local KIND = { dungeon = "Dungeon", raid = "Raid", event = "Event" }
 local PAD, EDGE, GAP = 14, 4, 16
 
@@ -43,6 +43,10 @@ local function Card(parent)
     c.Edit = W.Button(c, "Edit", 70, 22)
     c.Edit:SetPoint("BOTTOMRIGHT", -PAD + 4, PAD - 6)
     c.Edit:Hide()
+    -- where Edit would be, for one edited elsewhere: where to edit it (as the dashboard's "Made in game: edit it there")
+    c.Made = c:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
+    c.Made:SetPoint("BOTTOMRIGHT", -PAD, PAD)
+    c.Made:SetJustifyH("RIGHT")
     -- sign-ups (3.1): who's coming, as NGM Peon's post, and the buttons
     c.Signups = c:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     c.Signups:SetJustifyH("LEFT")
@@ -75,9 +79,8 @@ function EV:Build(frame)
     -- with NGM Desktop: send your changes now (a /reload writes them for the app)
     self.send = W.Button(page, "Send to Discord", 130, 22)
     self.send:SetPoint("RIGHT", self.create, "LEFT", -6, 0)
-    self.send:SetScript("OnClick", function()
-        W.Confirm("Send your changes to Discord now? This reloads your UI.", function() ns.DiscordCode:ReloadAndSync() end)
-    end)
+    -- straight from the click, as Reload and Sync (bottom right): the reload needs a click of yours
+    self.send:SetScript("OnClick", function() ns.DiscordCode:ReloadAndSync() end)
     W.Tooltip(self.send, "Send to Discord", "NGM Desktop sends what the game saves at a /reload. This reloads your UI now.")
     W.Tooltip(self.create, "Create an event", "Your guild sees it at once. With NGM Peon, it's posted in Discord with your next update.")
 
@@ -182,11 +185,12 @@ function EV:FillSignups(c, ev, inner, top)
         c.Change:Show()
     end
     -- with NGM Peon: your sign-up changed this session isn't on the Discord post yet
-    if ns.Sync:PeonGuild() and E:MineUnsent(ev) then
+    local unsent, yours = E:MineUnsent(ev)
+    if ns.Sync:PeonGuild() and unsent then
         c.Notice:ClearAllPoints()
         c.Notice:SetPoint("TOPLEFT", PAD, -(y + 28))
         c.Notice:SetWidth(inner - 2 * PAD)
-        c.Notice:SetText("Your sign-up reaches the Discord post " .. ns.DiscordCode:Carrier() .. ".")
+        c.Notice:SetText(Pending("Your sign-up isn't on the Discord post yet", yours))
         c.Notice:Show()
         return (y - top) + 28 + c.Notice:GetStringHeight()
     end
@@ -277,24 +281,27 @@ function EV:Refresh()
             local lines = {}
             if onDiscord then lines[#lines + 1] = onDiscord end
             if ev.cancelledInGame then lines[#lines + 1] = GRAY .. ("Cancelled in game by %s"):format(ns.ShortName(ev.cancelledBy or ev.creator or "")) .. "|r" end
-            if ev.cancelUnsent then lines[#lines + 1] = Pending("Cancel not on Discord yet", ev.cancelledBy) end
+            if ev.cancelUnsent then lines[#lines + 1] = Pending("Cancel not on Discord yet", ns.Sync:Get("EG:" .. (ev.game or ev.id))) end
             c.Where:SetText(table.concat(lines, "\n"))
         elseif ev.source == "game" then
             -- made in game: who made it; with NGM Peon, posted with the next update
             c.Coming:SetText("")
             c.Where:SetText(("Made in game by %s"):format(ns.ShortName(ev.creator))
-                .. (ns.Sync:PeonGuild() and ("\n" .. Pending("Not on Discord yet", ev.creator)) or ""))
+                .. (ns.Sync:PeonGuild() and ("\n" .. Pending("Not on Discord yet", ns.Sync:Get("EG:" .. ev.id))) or ""))
         else
             c.Where:SetText(onDiscord
                 .. (ev.made and ("\n" .. GRAY .. ("Made in game by %s"):format(ns.ShortName(ev.made.creator)) .. "|r"
-                    .. (ev.changed and ("\n" .. Pending("Changes not on Discord yet", ns.Sync:Get("EG:" .. ev.game) and ns.Sync:Get("EG:" .. ev.game).a)) or ""))
-                    or (manager and ("\n" .. GRAY .. "Made on the dashboard: edit it there.|r") or "")))
+                    .. (ev.changed and ("\n" .. Pending("Changes not on Discord yet", ns.Sync:Get("EG:" .. ev.game))) or ""))
+                    or ""))
         end
         c.Edit:SetShown(editable)
         c.Edit:SetScript("OnClick", function() ns.EventForm:Open(made) end)
+        local elsewhere = not editable and manager and not ev.cancelled and ev.source ~= "game" and not ev.made
+        c.Made:SetText(elsewhere and "Made on the dashboard: edit it there" or "")
+        c.Made:SetShown(elsewhere)
         local h = PAD + c.Title:GetStringHeight() + 6 + c.When:GetStringHeight()
             + (c.Text:IsShown() and (6 + c.Text:GetStringHeight()) or 0) + 8 + c.Where:GetStringHeight()
-        h = h + EV:FillSignups(c, ev, inner, h) + math.max(PAD, editable and 30 or 0)
+        h = h + EV:FillSignups(c, ev, inner, h) + math.max(PAD, (editable or elsewhere) and 30 or 0)
         c:SetHeight(h)
         c:Show()
         y = y + h + GAP
