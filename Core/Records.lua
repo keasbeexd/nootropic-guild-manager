@@ -711,7 +711,7 @@ end
 -- officer-only ones that can only be narrowed (docs/PERMISSIONS.md). Unlisted:
 -- officers. The one list every copy (and DB.PERMS, the page) goes by.
 S.PERM_DEFAULT = { ownprofile = "everyone", ownmain = "everyone", signup = "everyone", recruit = "recruiters", rmsg = "gm",
-    dnw_add = "everyone", dnw_remove = "recruiters", remind = "everyone", imsg = "gm" }
+    dnw_add = "recruiters", dnw_remove = "recruiters", remind = "everyone", imsg = "gm" }
 S.PERM_NARROW = { audit = true, officerlog = true, peonnews = true, peoncode = true }
 -- Rows only ranks the game lets invite (Guild Control: Invite Member) can hold
 S.PERM_INVITE = { recruit = true }

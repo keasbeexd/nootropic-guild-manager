@@ -406,9 +406,7 @@ end
 -- The default's name: "Everyone" or "Officers".
 local DEFAULT_TEXT = { everyone = "Everyone", officers = "Officers", recruiters = "Ranks that invite", gm = "Only the Guild Master" }
 function DB:PermDefaultText(key)
-    local default = ns.Sync.PERM_DEFAULT[key] or "officers"
-    if default == "everyone" and ns.Sync.PERM_NEEDS[key] == "recruit" then return "All recruiters" end
-    return DEFAULT_TEXT[default]
+    return DEFAULT_TEXT[ns.Sync.PERM_DEFAULT[key] or "officers"]
 end
 
 -- Short, for a button (as the dashboard says it): "Officers (default)",

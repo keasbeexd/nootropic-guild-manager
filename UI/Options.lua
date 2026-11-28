@@ -540,7 +540,7 @@ function O:PermMenu(owner, key)
                 Set(set)
             end }
     end
-    items[#items + 1] = { text = "Only me (the Guild Master)", radio = true,
+    items[#items + 1] = { text = "Only the Guild Master", radio = true,
         checked = function() local set = DB:PermRanks(key) return set ~= nil and next(set) == nil end,
         func = function() Set({}) end }
     items[#items + 1] = { divider = true }
