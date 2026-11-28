@@ -165,7 +165,7 @@ function GR:Init()
     -- at login, the Guild Master is told if the Guild Info needs the new line
     C_Timer.After(25, function()
         if ns.DB:IsGuildMaster() and GR:LineInPlace() == false then
-            ns:Print(("Your guild rules changed: put |cffffffff%s|r in the Guild Info (Options, Permissions, Copy the line), so every copy uses them."):format(GR:Line()))
+            ns:Print(("Put |cffffffff%s|r in your Guild Info, or nobody else can use anything. (Options, Permissions, Copy the line.)"):format(GR:Line()))
         end
     end)
 end
