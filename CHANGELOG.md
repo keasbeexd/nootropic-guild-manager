@@ -10,7 +10,6 @@ Every release is on the [releases page](https://github.com/keasbeexd/nootropic-g
 - **A ban list.** Ban a player and all their characters go with them, by the game's own character ID, so a rename doesn't get round it. Anyone who invites a banned player gets a big warning at once, recruiting skips them, and whoever may see the list is told if one is in the guild. **Ban List** on the Recruitment tab, `/ngm bans`, or the guild roster's right-click menu. Who may ban, see the list and see the reasons is on the Permissions page. The list stays in the game: NGM Peon keeps none of it.
 - **With NGM Peon, the same rules on Discord.** Its dashboard has a Permissions tab with the same rows (only the Guild Master changes them), and the Discord post's sign-up buttons, event creation and Tank / Healer / DPS picks follow them.
 - **`/ngm bug`: a report to send us.** If something goes wrong, `/ngm bug` opens a short report to copy into a bug report: your versions, which options are on, the other addons you run, and what went wrong. When the game blocks the NGM Addon ("Interface action failed because of an AddOn"), it notes which action and where, and chat points to `/ngm bug`. Nothing personal goes in it, and nothing is sent anywhere by itself.
-- **Get Connected asks the game first** whether you've connected Discord in WoW, with NGM Peon's answer as the fallback.
 
 ## 3.1.0
 
