@@ -33,6 +33,16 @@ assert(#settings.bugLog == 1 and settings.bugLog[1].n == 2, "the same block coun
 assert(settings.bugLog[1].windows == "CommunitiesFrame", "which window was open")
 assert(#printed == 1 and printed[1]:find("/ngm bug", 1, true), "told once a session")
 
+-- what the NGM Addon was handling when it happened (this frame only)
+GetTime = function() return 50 end
+ns.doing = { name = "GUILD_ROSTER_UPDATE", at = 50 }
+handlers.ADDON_ACTION_BLOCKED(nil, "NootropicGuildManager", "UNKNOWN()")
+assert(settings.bugLog[1].what == "UNKNOWN() during GUILD_ROSTER_UPDATE", settings.bugLog[1].what)
+ns.doing = { name = "PLAYER_LOGIN", at = 10 }
+handlers.ADDON_ACTION_FORBIDDEN(nil, "NootropicGuildManager", "UNKNOWN()")
+assert(settings.bugLog[1].what == "UNKNOWN()", "an old name isn't used")
+ns.doing = nil
+
 local text = B:Text()
 assert(text:find("NGM Addon 3.1.1", 1, true) and text:find("C_GuildInfo.SetNote() x2", 1, true), text)
 assert(text:find("Other addons: Details", 1, true), "other addons by name")

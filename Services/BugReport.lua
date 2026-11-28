@@ -66,7 +66,11 @@ function B:Init()
     local function Blocked(kind)
         return function(_, addon, fn)
             if addon ~= ADDON then return end
-            B:Note(kind, fn)
+            -- what the NGM Addon was handling at that moment (this frame only:
+            -- an error part-way can leave an old name behind)
+            local d = ns.doing
+            local during = d and GetTime and d.at == GetTime() and d.name or nil
+            B:Note(kind, tostring(fn or "?") .. (during and (" during " .. during) or ""))
             if not told then
                 told = true
                 ns:Print(("The game blocked the NGM Addon (%s). Type |cffffffff/ngm bug|r for a report to send us: it says what happened, nothing personal."):format(tostring(fn or "?")))

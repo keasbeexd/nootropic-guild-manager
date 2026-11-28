@@ -49,13 +49,24 @@ function ns:On(message, fn)
     table.insert(listeners[message], fn)
 end
 
+-- What the NGM Addon is handling right now (an event or message name, and
+-- the frame's time), for /ngm bug: the game reports a blocked action while
+-- it happens, so this says what led to it. Only names, nothing personal.
+local function Doing(name)
+    local prev = ns.doing
+    ns.doing = { name = name, at = GetTime and GetTime() or 0 }
+    return prev
+end
+
 function ns:Fire(message, ...)
     local list = listeners[message]
     if not list then return end
+    local prev = Doing(message)
     for i = 1, #list do
         local ok, err = pcall(list[i], ...)
         if not ok then geterrorhandler()(err) end
     end
+    ns.doing = prev
 end
 
 ------------------------------------------------------------------------
@@ -78,7 +89,11 @@ end
 eventFrame:SetScript("OnEvent", function(_, event, ...)
     local list = handlers[event]
     if not list then return end
+    -- (a blocked action is reported while it happens: keep what led to it)
+    local mark = event ~= "ADDON_ACTION_BLOCKED" and event ~= "ADDON_ACTION_FORBIDDEN"
+    local prev = mark and Doing(event)
     for i = 1, #list do list[i](event, ...) end
+    if mark then ns.doing = prev end
 end)
 
 ------------------------------------------------------------------------
