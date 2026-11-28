@@ -13,7 +13,7 @@ Decided (Guild Master, 27 November 2026):
   rank may do.
 - **Ranks only**, no exceptions for single players.
 - Each row is one small thing, with a picker: **Everyone**, **Officers**
-  (the ranks the game marks Officer), **chosen ranks**, or **Only me**.
+  (the ranks the game marks Officer), **chosen ranks**, or **Only the Guild Master**.
   Every default is today's behavior, so nothing changes until the Guild
   Master changes it.
 
@@ -39,11 +39,11 @@ widen it.
 | Events | Edit or cancel anyone's | Officers | `EG` | every copy, NGM Peon |
 | Events | Sign up | Everyone | `ES` | every copy, NGM Peon |
 | Recruiting | Use the recruiting tools (whispers, the /who button, the Invite prompt) | The game's Invite Member ranks | `RS` | every copy (statuses), in the NGM Addon (whispers) |
-| Recruiting | Write the guild's recruitment messages | Only me (and needs the recruiting tools) | `GS:rmsg*` | every copy |
-| Recruiting | Add to Do Not Whisper | Everyone (who may use the recruiting tools) | `DN` | every copy |
+| Recruiting | Write the guild's recruitment messages | Only the Guild Master (and needs the recruiting tools) | `GS:rmsg*` | every copy |
+| Recruiting | Add to Do Not Whisper | Ranks that invite | `DN` | every copy |
 | Recruiting | Take off Do Not Whisper | The game's Invite Member ranks | `DN` "" | every copy |
 | Members | Send install reminders | Everyone | `IR` | every copy |
-| Members | Write the install reminder text | Only me | `GS:imsg` | every copy |
+| Members | Write the install reminder text | Only the Guild Master | `GS:imsg` | every copy |
 | Members | Ban and unban players | Officers | `BN` | every copy |
 | Members | See the ban list | Officers | `BN` (shown) | in the NGM Addon |
 | Members | See ban reasons | Officers | `BN` reason (shown) | in the NGM Addon |

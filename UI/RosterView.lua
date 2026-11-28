@@ -27,6 +27,7 @@ local COLUMNS = {
     { key = "seen",   label = "Last Online", width = 76,  min = 60, hidePriority = 2.5 },
     { key = "profs",  label = "Professions", width = 150, min = 56, hidePriority = 4 },
     { key = "rank",   label = "Rank",        width = 96,  min = 56, hidePriority = 1 },
+    { key = "note",   label = "Public Note", width = 120, min = 60, hidePriority = 0.8 },
     { key = "version", label = "Addon Version", width = 96, min = 80, hidePriority = 0.5 },
 }
 local COL = {}
@@ -82,7 +83,6 @@ function RV:ResetColumns()
     s.columnOrder = nil
     wipe(s.columnWidths)
     wipe(s.hiddenColumns)
-    s.hiddenColumns.second = true
     self:Relayout()
     self:Refresh()
 end
@@ -831,6 +831,12 @@ local function BuildRow(row)
     row.Rank:SetPoint("RIGHT", -4, 0)
     row.Rank:SetTextColor(0.8, 0.8, 0.8)
 
+    -- Public note (the game's own, as on the guild roster)
+    row.Note = Text(cells.note)
+    row.Note:SetPoint("LEFT", 6, 0)
+    row.Note:SetPoint("RIGHT", -4, 0)
+    row.Note:SetTextColor(0.85, 0.85, 0.85)
+
     -- Addon version
     row.Version = Text(cells.version)
     row.Version:SetPoint("LEFT", 6, 0)
@@ -942,6 +948,11 @@ function RV:InitRow(row, e)
     -- Location
     if COL.zone.shown then
         row.Zone:SetText((e.zone ~= "" and e.zone) or "|cff6e6e6e-|r")
+    end
+
+    -- Public note
+    if COL.note.shown then
+        row.Note:SetText(e.publicNote ~= "" and e.publicNote:gsub("|", "||") or "|cff6e6e6e-|r")
     end
 
     -- Last online

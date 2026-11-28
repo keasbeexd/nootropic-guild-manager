@@ -462,6 +462,10 @@ local SORTERS = {
         local za, zb = a.zone ~= "" and a.zone or "~", b.zone ~= "" and b.zone or "~"
         if za ~= zb then return za < zb end
     end,
+    note = function(a, b)
+        local na, nb = a.publicNote ~= "" and a.publicNote:lower() or "~", b.publicNote ~= "" and b.publicNote:lower() or "~"
+        if na ~= nb then return na < nb end
+    end,
     -- online first (ascending), then whoever was on most recently
     seen = function(a, b)
         if a.online ~= b.online then return a.online end

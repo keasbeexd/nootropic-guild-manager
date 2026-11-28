@@ -42,7 +42,7 @@ local DEFAULTS = {
         sortKey = "rank",
         sortAsc = true,
         -- the game's own roster already shows level, class, zone and rank
-        hiddenColumns = { second = true }, -- false = shown on purpose
+        hiddenColumns = {}, -- every column shown; true = hidden by the player
         columnWidths = {},
         frameSize = { w = 1000, h = 580 },
     },
@@ -106,10 +106,15 @@ function DB:Init()
         for k in pairs(old) do
             if not st.hiddenColumns[k] then same = false end
         end
-        if same then
-            wipe(st.hiddenColumns)
-            st.hiddenColumns.second = true
-        end
+        if same then wipe(st.hiddenColumns) end
+    end
+    -- 3.2.1: Second Name starts shown too. Anyone still on the old default
+    -- (only Second Name hidden, and not by their own choice) gets it once.
+    if not st.columnsAllShown then
+        st.columnsAllShown = true
+        local only = true
+        for k, v in pairs(st.hiddenColumns) do if v and k ~= "second" then only = false end end
+        if only and st.hiddenColumns.second == true then st.hiddenColumns.second = nil end
     end
     -- 2.1: tags
     for _, k in ipairs({ "left", "right", "shift" }) do
@@ -406,9 +411,7 @@ end
 -- The default's name: "Everyone" or "Officers".
 local DEFAULT_TEXT = { everyone = "Everyone", officers = "Officers", recruiters = "Ranks that invite", gm = "Only the Guild Master" }
 function DB:PermDefaultText(key)
-    local default = ns.Sync.PERM_DEFAULT[key] or "officers"
-    if default == "everyone" and ns.Sync.PERM_NEEDS[key] == "recruit" then return "All recruiters" end
-    return DEFAULT_TEXT[default]
+    return DEFAULT_TEXT[ns.Sync.PERM_DEFAULT[key] or "officers"]
 end
 
 -- Short, for a button (as the dashboard says it): "Officers (default)",

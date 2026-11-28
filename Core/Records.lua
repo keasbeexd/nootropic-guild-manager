@@ -711,7 +711,7 @@ end
 -- officer-only ones that can only be narrowed (docs/PERMISSIONS.md). Unlisted:
 -- officers. The one list every copy (and DB.PERMS, the page) goes by.
 S.PERM_DEFAULT = { ownprofile = "everyone", ownmain = "everyone", signup = "everyone", recruit = "recruiters", rmsg = "gm",
-    dnw_add = "everyone", dnw_remove = "recruiters", remind = "everyone", imsg = "gm" }
+    dnw_add = "recruiters", dnw_remove = "recruiters", remind = "everyone", imsg = "gm" }
 S.PERM_NARROW = { audit = true, officerlog = true, peonnews = true, peoncode = true }
 -- Rows only ranks the game lets invite (Guild Control: Invite Member) can hold
 S.PERM_INVITE = { recruit = true }
@@ -1149,6 +1149,9 @@ end
 function S:Materialize(typ, key, member, rec)
     local v = rec.v
     if typ == "GS" then
+        -- a rule changed: worked out again on the next read, not a moment
+        -- later (an open Permissions menu reads it straight away)
+        if ns.GuildRules and (key:find("^GS:perm_") or key:find("^GS:feat_") or key:find("^GS:lock_")) then ns.GuildRules.effective = nil end
         ns.Debounce("guildsettings", 0.1, function() ns:Fire("GUILD_SETTINGS_CHANGED") end)
         return
     elseif typ == "RP" then

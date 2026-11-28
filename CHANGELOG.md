@@ -2,6 +2,14 @@
 
 Every release is on the [releases page](https://github.com/keasbeexd/nootropic-guild-manager/releases) with a `-forever.zip` that WowUp installs. Versions 2.12 and newer sync with each other; older versions use older sync protocols and don't exchange data with them (2.12 still shows their version, so they're told to update).
 
+## 3.2.1
+
+- **Public notes on Find.** A Public Note column, sortable, and searchable as before.
+- **Every column starts shown,** Second Name included.
+- **Clickable counts.** Under the window, "34 members" lists everyone and "8 online" lists who's on now, as "using the NGM Addon" already did.
+- **The Permissions menu ticks right.** Ticks show straight away and quick clicks stick; on a default, its ranks are ticked and ticking another adds to them.
+- **Add to Do Not Whisper** defaults to Ranks that invite, like the other recruiting rows.
+
 ## 3.2.0
 
 - **Permissions: the Guild Master decides who may do what.** Options has a Permissions page with every row in one place: linking mains and alts, editing profiles, choosing your own main on NGM Peon's dashboard, creating each kind of event, editing anyone's events, signing up, recruiting, Do Not Whisper, install reminders, banning, the Audit tab, the Officer Log, the Hall of Fame, and NGM Peon's codes and news. Recruiting only ever reaches ranks the game lets invite, and the other recruiting rows only ranks that may recruit. Each can be everyone, officers, chosen ranks or only the Guild Master; until the Guild Master picks, everything works as before. Only the Guild Master changes them; everyone else sees what their rank may do. Every copy of the NGM Addon checks shared changes against them, so a changed copy can't get round them.
