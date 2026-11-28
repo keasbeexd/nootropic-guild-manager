@@ -61,6 +61,24 @@ function B:Note(kind, what)
     while #log > MAX do table.remove(log) end
 end
 
+-- Where it happened: the game reports a blocked action while the call is
+-- still running, so the call stack names the code (file and line only:
+-- "Blizzard_Communities/GuildInfo.lua:62 < NootropicGuildManager/UI/X.lua:10")
+local function Where()
+    if not debugstack then return nil end
+    local ok, stack = pcall(debugstack, 3, 12, 0)
+    if not ok or type(stack) ~= "string" then return nil end
+    local out = {}
+    for file, line in stack:gmatch("Interface[/\\]AddOns[/\\]([^:%]\"]+%.lua)\"?%]?:(%d+):") do
+        if not file:find("BugReport.lua", 1, true) and not file:find("Core/Core.lua", 1, true) and not file:find("Core\\Core.lua", 1, true) then
+            out[#out + 1] = file:gsub("\\", "/") .. ":" .. line
+            if #out == 4 then break end
+        end
+    end
+    return #out > 0 and table.concat(out, " < ") or nil
+end
+B.Where = Where
+
 function B:Init()
     local told = false
     local function Blocked(kind)
@@ -70,7 +88,8 @@ function B:Init()
             -- an error part-way can leave an old name behind)
             local d = ns.doing
             local during = d and GetTime and d.at == GetTime() and d.name or nil
-            B:Note(kind, tostring(fn or "?") .. (during and (" during " .. during) or ""))
+            local where = Where()
+            B:Note(kind, tostring(fn or "?") .. (during and (" during " .. during) or "") .. (where and (" at " .. where) or ""))
             if not told then
                 told = true
                 ns:Print(("The game blocked the NGM Addon (%s). Type |cffffffff/ngm bug|r for a report to send us: it says what happened, nothing personal."):format(tostring(fn or "?")))

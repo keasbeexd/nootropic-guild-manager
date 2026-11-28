@@ -54,6 +54,10 @@ widen it.
 | NGM Peon | Bring in NGM Peon's news for the guild | Officers | NGM Peon's records | officers only, narrower |
 | NGM Peon | Make codes for NGM Peon | Guild Master and officers | NGM2 | NGM Peon |
 
+**Recruiting needs the game's Invite Member.** The recruiting tools row only
+reaches ranks the game lets invite (Guild Control), whatever ranks it's
+handed to.
+
 **The recruiting rows need the recruiting tools.** The messages and both
 Do Not Whisper rows only reach ranks that may also use the recruiting tools,
 whatever ranks they're handed to (as the Audit tab needs an officer rank).

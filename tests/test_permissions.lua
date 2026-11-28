@@ -107,9 +107,12 @@ local myBan = ("%d;Me Self-R;;Spammy Main-R;x"):format(NOW)
 check("my own copy: a member can't ban", (S:Set("BN:Other Spammer-R", myBan)), nil)
 permRanks.ban = { [4] = true }
 check("handed to members: my copy bans", (S:Set("BN:Other Spammer-R", myBan)), true)
+ns.Recruit = { GameInvite = function() return true end } -- the game lets my rank invite
 check("...the Guild Master's messages too once handed out (not an officer rank)", (function() permRanks.rmsg = { [4] = true } permRanks.recruit = { [4] = true } return S:CanWrite("GS:rmsgs") end)(), true)
 check("...but never the rules themselves", S:CanWrite("GS:perm_ban"), false)
 permRanks.dnw_add, permRanks.dnw_remove = nil, nil
 check("Do Not Whisper: adding (everyone who may recruit)", S:CanWrite("DN:Spam2-R", "1;x"), true)
-check("...taking off needs dnw_remove (recruiters: the game's Invite Member)", S:CanWrite("DN:Spam2-R", ""), false)
+check("...taking off: the default, ranks the game lets invite (mine may)", S:CanWrite("DN:Spam2-R", ""), true)
+ns.Recruit.GameInvite = function() return false end
+check("...without Invite Member, neither (recruiting needs it too)", S:CanWrite("DN:Spam2-R", "") or S:CanWrite("DN:Spam3-R", "1;x"), false)
 print("OK")

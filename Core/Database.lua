@@ -243,7 +243,7 @@ DB.PERMS = {
     { group = "Events", key = "signup", label = "Sign up for events",
       hint = "In game and, with NGM Peon, with the Discord post's buttons." },
     { group = "Recruiting", key = "recruit", label = "Use the recruiting tools",
-      hint = "Recruitment whispers, the button on /who results and the Invite prompt. Whispers happen on each player's own computer, so a changed copy of the NGM Addon could still send them; what they record is checked by everyone." },
+      hint = "Recruitment whispers, the button on /who results and the Invite prompt. Only ranks the game lets invite (Guild Control: Invite Member). Whispers happen on each player's own computer, so a changed copy of the NGM Addon could still send them; what they record is checked by everyone." },
     { group = "Recruiting", key = "rmsg", label = "Write the guild's recruitment messages",
       hint = "The messages everyone's recruitment whispers start from (or must use, with Everyone uses the guild's messages). Only ranks that may use the recruiting tools." },
     { group = "Recruiting", key = "dnw_add", label = "Add to Do Not Whisper",
@@ -336,10 +336,14 @@ function DB:HasPerm(key)
     local set = self:PermRanks(key)
     local needs = ns.Sync.PERM_NEEDS[key]
     if needs and not self:HasPerm(needs) then return false end
-    if set then return rank ~= nil and set[rank] == true and (not ns.Sync.PERM_NARROW[key] or ns.IsOfficer()) end
+    local invite = function() return ns.Recruit and ns.Recruit:GameInvite() or false end
+    if set then
+        return rank ~= nil and set[rank] == true and (not ns.Sync.PERM_NARROW[key] or ns.IsOfficer())
+            and (not ns.Sync.PERM_INVITE[key] or invite())
+    end
     local default = ns.Sync.PERM_DEFAULT[key] or "officers"
     if default == "everyone" then return true end
-    if default == "recruiters" then return ns.Sync:MayRecruit() end
+    if default == "recruiters" then return invite() end
     if default == "gm" then return false end
     return ns.IsOfficer()
 end
@@ -355,16 +359,23 @@ function DB:RankMay(r, key)
     local flags = S:RankFlags(r.index)
     local officer = flags and flags.officer or (not flags and S:RankIsOfficer({ rankIndex = r.index, rank = r.name }))
     local set = self:PermRanks(key)
-    if set then return set[r.index] == true and (not S.PERM_NARROW[key] or officer == true) end
+    if set then return set[r.index] == true and (not S.PERM_NARROW[key] or officer == true) and (not S.PERM_INVITE[key] or self:RankInvites(r)) end
     local default = S.PERM_DEFAULT[key] or "officers"
     if default == "everyone" then return true end
     if default == "gm" then return false end
-    if default == "recruiters" then
-        if flags then return flags.invite == true end
-        local ranks = S:RecruiterRanks()
-        if ranks then return ranks[(r.name or ""):lower()] == true end
-    end
+    if default == "recruiters" then return self:RankInvites(r) end
     return officer == true
+end
+
+-- Does the game let this rank invite (Guild Control: Invite Member)?
+function DB:RankInvites(r)
+    if r.index == 0 then return true end
+    local S = ns.Sync
+    local flags = S:RankFlags(r.index)
+    if flags then return flags.invite == true end
+    local ranks = S:RecruiterRanks()
+    if ranks then return ranks[(r.name or ""):lower()] == true end
+    return S:RankIsOfficer({ rankIndex = r.index, rank = r.name }) == true
 end
 
 -- Can this row be handed to this rank at all? (what it needs, officer data)
@@ -372,6 +383,7 @@ function DB:RankCanHold(r, key)
     local S = ns.Sync
     if r.index == 0 then return true end
     if S.PERM_NEEDS[key] and not self:RankMay(r, S.PERM_NEEDS[key]) then return false end
+    if S.PERM_INVITE[key] and not self:RankInvites(r) then return false end
     if S.PERM_NARROW[key] then
         local flags = S:RankFlags(r.index)
         if flags then return flags.officer end

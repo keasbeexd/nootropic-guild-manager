@@ -92,6 +92,7 @@ check("13th profession list from one member", rec("Ann Member-R", "RP:Ann Member
 check("recipe key with a made-up shape", rec("Ann Member-R", "RP:Ann Member-R:x", "Ann Member-R", "Alchemy;1"), nil)
 check("oversized value", rec("Ann Member-R", "AV:Ann Member-R", "Ann Member-R", string.rep("a", 5000)), "2.1")
 permRanks.recruit = { [4] = true } -- Bob may recruit (Do Not Whisper needs it, 3.2)
+S.RankFlags = function(_, i) return { officer = i <= 1, invite = true } end -- ...and the game lets his rank invite
 S.NEW_KEYS_PER_WINDOW = 3
 for i = 1, 5 do rec("Bob Member-R", "DN:Flood" .. i .. "-R", "Bob Member-R", "1;x") end
 check("flood: 4th new entry in the window refused", guild.sync.guild["DN:Flood4-R"], nil)

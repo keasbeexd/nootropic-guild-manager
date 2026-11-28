@@ -636,9 +636,19 @@ function RC:ClickOnly() return self.clickOnly end
 -- From 3.2 the Guild Master's Permissions page decides (by default, as
 -- before: the game's Invite Member ranks), and Recruiting can be off for
 -- the whole guild (docs/PERMISSIONS.md).
+-- May you use the recruiting tools? (the Guild Master's switch and row)
 function RC:MayRecruit()
     if not IsInGuild() then return false end
     return ns.DB:FeatureOn("recruit") and ns.DB:HasPerm("recruit")
+end
+
+-- Does the game let your rank invite (Guild Control: Invite Member)? The
+-- recruit row can only reach ranks that may; its default is exactly them.
+function RC:GameInvite()
+    if not IsInGuild() then return false end
+    if IsGuildLeader and IsGuildLeader() then return true end
+    if CanGuildInvite then return CanGuildInvite() and true or false end
+    return ns.IsOfficer()
 end
 
 function RC:CanSelect(p)

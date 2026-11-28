@@ -514,7 +514,8 @@ function O:PermMenu(owner, key)
     local items = { { text = "Who may do this", isTitle = true } }
     items[#items + 1] = { text = DB:PermDefaultText(key) .. " (default)", radio = true,
         checked = function() return DB:PermRanks(key) == nil end, func = function() Set(nil) end }
-    if not narrow and not needs then
+    local invite = ns.Sync.PERM_INVITE[key]
+    if not narrow and not needs and not invite then
         -- every rank
         items[#items + 1] = { text = "Everyone", radio = true,
             checked = function()
@@ -533,7 +534,7 @@ function O:PermMenu(owner, key)
         checked = function() local set = DB:PermRanks(key) return set ~= nil and next(set) == nil end,
         func = function() Set({}) end }
     items[#items + 1] = { divider = true }
-    items[#items + 1] = { text = narrow and "These officer ranks" or needs and "These ranks (ones that may recruit)" or "These ranks", isTitle = true }
+    items[#items + 1] = { text = narrow and "These officer ranks" or needs and "These ranks (ones that may recruit)" or invite and "These ranks (ones that may invite)" or "These ranks", isTitle = true }
     for _, r in ipairs(DB:GuildRanks()) do
         local gm = r.index == 0
         if DB:RankCanHold(r, key) then items[#items + 1] = {

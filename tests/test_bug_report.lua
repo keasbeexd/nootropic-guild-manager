@@ -43,6 +43,11 @@ handlers.ADDON_ACTION_FORBIDDEN(nil, "NootropicGuildManager", "UNKNOWN()")
 assert(settings.bugLog[1].what == "UNKNOWN()", "an old name isn't used")
 ns.doing = nil
 
+-- where: the call stack's files and lines (ours and the game's; not the report's own)
+debugstack = function() return '[string "@Interface/AddOns/NootropicGuildManager/Services/BugReport.lua"]:70: in x\n[string "@Interface/AddOns/Blizzard_Communities/GuildInfo.lua"]:62: in y\n' end
+handlers.ADDON_ACTION_FORBIDDEN(nil, "NootropicGuildManager", "UNKNOWN()")
+assert(settings.bugLog[1].what == "UNKNOWN() at Blizzard_Communities/GuildInfo.lua:62", settings.bugLog[1].what)
+debugstack = nil
 -- a new version gets its own line, not an old version's count
 ns.version = "3.1.2"
 handlers.ADDON_ACTION_BLOCKED(nil, "NootropicGuildManager", "C_GuildInfo.SetNote()")

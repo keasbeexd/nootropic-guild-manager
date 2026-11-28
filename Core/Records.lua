@@ -550,7 +550,7 @@ end
 -- May `name` recruit? The rank's Invite setting, the same way.
 function S:MayRecruitName(name)
     if not name then return false end
-    if Same(name, Me()) then return self:MayRecruit() end
+    if Same(name, Me()) then return ns.Recruit and ns.Recruit.GameInvite and ns.Recruit:GameInvite() or false end
     local e = RosterEntry(name)
     if not e then return false end
     if e.rankIndex == 0 then return true end
@@ -713,6 +713,8 @@ end
 S.PERM_DEFAULT = { ownprofile = "everyone", ownmain = "everyone", signup = "everyone", recruit = "recruiters", rmsg = "gm",
     dnw_add = "everyone", dnw_remove = "recruiters", remind = "everyone", imsg = "gm" }
 S.PERM_NARROW = { audit = true, officerlog = true, peonnews = true, peoncode = true }
+-- Rows only ranks the game lets invite (Guild Control: Invite Member) can hold
+S.PERM_INVITE = { recruit = true }
 -- Rows only someone who may also do another can hold: the recruiting ones
 -- need the recruiting tools (as officer data needs an officer rank)
 S.PERM_NEEDS = { rmsg = "recruit", dnw_add = "recruit", dnw_remove = "recruit" }
@@ -751,7 +753,10 @@ function S:Allowed(name, perm)
     if e.rankIndex == 0 then return true end
     if S.PERM_NEEDS[perm] and not self:Allowed(name, S.PERM_NEEDS[perm]) then return false end
     local set = ns.DB.PermRanks and ns.DB:PermRanks(perm)
-    if set then return set[e.rankIndex] == true and (not S.PERM_NARROW[perm] or self:KnownOfficer(name)) end
+    if set then
+        return set[e.rankIndex] == true and (not S.PERM_NARROW[perm] or self:KnownOfficer(name))
+            and (not S.PERM_INVITE[perm] or self:MayRecruitName(name))
+    end
     local default = S.PERM_DEFAULT[perm] or "officers"
     if default == "everyone" then return true end
     if default == "recruiters" then return self:MayRecruitName(name) end
