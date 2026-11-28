@@ -13,6 +13,7 @@ function ns:Fire() end
 function ns:On(e, fn) events[e] = fn end
 function ns:RegisterEvent(e, fn) events[e] = fn end
 function ns:Print(m) printed[#printed + 1] = m end
+function ns.Debounce(_, _, fn) fn() end
 local function Hash(s) local h = 0 for i = 1, #s do h = (h * 31 + s:byte(i)) % 4294967291 end return h end
 local function B36(n) local d, s = "0123456789abcdefghijklmnopqrstuvwxyz", "" repeat local r = n % 36 s = d:sub(r + 1, r + 1) .. s n = (n - r) / 36 until n == 0 return s end
 ns.Sync = { Store = function() return store end, Value = function(_, k) return store[k] and store[k].v end, Hash = Hash, Base36 = B36,
@@ -45,6 +46,19 @@ timers[1]()
 check("...told at login, with the line", printed[1] and printed[1]:find(GR:Line(), 1, true) ~= nil, true)
 info = info .. "\n" .. GR:Line() -- pasted
 check("pasted: in place", GR:LineInPlace(), true)
+
+-- new permissions sync in (NGM Peon's dashboard, say): the Guild Master is told once
+store["GS:perm_signup"] = { v = "1" }
+local n = #printed
+events.GUILD_SETTINGS_CHANGED()
+check("new permissions synced: told to update the code", printed[#printed]:find("New permissions were synced", 1, true) ~= nil and #printed == n + 1, true)
+events.GUILD_SETTINGS_CHANGED()
+check("...once for that line", #printed, n + 1)
+info = info:gsub("NGM:%w+", GR:Line())
+events.GUILD_SETTINGS_CHANGED()
+check("...not once it's pasted", #printed, n + 1)
+store["GS:perm_signup"] = nil
+info = info:gsub("NGM:%w+", GR:Line())
 
 -- a member's copy: matching
 gm = false

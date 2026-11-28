@@ -147,7 +147,21 @@ end
 
 function GR:Init()
     local function again() GR.effective = nil GR:Refresh() end
-    ns:On("GUILD_SETTINGS_CHANGED", again)
+    -- the Guild Master: new permissions came in (from NGM Peon's dashboard,
+    -- say) and the Guild Info doesn't have their line yet: say so, once per line
+    local told
+    ns:On("GUILD_SETTINGS_CHANGED", function()
+        again()
+        if not ns.DB:IsGuildMaster() then return end
+        ns.Debounce("guildrulesline", 3, function()
+            local line = GR:Line()
+            if line == told or GR:LineInPlace() ~= false then return end
+            -- (changing them on the Permissions page: it says so there)
+            if ns.Options and ns.Options.AnyShown and ns.Options:AnyShown() then told = line return end
+            told = line
+            ns:Print(("New permissions were synced: update the Guild Info code to |cffffffff%s|r (Options, Permissions, Copy the line), or everyone's permissions will default to Guild Master only, for safety reasons."):format(line))
+        end)
+    end)
     -- the Guild Info comes with the roster (and changes with it)
     ns:RegisterEvent("GUILD_ROSTER_UPDATE", function()
         if Restricted() then return end
@@ -164,7 +178,8 @@ function GR:Init()
     end)
     -- at login, the Guild Master is told if the Guild Info needs the new line
     C_Timer.After(25, function()
-        if ns.DB:IsGuildMaster() and GR:LineInPlace() == false then
+        if ns.DB:IsGuildMaster() and GR:LineInPlace() == false and told ~= GR:Line() then
+            told = GR:Line()
             ns:Print(("Put |cffffffff%s|r in your Guild Info, or everyone's permissions will default to Guild Master only, for safety reasons. (Options, Permissions, Copy the line.)"):format(GR:Line()))
         end
     end)
