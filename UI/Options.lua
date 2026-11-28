@@ -620,6 +620,9 @@ function O:RefreshPermControls()
     local gm = DB:IsGuildMaster()
     for _, row in ipairs(self.permRows) do
         row.btn:SetText(DB:PermText(row.key))
+        -- too long for the button (a long rank name, say): without "(default)"
+        local fs = row.btn.GetFontString and row.btn:GetFontString()
+        if fs and fs:GetStringWidth() > row.btn:GetWidth() - 16 then row.btn:SetText((DB:PermText(row.key):gsub(" %(default%)$", ""))) end
         row.btn:SetEnabled(gm)
         row.btn:SetAlpha(gm and 1 or 0.7)
         row.you:SetText(gm and "" or (DB:HasPerm(row.key) and "|cff6cbf5ayou may|r" or "you may not"))
