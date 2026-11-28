@@ -26,7 +26,7 @@ CURSEFORGE = "https://www.curseforge.com/wow/addons/nootropic-guild-manager"
 WAGO = "https://addons.wago.io/addons/nootropic-guild-manager"
 # the same footer on every NGM changelog post (NGM Peon's and NGM Desktop's too)
 # (the support line on feature releases only, x.y.0)
-FOOTER = "Free for every guild · by keasbeexd and aigoodandy"
+FOOTER = "Free for every guild · by keasbeexd"
 SUPPORT = "Enjoying NGM? [Ko-fi](https://ko-fi.com/keasbeexd) · [GitHub Sponsors](https://github.com/sponsors/keasbeexd)"
 MAX_NOTES = 3500  # an embed description holds 4096 characters
 
