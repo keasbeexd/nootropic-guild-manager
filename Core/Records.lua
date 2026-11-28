@@ -978,7 +978,7 @@ function S:Set(key, value, opts)
     local typ = S.ParseKey(key)
     if not typ then return nil, "Unknown record." end
     if not opts.force and not self:CanWrite(key, value) then
-        return nil, "Only officers can change that."
+        return nil, "Your rank can't change that (the Guild Master's Permissions)."
     end
     value = Clean(value)
     local store = self:Store(S.TYPES[typ].scope)

@@ -133,7 +133,10 @@ function GR:AddMenu(owner, root, contextData)
     end
     if ns.DB:HasPerm("ban") and e.rankIndex ~= 0 and full ~= ns.PlayerFullName() then
         if ns.Bans:IsBanned(full) then
-            root:CreateButton("Unban", function() ns.Bans:Unban(full) ns:Print(e.short .. " is no longer banned.") end)
+            root:CreateButton("Unban", function()
+                local n, err = ns.Bans:Unban(full)
+                ns:Print(n and (e.short .. " is no longer banned.") or ("|cffff2020" .. (err or "That didn't work.") .. "|r"))
+            end)
         else
             root:CreateButton("Ban from the guild...", function() ns.BanView:AskBan(full) end)
         end

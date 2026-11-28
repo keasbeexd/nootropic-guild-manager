@@ -846,8 +846,8 @@ function DP:BuildLogSection(parent)
     local function Submit()
         local e = DP.entry
         if not e then return end
-        local entry = ns.DB:AddLogEntry(e.full, input:GetText())
-        if entry then input:SetText("") end
+        local entry, err = ns.DB:AddLogEntry(e.full, input:GetText())
+        if entry then input:SetText("") elseif err then ns:Print("|cffff2020" .. err .. "|r") end
         input:ClearFocus()
     end
     s.Add:SetScript("OnClick", Submit)
@@ -898,12 +898,16 @@ end
 function DP:RefreshLog(e)
     local s = self.log
     local list = ns.DB:GetLog(e.full)
+    local may = ns.DB:HasPerm("officerlog") -- the Guild Master's row: who writes in it
+    s.Input:SetEnabled(may)
+    s.Add:SetEnabled(may)
     local y = -50
     for i, entry in ipairs(list) do
         local f = LogEntryFrame(s, i)
         f.entry = entry
         f.Meta:SetText(ns.FormatDate(entry.ts) .. "  |cff9d9d9d-  " .. (entry.author or "?") .. "|r")
         f.Text:SetText(entry.text)
+        f.Delete:SetShown(may)
         local h = 12 + 3 + math.max(12, math.ceil(f.Text:GetStringHeight()))
         f:SetHeight(h)
         f:ClearAllPoints()
