@@ -149,7 +149,7 @@ D.LINKS = {
     { label = "Privacy", url = "https://ngmpeon.app/privacy", icon = "Interface\\Icons\\INV_Misc_Key_14",
       hint = "What NGM Peon and NGM Desktop keep, and how to remove it." },
     { label = "Bugs and ideas", url = "https://github.com/keasbeexd/nootropic-guild-manager/issues/new/choose", icon = "Interface\\Icons\\INV_Misc_Note_01",
-      hint = "Report a bug or suggest a feature (include your version: /ngm diag)." },
+      hint = "Report a bug or suggest a feature (for a bug, paste what /ngm bug gives)." },
 }
 
 ------------------------------------------------------------------------

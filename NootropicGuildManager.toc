@@ -24,6 +24,7 @@ Core\Sync.lua
 
 # Services
 Services\Roster.lua
+Services\BugReport.lua
 Services\Comm.lua
 Services\Messages.lua
 Services\Recruit.lua
