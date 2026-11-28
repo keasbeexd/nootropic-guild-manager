@@ -448,11 +448,12 @@ function UI:UpdateTitle()
     W.SetTitle(self.frame, title)
 end
 
--- "x using <title>" after the status line. Click: roster of addon users with versions.
-function UI:BuildAddonCount(f)
+-- The status line's links: "34 members" (everyone), "8 online" (online
+-- only), "x using <title>" (who runs it, with versions). Each opens Find.
+local function StatusLink(f, anchor, title, text, onClick, gap)
     local b = CreateFrame("Button", nil, f)
     b:SetHeight(16)
-    b:SetPoint("LEFT", self.status, "RIGHT", 0, 0)
+    b:SetPoint("LEFT", anchor, "RIGHT", gap or 0, 0)
     b.Text = b:CreateFontString(nil, "OVERLAY", "NGMFontTextSmall")
     b.Text:SetPoint("LEFT", 0, 0)
     b.Underline = b:CreateTexture(nil, "OVERLAY")
@@ -465,16 +466,47 @@ function UI:BuildAddonCount(f)
         self.Underline:SetPoint("TOPRIGHT", self.Text, "BOTTOMRIGHT", 0, -1)
         self.Underline:Show()
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
-        GameTooltip:AddLine("Who uses the NGM Addon?")
-        GameTooltip:AddLine("Click to list guildmates running it, with the version each one has.", 1, 1, 1, true)
+        GameTooltip:AddLine(title)
+        GameTooltip:AddLine(text, 1, 1, 1, true)
         GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function(self)
         self.Underline:Hide()
         GameTooltip:Hide()
     end)
-    b:SetScript("OnClick", function() UI:ShowAddonUsers() end)
-    self.addonCount = b
+    b:SetScript("OnClick", onClick)
+    -- text, with a lead-in ("  -  ") that isn't underlined
+    function b:SetLink(lead, label)
+        self.Text:SetText(lead)
+        self.dashWidth = lead ~= "" and self.Text:GetStringWidth() or 0
+        self.Text:SetText(lead .. label)
+        self:SetWidth(math.ceil(self.Text:GetStringWidth()) + 2)
+    end
+    return b
+end
+
+function UI:BuildAddonCount(f)
+    self.membersLink = StatusLink(f, self.status, "Everyone in the guild", "Click to list every guildmate (clears the search and filters).",
+        function() UI:ShowRoster(false) end, 10)
+    self.onlineLink = StatusLink(f, self.membersLink, "Who's online", "Click to list only guildmates online now.",
+        function() UI:ShowRoster(true) end)
+    self.addonCount = StatusLink(f, self.onlineLink, "Who uses the NGM Addon?", "Click to list guildmates running it, with the version each one has.",
+        function() UI:ShowAddonUsers() end)
+end
+
+-- Find, with every guildmate (onlineOnly: only those online)
+function UI:ShowRoster(onlineOnly)
+    self:Show()
+    self:SelectTab(UI.TAB_ROSTER)
+    local RV = ns.RosterView
+    RV:SetSearch("")
+    RV:ClearFilters()
+    if onlineOnly then
+        ns.DB:Settings().onlineOnly = true
+        if RV.filterPanel and RV.filterPanel:IsShown() then RV:RefreshFilterPanel() end
+        RV:Refresh()
+    end
+    ns.PlaySound("IG_CHARACTER_INFO_TAB")
 end
 
 -- A dot by the version: green in sync, yellow working on it, grey nobody to
@@ -536,22 +568,23 @@ function UI:RefreshStatus()
     local count = self.addonCount
     if not IsInGuild() then
         self.status:SetText("Not in a guild")
+        self.membersLink:Hide()
+        self.onlineLink:Hide()
         count:Hide()
         return
     end
     local guild = GetGuildInfo("player") or "Guild"
     local total, online, withAddon = ns.Roster:Stats()
-    self.status:SetText(((ns.GOLD .. "%s|r   %d members  -  |cff20ff20%d online|r")):format(guild, total, online))
+    self.status:SetText(ns.GOLD .. guild .. "|r")
+    self.membersLink:SetLink("", total == 1 and "1 member" or (total .. " members"))
+    self.onlineLink:SetLink("  -  ", ("|cff20ff20%d online|r"):format(online))
+    self.membersLink:Show()
+    self.onlineLink:Show()
     if ns.DB:Settings().showAddonCount == false then
         count:Hide()
         return
     end
-    -- the dash isn't part of the underline
-    local dash = "  -  "
-    count.Text:SetText(dash)
-    count.dashWidth = count.Text:GetStringWidth()
-    count.Text:SetText(dash .. ("%d using %s"):format(withAddon, self:Title()))
-    count:SetWidth(math.ceil(count.Text:GetStringWidth()) + 2)
+    count:SetLink("  -  ", ("%d using %s"):format(withAddon, self:Title()))
     count:Show()
 end
 
