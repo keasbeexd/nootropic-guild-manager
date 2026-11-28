@@ -48,7 +48,9 @@ local function Linked()
     return false
 end
 
--- "1" connected, "0" not yet, nil not seen
+-- "1" connected, "0" not yet, nil not seen: NGM Peon's DX records. (Never
+-- C_Discord.IsUserOAuthed: the game forbids it to addons even out of
+-- combat, "Interface action failed", 3.2.0-test5.)
 function CG:DiscordInWoW()
     local state
     for _, n in ipairs(Mine()) do
@@ -97,6 +99,7 @@ end
 -- Worth opening by itself: with NGM Peon, linking or Discord in WoW still to do
 function CG:Needed()
     if not (ns.Sync.PeonGuild and ns.Sync:PeonGuild()) then return false end
+    if ns.DB.FeatureOn and not ns.DB:FeatureOn("connect") then return false end -- off for the guild
     for _, s in ipairs(self:Steps()) do
         if s.state == "todo" then return true end
     end

@@ -33,6 +33,27 @@ assert(#settings.bugLog == 1 and settings.bugLog[1].n == 2, "the same block coun
 assert(settings.bugLog[1].windows == "CommunitiesFrame", "which window was open")
 assert(#printed == 1 and printed[1]:find("/ngm bug", 1, true), "told once a session")
 
+-- what the NGM Addon was handling when it happened (this frame only)
+GetTime = function() return 50 end
+ns.doing = { name = "GUILD_ROSTER_UPDATE", at = 50 }
+handlers.ADDON_ACTION_BLOCKED(nil, "NootropicGuildManager", "UNKNOWN()")
+assert(settings.bugLog[1].what == "UNKNOWN() during GUILD_ROSTER_UPDATE", settings.bugLog[1].what)
+ns.doing = { name = "PLAYER_LOGIN", at = 10 }
+handlers.ADDON_ACTION_FORBIDDEN(nil, "NootropicGuildManager", "UNKNOWN()")
+assert(settings.bugLog[1].what == "UNKNOWN()", "an old name isn't used")
+ns.doing = nil
+
+-- where: the call stack's files and lines (ours and the game's; not the report's own)
+debugstack = function() return '[string "@Interface/AddOns/NootropicGuildManager/Services/BugReport.lua"]:70: in x\n[string "@Interface/AddOns/Blizzard_Communities/GuildInfo.lua"]:62: in y\n' end
+handlers.ADDON_ACTION_FORBIDDEN(nil, "NootropicGuildManager", "UNKNOWN()")
+assert(settings.bugLog[1].what == "UNKNOWN() at Blizzard_Communities/GuildInfo.lua:62", settings.bugLog[1].what)
+debugstack = nil
+-- a new version gets its own line, not an old version's count
+ns.version = "3.1.2"
+handlers.ADDON_ACTION_BLOCKED(nil, "NootropicGuildManager", "C_GuildInfo.SetNote()")
+assert(settings.bugLog[1].version == "3.1.2" and (settings.bugLog[1].n or 1) == 1, "its own line")
+ns.version = "3.1.1"
+
 local text = B:Text()
 assert(text:find("NGM Addon 3.1.1", 1, true) and text:find("C_GuildInfo.SetNote() x2", 1, true), text)
 assert(text:find("Other addons: Details", 1, true), "other addons by name")

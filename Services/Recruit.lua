@@ -189,7 +189,7 @@ end
 -- joined > dnw > invited > replied > whispered > new
 function RC:Status(p)
     if p.joined then return "joined" end
-    if self:IsDNW(p.full) then return "dnw" end
+    if self:IsDNW(p.full) or ns.Bans:IsBanned(p.full) then return "dnw" end
     local c = self:Contact(p)
     if c.invited then return "invited" end
     if c.replied then return "replied" end
@@ -408,7 +408,7 @@ function RC:OnWhoResults()
         if name and (guild or "") == "" then
             local full = ns.NormalizeName(name)
             if full ~= ns.PlayerFullName() and not ns.Roster.byName[full] then
-                if self:IsDNW(full) and not r.people[full] then
+                if (self:IsDNW(full) or ns.Bans:IsBanned(full)) and not r.people[full] then
                     skipped = skipped + 1 -- asked not to be contacted
                 else
                     matched = matched + 1
@@ -536,6 +536,7 @@ function RC:Whisper(full, customText)
     if self:IsDNW(full) then
         return false, ns.ShortName(full) .. " asked not to be contacted (Do Not Whisper list)."
     end
+    if ns.Bans:IsBanned(full) then return false, ns.ShortName(full) .. " is banned from the guild." end
     p.full, p.short = full, ns.ShortName(full)
     local msg = self:Format(customText or self:TemplateFor(p), p)
     if msg == "" then return false, ("Write a whisper message first (right side of the %s tab)."):format(ns.TabName("recruit")) end
@@ -561,6 +562,7 @@ function RC:CanInviteNow(full)
     if self:IsDNW(full) then
         return false, ns.ShortName(full) .. " asked not to be contacted (Do Not Whisper list)."
     end
+    if ns.Bans:IsBanned(full) then return false, ns.ShortName(full) .. " is banned from the guild." end
     local person = self:Get(full)
     if person then person.full = full end
     if not (person and self:Contact(person).whispered) then
@@ -631,7 +633,18 @@ function RC:ClickOnly() return self.clickOnly end
 -- guildmate invited, can't be ticked: one whisper from the guild is enough.
 -- Ranks the Guild Master allows to recruit (everyone by default).
 -- The game's Invite setting for your rank (Guild Control).
+-- From 3.2 the Guild Master's Permissions page decides (by default, as
+-- before: the game's Invite Member ranks), and Recruiting can be off for
+-- the whole guild (docs/PERMISSIONS.md).
+-- May you use the recruiting tools? (the Guild Master's switch and row)
 function RC:MayRecruit()
+    if not IsInGuild() then return false end
+    return ns.DB:FeatureOn("recruit") and ns.DB:HasPerm("recruit")
+end
+
+-- Does the game let your rank invite (Guild Control: Invite Member)? The
+-- recruit row can only reach ranks that may; its default is exactly them.
+function RC:GameInvite()
     if not IsInGuild() then return false end
     if IsGuildLeader and IsGuildLeader() then return true end
     if CanGuildInvite then return CanGuildInvite() and true or false end
@@ -640,7 +653,7 @@ end
 
 function RC:CanSelect(p)
     if not self:MayRecruit() then return false end
-    if not p or p.joined or p.guild or self:IsDNW(p.full) then return false end
+    if not p or p.joined or p.guild or self:IsDNW(p.full) or ns.Bans:IsBanned(p.full) then return false end
     if self:LockedUntil(p) then return false end
     local c = self:Contact(p)
     if c.by and c.invited then return false end
@@ -721,6 +734,7 @@ function RC:WhisperBlocked(full, p, guild)
     if ns.Roster.byName[full] then return "Already in your guild." end
     if (guild and guild ~= "") or (p and p.guild) then return "Already in a guild. Only players without one are recruited." end
     if self:IsDNW(full) then return "On the Do Not Whisper list." end
+    if ns.Bans:IsBanned(full) then return "Banned from the guild." end
     p = p or { }
     p.full = full
     local locked = self:LockedUntil(p)
@@ -898,6 +912,10 @@ end
 
 function RC:AddDNW(full, reply)
     if not full or not ns.DB:Guild() then return end
+    if not ns.DB:HasPerm("dnw_add") then
+        ns:Print("|cffff2020Your rank can't add people to the Do Not Whisper list (Permissions).|r")
+        return
+    end
     local text = ns.Sync.Clean(reply or ""):gsub(";", ","):sub(1, 80)
     local ok = ns.Sync:Set(DNKey(full), ("%d;%s"):format(ns.DB:Now(), text))
     Changed()
@@ -905,8 +923,8 @@ function RC:AddDNW(full, reply)
 end
 
 function RC:RemoveDNW(full)
-    if not self:MayRecruit() then
-        ns:Print("|cffff2020Only ranks the Guild Master lets recruit can take people off the Do Not Whisper list.|r")
+    if not ns.DB:HasPerm("dnw_remove") then
+        ns:Print("|cffff2020Your rank can't take people off the Do Not Whisper list (Permissions).|r")
         return
     end
     if self:IsDNW(full) then

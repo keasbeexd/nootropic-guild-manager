@@ -24,6 +24,9 @@ function ns.DB:Guild() return guild end
 function ns.DB:Now() return NOW end
 function ns.DB:Settings() return settings end
 function ns.DB:EnsureMember(f) guild.members[f] = guild.members[f] or {} return guild.members[f] end
+local featureOn, mayRemind = true, true
+function ns.DB:FeatureOn() return featureOn end
+function ns.DB:HasPerm(k) if k == "remind" then return mayRemind end return true end
 ns.Roster = { byName = { ["Marc Priest"] = { rankIndex = 0 }, ["Grud Sama"] = { rankIndex = 4 }, ["Probably Shawn"] = { rankIndex = 1 } } }
 C_Timer = { After = function() end }
 GetTime = function() return 100 end
@@ -93,4 +96,13 @@ ns.DB.GetMember = function(_, f) return guild.members[f] end
 ns.Sync.CanWrite = function() return true end
 PF:SetContact("Marc Priest", "@keasbeexd", "")
 assert(ns.Sync:Value("CN:Marc Priest") == "keasbeexd;", "saved without the @")
+-- 3.2: the Guild Master's switch and row
+do
+    local e = { full = "Zed Fresh-R", online = true }
+    featureOn = false
+    assert(select(2, ns.InstallReminder:Can(e)):find("off for the guild", 1, true))
+    featureOn, mayRemind = true, false
+    assert(select(2, ns.InstallReminder:Can(e)):find("Permissions", 1, true))
+    mayRemind = true
+end
 print("OK")

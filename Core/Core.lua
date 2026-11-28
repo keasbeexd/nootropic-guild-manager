@@ -49,13 +49,24 @@ function ns:On(message, fn)
     table.insert(listeners[message], fn)
 end
 
+-- What the NGM Addon is handling right now (an event or message name, and
+-- the frame's time), for /ngm bug: the game reports a blocked action while
+-- it happens, so this says what led to it. Only names, nothing personal.
+local function Doing(name)
+    local prev = ns.doing
+    ns.doing = { name = name, at = GetTime and GetTime() or 0 }
+    return prev
+end
+
 function ns:Fire(message, ...)
     local list = listeners[message]
     if not list then return end
+    local prev = Doing(message)
     for i = 1, #list do
         local ok, err = pcall(list[i], ...)
         if not ok then geterrorhandler()(err) end
     end
+    ns.doing = prev
 end
 
 ------------------------------------------------------------------------
@@ -78,7 +89,11 @@ end
 eventFrame:SetScript("OnEvent", function(_, event, ...)
     local list = handlers[event]
     if not list then return end
+    -- (a blocked action is reported while it happens: keep what led to it)
+    local mark = event ~= "ADDON_ACTION_BLOCKED" and event ~= "ADDON_ACTION_FORBIDDEN"
+    local prev = mark and Doing(event)
     for i = 1, #list do list[i](event, ...) end
+    if mark then ns.doing = prev end
 end)
 
 ------------------------------------------------------------------------
@@ -332,6 +347,8 @@ ns:RegisterEvent("PLAYER_LOGIN", function()
     ns.Theme:LoadTheme() -- the guild's colours, before any window is built
     ns.BugReport:Init() -- first: it notes what goes wrong from here on
     ns.Roster:Init()
+    ns.GuildRules:Init()
+    ns.Bans:Init()
     ns.Sync:Init()
     ns.RosterLog:Init()
     ns.Recipes:Init()
@@ -385,6 +402,7 @@ local function PrintHelp()
     ns:Print("  |cffffffff/ngm options|r  - open the options")
     ns:Print("  |cffffffff/ngm events|r  - the guild's upcoming events from NGM Peon and where to sign up, plus the game's resets and holidays")
     ns:Print("  |cffffffff/ngm bug|r  - a report of what went wrong, to copy into a bug report (nothing personal)")
+    if ns.DB:HasPerm("banlist") then ns:Print("  |cffffffff/ngm bans|r  - the guild's ban list") end
     if ns.Sync.PeonGuild and ns.Sync:PeonGuild() then ns:Print("  |cffffffff/ngm connect|r  - Get Connected: linking with NGM Peon and Discord in WoW, and where each stands") end
     ns:Print(ns.GOLD .. "NGM Peon|r (your guild's Discord, ngmpeon.app):")
     ns:Print("  |cffffffff/ngm link|r  - in Discord, not here: link your characters for your rank role")
@@ -410,6 +428,8 @@ SlashCmdList.NOOTROPICGM = function(msg)
     elseif cmd == "find" or cmd == "search" then
         ns.UI:Show()
         ns.UI:SetSearch(rest)
+    elseif cmd == "bans" or cmd == "ban" or cmd == "banlist" then
+        ns.BanView:Open()
     elseif cmd == "bug" and rest:lower() == "log" then
         ns.BugReport:TaintLog()
     elseif cmd == "bug" or cmd == "report" then

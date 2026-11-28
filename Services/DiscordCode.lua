@@ -174,7 +174,9 @@ function DC:Changes(since)
     for key, rec in pairs(store) do
         local typ = key:match("^(%u+):")
         -- 3.1: events made in game and sign-ups too (not NGM Peon's own copies)
-        if (typ == "M" or typ == "RL" or typ == "EG" or (typ == "ES" and rec.a ~= (ns.Sync.PEON or "NGM Peon"))) and (rec.t or 0) > since and rec.a and rec.a ~= ""
+        -- 3.2: the Guild Master's rules (GS:perm_ / feat_ / lock_), so NGM Peon applies them too
+        local rule = typ == "GS" and (key:find("^GS:perm_") or key:find("^GS:feat_") or key:find("^GS:lock_"))
+        if (typ == "M" or typ == "RL" or typ == "EG" or rule or (typ == "ES" and rec.a ~= (ns.Sync.PEON or "NGM Peon"))) and (rec.t or 0) > since and rec.a and rec.a ~= ""
             and ns.Sync.ValidValue(typ, rec.v) then
             out[#out + 1] = { key = key, v = rec.v or "", t = rec.t, a = rec.a }
         end
@@ -259,8 +261,8 @@ function DC:ForMyGuild(mode)
     if not gm and mode == "setup" then
         return nil, "Only the Guild Master can make the setup code: only their game sees every rank's settings."
     end
-    if not gm and not (ns.IsOfficer and ns.IsOfficer()) then
-        return nil, "Only the Guild Master or an officer can make codes for NGM Peon. Ask one of them (Sync tab, step 2)."
+    if not gm and not (ns.IsOfficer and ns.IsOfficer() and (not ns.DB.HasPerm or ns.DB:HasPerm("peoncode"))) then
+        return nil, "Your rank can't make codes for NGM Peon (the Guild Master's Permissions). Ask someone who can (Sync tab, step 2)."
     end
     local region = self:Region()
     if not region then return nil, "NGM Peon serves the US and EU regions only, for now." end
@@ -389,6 +391,8 @@ function DC:ApplyPeon(code)
         -- 3.1: links to NGM Peon, who may create events, posts' links and Discord sign-ups
         local wanted = typ == "M" or typ == "RL" or typ == "CN" or (typ == "HW" and r.key:match("^HW:%d%d%d%d%d%d$")) or r.key == "GS:peon"
             or typ == "LK" or typ == "DX" or typ == "EL" or typ == "ES" or r.key == "GS:evranks" or r.key == "GS:gamechat"
+            -- 3.2: rules the Guild Master set on the dashboard (written as them)
+            or (typ == "GS" and (r.key:find("^GS:perm_") or r.key:find("^GS:feat_") or r.key:find("^GS:lock_")) ~= nil)
         if not wanted then
             out.refused = out.refused + 1
         else

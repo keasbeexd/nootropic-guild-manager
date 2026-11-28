@@ -244,25 +244,30 @@ Messages and keywords are saved per guild.
 
 ## Who can do what
 
+Until the Guild Master changes anything:
+
 | | Everyone with the NGM Addon | Officers |
 | --- | --- | --- |
 | See roster, mains/alts, specs, professions, Discord | yes | yes |
-| Add someone to the Do Not Whisper list | yes | yes |
-| Edit their **own** spec, roles, professions and Discord | yes (by default) | yes |
-| Recruit; take someone off the Do Not Whisper list | | yes (by default) |
-| Link mains and alts | | yes (by default) |
-| Edit others' spec, roles, professions and Discord | | yes (by default) |
+| Add someone to the Do Not Whisper list, send install reminders, sign up for events | yes | yes |
+| Edit their **own** spec, roles, professions and Discord | yes | yes |
+| Recruit; take someone off the Do Not Whisper list | ranks the game lets invite | yes |
+| Link mains and alts; edit others' profiles; create and manage events; ban | | yes |
 | Officer Log, Change History, Audit tab | | yes |
 
 "Officers" are the ranks the game marks **Officer**, and recruiters the ranks with **Invite Member** (Guild Control, the game's own rank settings). Change those in the game and the NGM Addon follows, on the spot.
 
-**Permissions** (Guild Master only, in **Options > Officers > Permissions**): every row marked "by default" can be given to other ranks or taken away: **edit their own profile** (everyone by default; spec, roles, professions and Discord, not what their addon reports by itself), **link mains and alts**, and **edit other guildmates' profiles** (spec, roles, professions, contact; this includes their own). Pick ranks from each row's menu, or the default to go back. Untick everyone and only the Guild Master can. The Guild Master always can. Officer Log and Audit always stay with officers: the game only delivers that data to officer ranks. Permission changes show in the Audit tab.
+**Permissions** (3.2, **Options > Permissions**): the Guild Master decides each of these, row by row: everyone, officers, chosen ranks or only the Guild Master. Profiles (link mains and alts, edit their own, edit others', choose their own main on NGM Peon's dashboard), events (create each kind, edit or cancel anyone's, sign up), recruiting (the tools, the guild's messages, Do Not Whisper both ways), members (install reminders and their text, banning, the ban list and its reasons), the Audit tab and the Officer Log, the Hall of Fame (hiding, announcing), and NGM Peon (bringing in its news, making codes). Also **Everyone uses the guild's recruitment messages** and **install reminder text**, and switches that turn Recruiting, Play Together, Upcoming Events, the Overview, Who Can Craft, the Hall of Fame, level-ups in chat, install reminders and Get Connected off for the whole guild. Everyone else sees what their own rank may do. Officer data (the Officer Log, the Audit) only ever reaches officer ranks: those rows can only be narrowed. Likewise the recruiting tools only ever reach ranks the game lets invite (Guild Control: Invite Member), and the other recruiting rows only ranks that may use the recruiting tools. With NGM Peon, its dashboard's Permissions tab shows the same rows.
+
+Every copy checks shared changes against these, whoever passes them on. Rules are accepted only from the Guild Master, and the Guild Master pastes a short code into the Guild Info (`NGM:...`; **Copy the line** on the Permissions page, since the game doesn't let addons write it), a fingerprint of the rules. Every copy checks its rules against it (only ranks the game lets edit the Guild Info can change it; it's read only when the game restricts nothing, out of combat), and while they don't match, every permission is Guild Master only until the Guild Master's rules arrive.
+
+**Ban list** (3.2): ban a player and their main and every alt linked to them go too, matched by the game's character ID, so a rename doesn't get round it. Anyone who invites a banned player gets a big warning on screen; recruiting skips them; whoever may see the list is told once a session if a banned character is in the guild. **Ban List** on the Recruitment tab, `/ngm bans`, or the guild roster's right-click **Ban from the guild**. The list lives in the NGM Addon only: NGM Peon keeps none of it.
 
 ## Options
 
 Open from **Options > AddOns > Nootropic Guild Manager**, `/ngm options`, right-clicking the minimap button (by default), or right-clicking the NGM Addon compartment entry.
 
-Options has four pages in the game's AddOns list:
+Options has five pages in the game's AddOns list:
 
 - **Nootropic Guild Manager** (main page)
   - **Appearance**: always in your guild's colors: the NGM Addon's icon is the NGM Addon's herald banner in your tabard's colors, and the accents take them too, the same as on ngmpeon.app (herald blue without a tabard). Also: **show how many guildmates use the NGM Addon** (on by default), the **shortcut on the Guild & Communities window**, and **Show alts and profiles on the Guild roster** (on by default).
@@ -272,7 +277,8 @@ Options has four pages in the game's AddOns list:
   - **Reset**: window size and position, and list columns (roster and recruitment list).
   - **Sync and Commands**: sync stats with a **Sync Now** button, **Open Guild Manager**, **Get Connected** (with NGM Peon), and the most useful commands.
 - **Recruiting** (saved per guild, except the hourly cap): the **recruitment whisper button on /who results** (on by default), **Whispers per hour** (40 by default, for all your characters), **Auto-Invite** (Invite popup on a keyword reply, up to 6 keywords) and **Do Not Whisper** (on/off, up to 6 words, and the shared list). The Recruitment tab shows how these are set under **Replies**, with a **Reply Settings...** button that opens this page.
-- **Officers**: **Permissions** (Guild Master, whole guild) and **Audit History** (keep 30, 60 or 90 days on your copy). Shown to officers; everyone else sees a line saying who uses it. The **Recruiting** page works the same way, for ranks with Invite Member.
+- **Permissions**: who may do what, for the whole guild (the Guild Master changes it; see Who can do what).
+- **Officers**: **Audit History** (keep 30, 60 or 90 days on your copy). Shown to officers; everyone else sees a line saying who uses it. The **Recruiting** page works the same way, for ranks with Invite Member.
 - **About**: what the NGM Addon does, **what's shared** (with guildmates, with officers only, with NGM Peon, and what never leaves your computer), credits, and links to copy (the game can't open web pages): **ngmpeon.app**, **What's new**, **Privacy** and **Bugs and ideas** (the GitHub forms for bug reports and feature ideas).
 
 The window's tabs run down its right side like the character panel's; hover one for its name. Tabs you can't use (Recruitment without your rank's Invite Member setting, Audit for non-officers) are hidden.
@@ -336,7 +342,7 @@ The dot next to the version number in the window shows sync at a glance: green i
 Everything is saved per guild in `WTF/Account/<account>/SavedVariables/NootropicGuildManager.lua`, along with your settings. **Private notes never leave your computer**; shared data syncs as described above.
 
 What is shared:
-- With everyone running the NGM Addon (your recipes and play hours can be switched off in **Options > Sharing**; the rest is public anyway): each player's own professions and spec, mains/alts, spec/profession overrides, Discord names, roles, when each person usually plays (only the learned summary), the recipes they know, their raid readiness, the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, the Guild Master's permissions, events made in game and sign-ups, and (with NGM Peon) whether each character is linked to it and has connected WoW to Discord.
+- With everyone running the NGM Addon (your recipes and play hours can be switched off in **Options > Sharing**; the rest is public anyway): each player's own professions and spec, mains/alts, spec/profession overrides, Discord names, roles, when each person usually plays (only the learned summary), the recipes they know, their raid readiness, the Do Not Whisper list, recruitment statuses (the last 14 days), which addon version each person runs, the Guild Master's permissions and switches, the guild's ban list (reasons shown only to ranks allowed) and shared messages, events made in game and sign-ups, and (with NGM Peon) whether each character is linked to it and has connected WoW to Discord.
 - With NGM Peon, only if your guild uses it and only what a code carries: the Guild Master's or an officer's (mains and alts, roles, when the guild plays, join dates, the game's resets and holidays, events made in game and sign-ups), or a member's own through NGM Desktop (their own characters' mains, roles, events and sign-ups).
 - With officers only: Officer Log entries (140 characters max; deleting one deletes it for every officer) and the audit trail.
 
@@ -360,6 +366,7 @@ A note on trust: every copy of the NGM Addon checks each change it receives agai
 | `/ngm craft <name>` | who in the guild can craft it (the Who Can Craft? window) |
 | `/ngm recruit` | open the Recruitment tab |
 | `/ngm options` | open the options |
+| `/ngm bans` | the guild's ban list (ranks the Guild Master allows) |
 | `/ngm bug` | a report of what went wrong (anything the game blocked, the NGM Addon's own errors, versions, which options are on), to copy into a bug report; nothing personal. `/ngm bug log` tries to turn on the game's own detailed log |
 | `/ngm diag` | report what the Guild & Communities shortcut, the guild roster hooks and the /who whisper buttons and the Invite prompt can see, and which name and version the NGM Addon uses for you |
 | `/ngm sync` | sync now and show sync stats |
@@ -384,9 +391,9 @@ A note on trust: every copy of the NGM Addon checks each change it receives agai
 ```
 NootropicGuildManager.toc
 Core/      Core.lua (namespace, events, utils, slash)  Data.lua (classes, specs, professions, roles, raid checks, links)  Database.lua (saved data, permissions)  Records.lua (shared records and who may write them)  Sync.lua (carrying records between guildmates)  Accent.lua (the guild's tabard colors)
-Services/  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)  HallOfFame.lua (shared character statistics)  InstallReminder.lua (one-click "install the addon" whispers)  HofCheck.lua (Hall of Fame numbers vs the game, on inspect)  DiscordCode.lua (codes to and from NGM Peon, NGM Desktop, in step or not)  Events.lua (Upcoming Events, events made in game, sign-ups, reminders)  GameCalendar.lua (resets and holidays)  GuildFeed.lua (new events and level-ups in your chat)
+Services/  GuildRules.lua (the Guild Info code)  Bans.lua (the ban list)  BugReport.lua (/ngm bug)  Sharing.lua (sharing switches)  Roster.lua (roster, search, sort)  Comm.lua (own spec/professions)  Messages.lua (custom message rules)  Recruit.lua (/who, whisper queue, invites)  Profile.lua (contact, usually online)  Audit.lua (change descriptions)  RosterLog.lua (joins, leaves, promotions, level-ups, notes from the roster)  Recipes.lua (shared recipes)  Readiness.lua (raid attunements and keys)  HallOfFame.lua (shared character statistics)  InstallReminder.lua (one-click "install the addon" whispers)  HofCheck.lua (Hall of Fame numbers vs the game, on inspect)  DiscordCode.lua (codes to and from NGM Peon, NGM Desktop, in step or not)  Events.lua (Upcoming Events, events made in game, sign-ups, reminders)  GameCalendar.lua (resets and holidays)  GuildFeed.lua (new events and level-ups in your chat)
 Media/     Logo.tga (the addon's icon, from docs/logo.svg)  Banner*.tga (the herald banner, from docs/Banner*.svg)  Sounds/ (the Guild Feed's sounds)
-UI/        Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  OverviewView.lua (Overview tab)  HallOfFameView.lua (Hall of Fame tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua  EventsView.lua (Upcoming Events tab)  EventForm.lua (create or edit an event)  ConnectGuide.lua (Get Connected)  DiscordCodeView.lua + PeonPasteView.lua (codes for NGM Peon)  Gamepad.lua (controller)  Theme.lua
+UI/        BanView.lua (Ban List window)  Widgets.lua  Columns.lua  ScheduleGrid.lua  BrandIcon.lua  MemberPicker.lua  RosterView.lua (Find tab)  TogetherView.lua (Play Together tab)  OverviewView.lua (Overview tab)  HallOfFameView.lua (Hall of Fame tab)  DetailPanel.lua  GuildRoster.lua (hooks on the game's roster)  RecruitView.lua  DNWView.lua (Do Not Whisper window, name menus)  RecipesView.lua (Who Can Craft? window)  Welcome.lua (first-launch tour)  InvitePrompt.lua (/ginvite prompt)  MessagesView.lua  AuditView.lua  MainFrame.lua  MinimapButton.lua  Options.lua  Communities.lua  WhoWhisper.lua  EventsView.lua (Upcoming Events tab)  EventForm.lua (create or edit an event)  ConnectGuide.lua (Get Connected)  DiscordCodeView.lua + PeonPasteView.lua (codes for NGM Peon)  Gamepad.lua (controller)  Theme.lua
 docs/      ARCHITECTURE.md (how it works inside)  EVENTS.md (events made in game, sign-ups, in step with Discord)  CONTROLLER.md (controller support)  PUBLISHING.md (releases and addon sites)  logo.svg  screenshots/ (README and addon-site images)  preview/ (source of preview.png, an older illustration)
 tests/     run.sh and offline tests (not in the release zip)
 ```

@@ -22,6 +22,7 @@ AU.CATEGORIES = {
     { key = "CN", label = "Contact" },
     { key = "GS", label = "Guild settings" },
     { key = "DN", label = "Do Not Whisper" },
+    { key = "BN", label = "Ban list" },
 }
 
 local GREEN, RED, GRAY = "|cff20ff20", "|cffff2020", "|cff9d9d9d"
@@ -123,6 +124,11 @@ function AU:Describe(e)
         if new == "" then return "Removed " .. who .. " from the Do Not Whisper list" end
         local reply = new:match("^%d+;(.*)$")
         return "Added " .. who .. " to the Do Not Whisper list" .. ((reply and reply ~= "") and (GRAY .. " (said \"" .. reply .. "\")|r") or "")
+    elseif t == "BN" then
+        local who = e.ref and ns.ShortName(e.ref) or "?"
+        if new == "" then return GREEN .. "Unbanned|r " .. who end
+        local reason = ns.DB:HasPerm("banreason") and new:match("^%d+;[^;]*;[^;]*;[^;]*;(.*)$") or nil
+        return RED .. "Banned|r " .. who .. ((reason and reason ~= "") and (GRAY .. " (" .. reason .. ")|r") or "")
     elseif t == "GS" then
         local perm = (e.ref or ""):match("^perm_(.+)$")
         local def = perm and ns.DB:PermDef(perm)

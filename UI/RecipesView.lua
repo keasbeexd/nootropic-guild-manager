@@ -186,6 +186,7 @@ function RV:Refresh()
 end
 
 function RV:Open(opts)
+    if ns.DB.FeatureOn and not ns.DB:FeatureOn("crafting") then ns:Print("Who Can Craft is off for the guild (the Guild Master's Permissions).") return end
     opts = opts or {}
     if not self.frame then self:Build() end
     self.member = opts.member
