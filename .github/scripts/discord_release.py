@@ -24,6 +24,8 @@ import urllib.request
 
 CURSEFORGE = "https://www.curseforge.com/wow/addons/nootropic-guild-manager"
 WAGO = "https://addons.wago.io/addons/nootropic-guild-manager"
+# the same footer on every NGM changelog post (NGM Peon's and NGM Desktop's too)
+SUPPORT = "Enjoying NGM? [Ko-fi](https://ko-fi.com/keasbeexd) · [GitHub Sponsors](https://github.com/sponsors/keasbeexd)"
 MAX_NOTES = 3500  # an embed description holds 4096 characters
 
 
@@ -86,9 +88,9 @@ def payload(version: str, notes: str, repo: str, tag: str, ping_roles: list[str]
             "description": notes or "See the release notes on GitHub.",
             "color": 0xC79C3E,
             "fields": [{
-                "name": "Get it",
+                "name": "Links",
                 "value": f"[CurseForge]({CURSEFORGE}) · [Wago]({WAGO}){wowi_link()} · [GitHub]({release}) · [What's new](https://ngmpeon.app/changelog#addon)\n"
-                         "WowUp and the CurseForge app pick it up automatically.",
+                         f"{SUPPORT}",
             }],
         }],
     }
