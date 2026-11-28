@@ -32,14 +32,15 @@ widen it.
 | Profiles | Link mains and alts | Officers | `M` | every copy |
 | Profiles | Edit their own profile | Everyone | `MS RL MP CN` (own) | every copy |
 | Profiles | Edit other guildmates' profiles | Officers | `MS RL MP CN` | every copy |
+| Profiles | Choose their own main on NGM Peon's dashboard | Everyone | NGM Peon's links | NGM Peon |
 | Events | Create dungeons | Officers (with NGM Peon: its rule today) | `EG` | every copy, NGM Peon |
 | Events | Create raids | Officers (same) | `EG` | every copy, NGM Peon |
 | Events | Create events | Officers (same) | `EG` | every copy, NGM Peon |
 | Events | Edit or cancel anyone's | Officers | `EG` | every copy, NGM Peon |
 | Events | Sign up | Everyone | `ES` | every copy, NGM Peon |
 | Recruiting | Use the recruiting tools (whispers, the /who button, the Invite prompt) | The game's Invite Member ranks | `RS` | every copy (statuses), in the NGM Addon (whispers) |
-| Recruiting | Write the guild's recruitment messages | Only me | `GS:rmsg*` | every copy |
-| Recruiting | Add to Do Not Whisper | Everyone | `DN` | every copy |
+| Recruiting | Write the guild's recruitment messages | Only me (and needs the recruiting tools) | `GS:rmsg*` | every copy |
+| Recruiting | Add to Do Not Whisper | Everyone (who may use the recruiting tools) | `DN` | every copy |
 | Recruiting | Take off Do Not Whisper | The game's Invite Member ranks | `DN` "" | every copy |
 | Members | Send install reminders | Everyone | `IR` | every copy |
 | Members | Write the install reminder text | Only me | `GS:imsg` | every copy |
@@ -47,10 +48,15 @@ widen it.
 | Members | See the ban list | Officers | `BN` (shown) | in the NGM Addon |
 | Members | See ban reasons | Officers | `BN` reason (shown) | in the NGM Addon |
 | Officers | See the Audit tab | Officers | `A` | officers only, narrower |
+| Officers | Write in the Officer Log | Officers | `L` | officers only, narrower |
 | Hall of Fame | Hide someone from it | Officers | `HX` | every copy |
 | Hall of Fame | Announce champions in guild chat | Officers | `HA` | every copy |
 | NGM Peon | Bring in NGM Peon's news for the guild | Officers | NGM Peon's records | officers only, narrower |
 | NGM Peon | Make codes for NGM Peon | Guild Master and officers | NGM2 | NGM Peon |
+
+**The recruiting rows need the recruiting tools.** The messages and both
+Do Not Whisper rows only reach ranks that may also use the recruiting tools,
+whatever ranks they're handed to (as the Audit tab needs an officer rank).
 
 **Messages.** The recruitment messages row's people write the guild's
 messages (the same rules as today's custom messages: class, race, level and
@@ -62,13 +68,13 @@ still write their own. The install reminder text works the same way
 (`GS:imsg`, with its own switch).
 
 **Feature switches** (on/off for the whole guild, not by rank): Recruiting,
-Play Together, Hall of Fame, the Guild Feed's level-up lines, install
-reminders, Get Connected. Off, the feature is hidden for everyone and its
+Play Together, Upcoming Events, Overview, Who Can Craft, Hall of Fame, the
+Guild Feed's level-up lines, install reminders, Get Connected. Off, the feature is hidden for everyone and its
 copies stop sending for it; what's already shared is kept, so turning it
 back on loses nothing.
 
 All rules are `GS:perm_<key>` (rank numbers, as the three existing ones) and
-`GS:feat_<key>` (`0` off), written by the Guild Master only (every copy
+`GS:feat_<key>` (`0` off) and `GS:lock_<key>` (`1` locked), written by the Guild Master only (every copy
 already refuses `GS:perm_*` from anyone else).
 
 ## Keeping every copy on the same rules: the Guild Info code
@@ -77,12 +83,13 @@ As GRM does: a short code in the guild's Guild Info text, which only ranks
 the game lets edit it can change.
 
 - **The code** is a fingerprint of every rule: `NGM:7k3f9a2c` (base 36 of a
-  hash over the sorted `GS:perm_*`, `GS:feat_*` and message records). The
+  hash over the sorted `GS:perm_*`, `GS:feat_*` and `GS:lock_*` records). The
   Guild Info holds 499 characters in all, so it stays one short line.
-- **Writing it:** whenever the Guild Master changes a rule, their copy
-  updates the line in the Guild Info by itself (`C_GuildInfo.SetInfoText`,
-  out of combat; the Guild Master can always edit it). If the game doesn't
-  let it, the Permissions page shows the line to paste.
+- **Writing it:** the Guild Master pastes it. The game forbids addons to
+  write the Guild Info (`C_GuildInfo.SetInfoText` is blocked even inside
+  `pcall`), so the NGM Addon never tries: the Permissions page says whether
+  the line is in place and has **Copy the line**, and at login a chat line
+  tells the Guild Master when it needs pasting.
 - **Checking it:** every copy reads the Guild Info at login and when it
   changes (`C_GuildInfo.GetInfoText`). If its own rules give a different
   fingerprint, it says "Guild rules not up to date", asks guildmates for
@@ -94,18 +101,18 @@ the game lets edit it can change.
 - **No code** in the Guild Info (a guild not using it yet, or a 3.1 Guild
   Master): today's behavior, the Guild Master's records as they are.
 - **NGM Peon** gets the rules with the Guild Master's and officers' updates
-  (`R` lines `GS:perm_*`, `GS:feat_*`), and checks the fingerprint too.
-  Changed on the dashboard (Guild Master only), they reach the game at the
-  next sync, and the Guild Master's game updates the code at their next
-  login.
+  (`R` lines `GS:perm_*`, `GS:feat_*`, `GS:lock_*`) and takes them only
+  from the Guild Master's own character. Changed on the dashboard (Guild
+  Master only), they reach the game at the next sync, and the Guild Master
+  is told at their next login to paste the new line.
 
 ## The ban list
 
 The same model as GRM's (checked against its code): a ban is about a
 person, not one name.
 
-- **Ban:** from a profile, the guild roster's right-click menu, the Ban List
-  window or by name, with an optional reason. **Their whole family** (their
+- **Ban:** from the guild roster's right-click menu or the Ban List window
+  (by name), with an optional reason. **Their whole family** (their
   main and every alt linked to them) is banned together, each by the
   character's permanent game ID (GUID), so a rename doesn't get around it.
   A name the game can't put an ID to yet (someone never seen) is banned by
@@ -124,8 +131,8 @@ person, not one name.
   - **in recruiting:** banned players are skipped in `/who` results and the
     recruiting lists, like Do Not Whisper.
 - **The Ban List window**, like Do Not Whisper's: everyone banned, with all
-  their characters, when, by whom and why (for those who may see it),
-  searchable, with Remove.
+  their characters, when, by whom and why (for those who may see it), with
+  Unban.
 - **NGM Addon only.** NGM Peon keeps no ban data (banned players are often
   outside the guild, and NGM Peon keeps nothing about those) and no account
   fingerprint: no privacy change. It only gets the rules about who may ban

@@ -2,8 +2,8 @@
     Nootropic Guild Manager - Ban List window (3.2, docs/PERMISSIONS.md)
     Everyone banned, as people (main and alts together): when, by whom, and
     why (for ranks the Guild Master lets see reasons). Ban a Player and Unban
-    for ranks allowed to ban. Opens with /ngm bans, from the guild roster's
-    right-click menu, or Options; only for ranks allowed to see the list.
+    for ranks allowed to ban. Opens with /ngm bans or the Recruitment tab's
+    Ban List button (the guild roster's right-click menu bans by name); only for ranks allowed to see the list.
 ]]
 local _, ns = ...
 local W = ns.Widgets

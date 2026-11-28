@@ -1,6 +1,6 @@
 -- Test: the Guild Info code (3.2, docs/PERMISSIONS.md): rules count when
 -- they match the code; while they don't, the last ones that did; the Guild
--- Master's copy writes the code into the Guild Info (or hands the line back).
+-- Master's copy never writes the Guild Info, it hands back the line to paste.
 local ROOT = arg[1]
 local ns = {}
 local store, guild, gm = {}, {}, false
