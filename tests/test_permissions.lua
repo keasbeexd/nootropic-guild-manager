@@ -75,6 +75,12 @@ check("handed to Veterans: a Veteran writes them (not an officer rank)", rec("Vi
 check("an officer can't turn a feature off", rec("Mira Officer-R", "GS:feat_fame", "Mira Officer-R", "0"), nil)
 check("the Guild Master can", rec("Gm Boss-R", "GS:feat_fame", "Gm Boss-R", "0"), "0")
 
+-- a rule that changes is worked out again on the next read (an open menu reads it at once)
+ns.GuildRules = { effective = { perm_links = "1" } }
+rec("Gm Boss-R", "GS:perm_links", "Gm Boss-R", "1,2")
+check("a rule changed: the cached rules are dropped at once", ns.GuildRules.effective, nil)
+ns.GuildRules = nil
+
 -- officer-only rows can be narrowed, never widened
 permRanks.audit = { [1] = true, [4] = true }
 check("audit handed to members: still officers only", S:Allowed("Bob Member-R", "audit"), false)

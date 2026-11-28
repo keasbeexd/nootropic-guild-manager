@@ -506,27 +506,37 @@ function O:PermMenu(owner, key)
     local DB = ns.DB
     local narrow = ns.Sync.PERM_NARROW[key]
     local needs = ns.Sync.PERM_NEEDS[key]
+    local invite = ns.Sync.PERM_INVITE[key]
     local function Set(set)
         local ok, err = DB:SetPermRanks(key, set)
         if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
         O:Refresh()
     end
+    -- the ranks that may now: the chosen ones, or the default's
+    local function Current()
+        local out, set = {}, DB:PermRanks(key)
+        for _, r in ipairs(DB:GuildRanks()) do
+            if r.index ~= 0 and (set and set[r.index] or (not set and DB:RankMay(r, key))) then out[r.index] = true end
+        end
+        return out
+    end
+    local holdable = {}
+    for _, r in ipairs(DB:GuildRanks()) do if r.index ~= 0 and DB:RankCanHold(r, key) then holdable[#holdable + 1] = r end end
     local items = { { text = "Who may do this", isTitle = true } }
     items[#items + 1] = { text = DB:PermDefaultText(key) .. " (default)", radio = true,
         checked = function() return DB:PermRanks(key) == nil end, func = function() Set(nil) end }
-    local invite = ns.Sync.PERM_INVITE[key]
     if not narrow and not needs and not invite then
         -- every rank
         items[#items + 1] = { text = "Everyone", radio = true,
             checked = function()
                 local set = DB:PermRanks(key)
                 if not set then return false end
-                for _, r in ipairs(DB:GuildRanks()) do if r.index ~= 0 and not set[r.index] then return false end end
+                for _, r in ipairs(holdable) do if not set[r.index] then return false end end
                 return true
             end,
             func = function()
                 local set = {}
-                for _, r in ipairs(DB:GuildRanks()) do if r.index ~= 0 then set[r.index] = true end end
+                for _, r in ipairs(holdable) do set[r.index] = true end
                 Set(set)
             end }
     end
@@ -535,24 +545,19 @@ function O:PermMenu(owner, key)
         func = function() Set({}) end }
     items[#items + 1] = { divider = true }
     items[#items + 1] = { text = narrow and "These officer ranks" or needs and "These ranks (ones that may recruit)" or invite and "These ranks (ones that may invite)" or "These ranks", isTitle = true }
-    for _, r in ipairs(DB:GuildRanks()) do
-        local gm = r.index == 0
-        if DB:RankCanHold(r, key) then items[#items + 1] = {
-            text = r.name .. (gm and "  |cff9d9d9d(always)|r" or ""),
-            checked = function()
-                if gm then return true end
-                local set = DB:PermRanks(key)
-                return set ~= nil and set[r.index] == true
-            end,
+    items[#items + 1] = { text = (DB:GuildRanks()[1] and DB:GuildRanks()[1].name or "Guild Master") .. "  |cff9d9d9d(always)|r", isTitle = true }
+    for _, r in ipairs(holdable) do
+        items[#items + 1] = {
+            text = r.name,
+            -- ticked: may now (the default's ranks too, while it's the default)
+            checked = function() return Current()[r.index] == true end,
+            -- from the default, a tick adds to (or takes from) what it allows
             func = function()
-                if gm then return end
-                local set = DB:PermRanks(key) or {}
+                local set = Current()
                 set[r.index] = not set[r.index] or nil
-                local ok, err = DB:SetPermRanks(key, set)
-                if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
-                O:Refresh()
+                Set(set)
             end,
-        } end
+        }
     end
     W.ShowMenu(owner, items)
 end

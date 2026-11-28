@@ -122,6 +122,8 @@ function GR:Refresh()
 end
 
 function GR:Value(name)
+    -- the Guild Master's own copy: their rules as they are, always current
+    if ns.DB:IsGuildMaster() then return ns.Sync:Value("GS:" .. name) end
     if not self.effective then self:Refresh() end
     local v = self.effective and self.effective[name]
     if v == nil and not self.effective then return ns.Sync:Value("GS:" .. name) end
