@@ -83,30 +83,31 @@ already refuses `GS:perm_*` from anyone else).
 
 ## Keeping every copy on the same rules: the Guild Info code
 
-**Off for now (3.2.0-test3).** On Forever, `C_GuildInfo.GetInfoText` is a
-restricted call (`HasRestrictions` in the game's API docs): reading it from
-the NGM Addon raised "Interface action failed" (blocked in combat, forbidden
-when the Guild Info opened). The NGM Addon neither reads nor writes the
-Guild Info; every copy takes rules only from the Guild Master (checked
-whoever passes them on). The design below stays for if a safe way to read
-it turns up.
-
 As GRM does: a short code in the guild's Guild Info text, which only ranks
 the game lets edit it can change.
 
 - **The code** is a fingerprint of every rule: `NGM:7k3f9a2c` (base 36 of a
   hash over the sorted `GS:perm_*`, `GS:feat_*` and `GS:lock_*` records). The
   Guild Info holds 499 characters in all, so it stays one short line.
-- **Writing it:** the Guild Master pastes it. The game forbids addons to
+- **Writing it:** the Guild Master pastes it (as GRM does: its settings
+  line is pasted too). The game forbids addons to
   write the Guild Info (`C_GuildInfo.SetInfoText` is blocked even inside
   `pcall`), so the NGM Addon never tries: the Permissions page says whether
   the line is in place and has **Copy the line**, and at login a chat line
   tells the Guild Master when it needs pasting.
-- **Checking it:** every copy reads the Guild Info at login and when it
-  changes (`C_GuildInfo.GetInfoText`). If its own rules give a different
-  fingerprint, it says "Guild rules not up to date", asks guildmates for
-  them through guild sync, and meanwhile keeps the **last rules that
-  matched** the code (or the defaults, the first time).
+- **Checking it:** every copy reads the Guild Info (`C_GuildInfo.GetInfoText`)
+  only while the game restricts nothing: not in combat, encounters,
+  keystones, PvP matches, restricted maps or restricted chat (checked with
+  `C_RestrictedActions.IsAddOnRestrictionActive` and
+  `ADDON_RESTRICTION_STATE_CHANGED`; reading it then is blocked), as GRM
+  does. It keeps the last code it read for the rest of the time and reads
+  again when restrictions lift and with each roster update. If its own
+  rules give a different fingerprint, it says "Guild rules not up to date",
+  asks guildmates for them through guild sync, and meanwhile is **strict**:
+  every row only the Guild Master (switches and locks as they last matched,
+  since they hand nobody anything). A Guild Master who changes a rule and
+  doesn't paste the new line leaves everyone strict, so the Permissions
+  page and a chat line at login say so.
 - **Trust:** rules count only when they match the code. A copy can't push
   made-up rules, even an officer's, because the game decides who edits the
   Guild Info.

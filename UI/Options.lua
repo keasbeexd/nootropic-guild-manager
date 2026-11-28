@@ -634,8 +634,24 @@ function O:RefreshPermControls()
     for _, pair in ipairs({ { self.lockRmsg, "rmsg" }, { self.lockImsg, "imsg" } }) do
         if pair[1] then pair[1]:SetChecked(DB:Rule("lock_" .. pair[2]) == "1") pair[1]:SetEnabled(gm) end
     end
-    -- (the Guild Info code is off for now: Services/GuildRules.lua)
-    local text, showCopy = gm and "Only you can change these: every copy accepts permissions only from the Guild Master." or "Only the Guild Master can change these.", false
+    -- the Guild Info code (Services/GuildRules.lua)
+    local text, showCopy
+    if gm then
+        local inPlace = GR:LineInPlace()
+        if inPlace == false then
+            text, showCopy = "|cffff8000Put this line in the Guild Info|r (Guild & Communities, Guild Info; the game doesn't let addons write it): |cffffffff" .. GR:Line() .. "|r. Until it's there, everyone else's permissions are Guild Master only.", true
+        elseif inPlace then
+            text = "|cff6cbf5aIn the Guild Info:|r " .. GR:Line() .. ". Every copy checks your rules against it, so nobody can change them but you."
+        elseif next(GR:Raw()) then
+            text, showCopy = "Your rules' line for the Guild Info: |cffffffff" .. GR:Line() .. "|r (the Guild Info is checked again out of combat).", true
+        else
+            text = "Nothing set yet: everything works as before. Change a row and the page gives you a line for the Guild Info."
+        end
+    elseif GR:Stale() then
+        text = "|cffff8000Guild rules not up to date:|r they don't match the Guild Info yet, so every row is Guild Master only for now. Fetching the Guild Master's from guildmates."
+    else
+        text = GR:Code() and "|cff6cbf5aIn step with the Guild Info.|r Only the Guild Master can change these." or "Only the Guild Master can change these."
+    end
     self.rulesStatus:SetText(text)
     self.rulesCopy:SetShown(showCopy == true)
 end
