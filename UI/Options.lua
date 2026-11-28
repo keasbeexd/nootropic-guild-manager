@@ -639,7 +639,7 @@ function O:RefreshPermControls()
     if gm then
         local inPlace = GR:LineInPlace()
         if inPlace == false then
-            text, showCopy = "|cffff8000Put this in your Guild Info, or nobody else can use anything:|r |cffffffff" .. GR:Line() .. "|r", true
+            text, showCopy = "|cffff8000Put this in your Guild Info, or everyone's permissions will default to Guild Master only, for safety reasons:|r |cffffffff" .. GR:Line() .. "|r", true
         elseif inPlace then
             text = "|cff6cbf5aIn the Guild Info:|r " .. GR:Line() .. ". Every copy checks your rules against it, so nobody can change them but you."
         elseif next(GR:Raw()) then
