@@ -344,6 +344,42 @@ function DB:HasPerm(key)
     return ns.IsOfficer()
 end
 
+-- May this rank (r = { index, name }) do `key`? (for the Permissions page's
+-- choices: the recruiting rows only offer ranks that may recruit, officer
+-- data only officer ranks)
+function DB:RankMay(r, key)
+    if r.index == 0 then return true end
+    local S = ns.Sync
+    local needs = S.PERM_NEEDS[key]
+    if needs and not self:RankMay(r, needs) then return false end
+    local flags = S:RankFlags(r.index)
+    local officer = flags and flags.officer or (not flags and S:RankIsOfficer({ rankIndex = r.index, rank = r.name }))
+    local set = self:PermRanks(key)
+    if set then return set[r.index] == true and (not S.PERM_NARROW[key] or officer == true) end
+    local default = S.PERM_DEFAULT[key] or "officers"
+    if default == "everyone" then return true end
+    if default == "gm" then return false end
+    if default == "recruiters" then
+        if flags then return flags.invite == true end
+        local ranks = S:RecruiterRanks()
+        if ranks then return ranks[(r.name or ""):lower()] == true end
+    end
+    return officer == true
+end
+
+-- Can this row be handed to this rank at all? (what it needs, officer data)
+function DB:RankCanHold(r, key)
+    local S = ns.Sync
+    if r.index == 0 then return true end
+    if S.PERM_NEEDS[key] and not self:RankMay(r, S.PERM_NEEDS[key]) then return false end
+    if S.PERM_NARROW[key] then
+        local flags = S:RankFlags(r.index)
+        if flags then return flags.officer end
+        return S:RankIsOfficer({ rankIndex = r.index, rank = r.name }) == true
+    end
+    return true
+end
+
 -- set = { [rankIndex] = true } or nil for the default (officers).
 function DB:SetPermRanks(key, set)
     if not self:IsGuildMaster() then return nil, "Only the Guild Master can change permissions." end
@@ -358,7 +394,9 @@ end
 -- The default's name: "Everyone" or "Officers".
 local DEFAULT_TEXT = { everyone = "Everyone", officers = "Officers", recruiters = "Ranks that may invite", gm = "Only the Guild Master" }
 function DB:PermDefaultText(key)
-    return DEFAULT_TEXT[ns.Sync.PERM_DEFAULT[key] or "officers"]
+    local default = ns.Sync.PERM_DEFAULT[key] or "officers"
+    if default == "everyone" and ns.Sync.PERM_NEEDS[key] == "recruit" then return "Everyone who may recruit" end
+    return DEFAULT_TEXT[default]
 end
 
 -- Short, for a button (as the dashboard says it): "Officers (default)",

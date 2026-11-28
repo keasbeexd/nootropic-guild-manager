@@ -43,6 +43,12 @@ handlers.ADDON_ACTION_FORBIDDEN(nil, "NootropicGuildManager", "UNKNOWN()")
 assert(settings.bugLog[1].what == "UNKNOWN()", "an old name isn't used")
 ns.doing = nil
 
+-- a new version gets its own line, not an old version's count
+ns.version = "3.1.2"
+handlers.ADDON_ACTION_BLOCKED(nil, "NootropicGuildManager", "C_GuildInfo.SetNote()")
+assert(settings.bugLog[1].version == "3.1.2" and (settings.bugLog[1].n or 1) == 1, "its own line")
+ns.version = "3.1.1"
+
 local text = B:Text()
 assert(text:find("NGM Addon 3.1.1", 1, true) and text:find("C_GuildInfo.SetNote() x2", 1, true), text)
 assert(text:find("Other addons: Details", 1, true), "other addons by name")

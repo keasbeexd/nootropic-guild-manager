@@ -79,6 +79,14 @@ already refuses `GS:perm_*` from anyone else).
 
 ## Keeping every copy on the same rules: the Guild Info code
 
+**Off for now (3.2.0-test3).** On Forever, `C_GuildInfo.GetInfoText` is a
+restricted call (`HasRestrictions` in the game's API docs): reading it from
+the NGM Addon raised "Interface action failed" (blocked in combat, forbidden
+when the Guild Info opened). The NGM Addon neither reads nor writes the
+Guild Info; every copy takes rules only from the Guild Master (checked
+whoever passes them on). The design below stays for if a safe way to read
+it turns up.
+
 As GRM does: a short code in the guild's Guild Info text, which only ranks
 the game lets edit it can change.
 

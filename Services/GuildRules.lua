@@ -41,11 +41,14 @@ function GR.Fingerprint(rules)
     return ns.Sync.Base36(ns.Sync.Hash(table.concat(parts, ";")))
 end
 
+-- Not read for now: on Forever, C_GuildInfo.GetInfoText is a restricted
+-- call (HasRestrictions in the game's API docs) and reading it from the NGM
+-- Addon raised "Interface action failed" (blocked in combat, forbidden
+-- when the Guild Info opened; 3.2.0-test3). With no code, every copy uses
+-- the Guild Master's records as they are (only the Guild Master's are
+-- accepted).
 local function InfoText()
-    local get = (C_GuildInfo and C_GuildInfo.GetInfoText) or rawget(_G, "GetGuildInfoText")
-    if not get then return nil end
-    local ok, text = pcall(get)
-    return ok and type(text) == "string" and text or nil
+    return nil
 end
 
 -- The code in the Guild Info, or nil
@@ -105,7 +108,7 @@ end
 -- Does the Guild Info have the line for the rules as they are now? (the
 -- Guild Master's copy: nil when the guild has no rules set at all)
 function GR:LineInPlace()
-    if not next(RawRules()) then return nil end
+    if not next(RawRules()) or not InfoText() then return nil end
     return (InfoText() or ""):find(self:Line(), 1, true) ~= nil
 end
 
@@ -116,15 +119,6 @@ function GR:Init()
         -- the Guild Master changed a rule: the line to paste follows (Permissions page)
         if ns.DB:IsGuildMaster() then GR:Publish() end
     end)
-    -- at login, the Guild Master is told if the Guild Info needs the new line
-    C_Timer.After(25, function()
-        if ns.DB:IsGuildMaster() and GR:LineInPlace() == false then
-            ns:Print(("Your guild rules changed: put |cffffffff%s|r in the Guild Info (Options, Permissions, Copy the line), so every copy uses them."):format(GR:Line()))
-        end
-    end)
-    -- the Guild Info comes with the roster (and changes with it)
-    ns:RegisterEvent("GUILD_ROSTER_UPDATE", function()
-        local code = GR:Code()
-        if code ~= GR.code then again() end
-    end)
+    -- (no login reminder and no watching the roster for the Guild Info: it
+    -- isn't read, see InfoText)
 end

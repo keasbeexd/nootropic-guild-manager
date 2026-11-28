@@ -505,6 +505,7 @@ end
 function O:PermMenu(owner, key)
     local DB = ns.DB
     local narrow = ns.Sync.PERM_NARROW[key]
+    local needs = ns.Sync.PERM_NEEDS[key]
     local function Set(set)
         local ok, err = DB:SetPermRanks(key, set)
         if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
@@ -513,7 +514,7 @@ function O:PermMenu(owner, key)
     local items = { { text = "Who may do this", isTitle = true } }
     items[#items + 1] = { text = DB:PermDefaultText(key) .. " (default)", radio = true,
         checked = function() return DB:PermRanks(key) == nil end, func = function() Set(nil) end }
-    if not narrow then
+    if not narrow and not needs then
         -- every rank
         items[#items + 1] = { text = "Everyone", radio = true,
             checked = function()
@@ -532,10 +533,10 @@ function O:PermMenu(owner, key)
         checked = function() local set = DB:PermRanks(key) return set ~= nil and next(set) == nil end,
         func = function() Set({}) end }
     items[#items + 1] = { divider = true }
-    items[#items + 1] = { text = narrow and "These officer ranks" or "These ranks", isTitle = true }
+    items[#items + 1] = { text = narrow and "These officer ranks" or needs and "These ranks (ones that may recruit)" or "These ranks", isTitle = true }
     for _, r in ipairs(DB:GuildRanks()) do
         local gm = r.index == 0
-        items[#items + 1] = {
+        if DB:RankCanHold(r, key) then items[#items + 1] = {
             text = r.name .. (gm and "  |cff9d9d9d(always)|r" or ""),
             checked = function()
                 if gm then return true end
@@ -550,7 +551,7 @@ function O:PermMenu(owner, key)
                 if not ok and err then ns:Print("|cffff2020" .. err .. "|r") end
                 O:Refresh()
             end,
-        }
+        } end
     end
     W.ShowMenu(owner, items)
 end
@@ -629,22 +630,8 @@ function O:RefreshPermControls()
     for _, pair in ipairs({ { self.lockRmsg, "rmsg" }, { self.lockImsg, "imsg" } }) do
         if pair[1] then pair[1]:SetChecked(DB:Rule("lock_" .. pair[2]) == "1") pair[1]:SetEnabled(gm) end
     end
-    -- the Guild Info code
-    local text, showCopy
-    if gm then
-        local inPlace = GR:LineInPlace()
-        if inPlace == false then
-            text, showCopy = "|cffff8000Put this line in the Guild Info|r (Guild & Communities, Guild Info; the game doesn't let addons write it): |cffffffff" .. GR:Line() .. "|r. Every copy checks your rules against it.", true
-        elseif inPlace then
-            text = "|cff6cbf5aIn the Guild Info:|r " .. GR:Line() .. ". Every copy checks your rules against it, so nobody can change them but you."
-        else
-            text = "Nothing set yet: everything works as before. Change a row and the page gives you a line for the Guild Info."
-        end
-    elseif GR:Stale() then
-        text = "|cffff8000Guild rules not up to date:|r they don't match the Guild Info yet, so the last ones that did are used. Fetching the Guild Master's from guildmates."
-    else
-        text = GR:Code() and "|cff6cbf5aIn step with the Guild Info.|r Only the Guild Master can change these." or "Only the Guild Master can change these."
-    end
+    -- (the Guild Info code is off for now: Services/GuildRules.lua)
+    local text, showCopy = gm and "Only you can change these: every copy accepts permissions only from the Guild Master." or "Only the Guild Master can change these.", false
     self.rulesStatus:SetText(text)
     self.rulesCopy:SetShown(showCopy == true)
 end

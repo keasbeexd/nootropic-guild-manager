@@ -49,9 +49,9 @@ end
 function B:Note(kind, what)
     local log = Log()
     what = tostring(what or ""):gsub("[\r\n]+", " | "):sub(1, 300)
-    -- the same thing again: counted, not listed twice
+    -- the same thing again, on the same version: counted, not listed twice
     for _, e in ipairs(log) do
-        if e.kind == kind and e.what == what then
+        if e.kind == kind and e.what == what and e.version == ns.version then
             e.n, e.t = (e.n or 1) + 1, time()
             return
         end
