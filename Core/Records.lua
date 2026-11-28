@@ -335,19 +335,25 @@ end
 ------------------------------------------------------------------------
 -- Permissions
 ------------------------------------------------------------------------
-function S:CanWrite(key)
+-- May you write `key` (with `value`, when it matters: Do Not Whisper adds
+-- and removes, sign-ups and withdrawals)? The same rules as every copy's
+-- check on what it receives.
+function S:CanWrite(key, value)
     local typ, member, rest = S.ParseKey(key)
     if not typ then return false end
     local def = S.TYPES[typ]
+    -- the Guild Master's permissions (docs/PERMISSIONS.md)
+    local permits = self:PermitsAuthor(typ, Me(), member, rest, value ~= nil and { v = value } or nil)
+    if permits == false then return false end
     if def.selfOnly then return member == Me() end
-    if def.anyone then return IsInGuild() end -- (DN removal is checked in RC:RemoveDNW)
+    if def.anyone then return IsInGuild() end
     -- events made in game and sign-ups: what's in them is checked too (Services/Events.lua)
     if typ == "EG" or typ == "ES" or typ == "LK" or typ == "DX" or typ == "EL" then return self:MayAuthor(Me(), typ, member, rest) end
     -- your own profile: the Guild Master decides (everyone by default)
     if def.self and member == Me() and ns.DB:HasPerm("ownprofile") then return true end
-    -- permissions only the Guild Master changes
-    if typ == "GS" and (rest:sub(1, 5) == "perm_" or rest == "officers" or rest == "recruiters") then return ns.DB:IsGuildMaster() end
-    -- what the Guild Master hands out per rank (Options > Officers > Permissions)
+    -- rules, the guild's messages, bans, the Hall of Fame, the Officer Log
+    if permits then return true end
+    -- what the Guild Master hands out per rank (the Permissions page)
     local perm = def.scope == "guild" and ns.DB.PERM_BY_TYPE[typ]
     if perm then return ns.DB:HasPerm(perm) end
     if def.officer and ns.IsOfficer() then return true end
@@ -971,7 +977,7 @@ function S:Set(key, value, opts)
     if not ns.DB:Guild() then return nil, "You are not in a guild." end
     local typ = S.ParseKey(key)
     if not typ then return nil, "Unknown record." end
-    if not opts.force and not self:CanWrite(key) then
+    if not opts.force and not self:CanWrite(key, value) then
         return nil, "Only officers can change that."
     end
     value = Clean(value)

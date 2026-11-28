@@ -36,12 +36,13 @@ function BN:All()
     return out
 end
 
--- The ban covering this character (by game ID first, then name), or nil
-function BN:Find(full, guid)
+-- The ban covering this character (by game ID first, then name), or nil;
+-- `list` is All() when checking many at once
+function BN:Find(full, guid, list)
     if not full and not guid then return nil end
     guid = guid or (full and ns.Roster.byName[full] and ns.Roster.byName[full].guid)
     local byName
-    for _, b in ipairs(self:All()) do
+    for _, b in ipairs(list or self:All()) do
         if guid and b.guid == guid then return b end
         if full and b.full == full then byName = b end
     end
@@ -73,12 +74,15 @@ function BN:Ban(full, reason)
     if not ns.DB:HasPerm("ban") then return nil, "Your rank can't ban players (the Guild Master's Permissions)." end
     full = full and ns.NormalizeName(ns.Trim(full))
     if not full or full == "" then return nil, "Whose name?" end
-    if full == ns.PlayerFullName() then return nil, "That's you." end
-    local e = ns.Roster.byName[full]
-    if e and e.rankIndex == 0 then return nil, "Not the Guild Master." end
-    reason = ns.Sync.Clean(reason or ""):gsub(";", ","):sub(1, 200)
     local chars, main = Family(full)
     local me, now = ns.PlayerFullName(), ns.DB:Now()
+    for _, c in ipairs(chars) do
+        -- the whole family goes: never your own characters or the Guild Master's
+        if c == me then return nil, "That's you (or one of your characters)." end
+        local e = ns.Roster.byName[c]
+        if e and e.rankIndex == 0 then return nil, "Not the Guild Master (or their characters)." end
+    end
+    reason = ns.Sync.Clean(reason or ""):gsub(";", ","):sub(1, 200)
     for _, c in ipairs(chars) do
         local guid = ns.Roster.byName[c] and ns.Roster.byName[c].guid or ""
         ns.Sync:Set("BN:" .. c, table.concat({ now, me, guid, main, reason }, ";"))
@@ -152,8 +156,10 @@ function BN:Init()
     local told = {}
     ns:On("ROSTER_UPDATED", function()
         if not ns.DB:HasPerm("banlist") then return end
+        local list = BN:All()
+        if #list == 0 then return end
         for full, e in pairs(ns.Roster.byName) do
-            if not told[full] and BN:IsBanned(full, e.guid) then
+            if not told[full] and BN:Find(full, e.guid, list) then
                 told[full] = true
                 BN:Warn(full, "They're in the guild.")
             end

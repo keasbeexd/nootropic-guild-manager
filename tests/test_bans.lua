@@ -15,9 +15,10 @@ function ns.PlayerFullName() return "Officer Me" end
 ns.Sync = { Store = function() return store end, Set = function(_, k, v) store[k] = { v = v } end,
   Clean = function(v) return (tostring(v or ""):gsub("|", "/")) end }
 ns.DB = { Now = function() return 1800000000 end, HasPerm = function(_, k) return perms[k] end,
-  RootOf = function(_, n) return ({ ["Bad Alt"] = "Bad Main" })[n] or n end,
-  GetAltsOf = function(_, n) return n == "Bad Main" and { "Bad Alt" } or {} end }
-ns.Roster = { byName = { ["Bad Main"] = { guid = "Player-1-AAA", rankIndex = 4 }, ["Bad Alt"] = { guid = "Player-1-BBB", rankIndex = 4 } } }
+  RootOf = function(_, n) return ({ ["Bad Alt"] = "Bad Main", ["My Alt"] = "Officer Me", ["Gm Alt"] = "Gm Boss" })[n] or n end,
+  GetAltsOf = function(_, n) return ({ ["Bad Main"] = { "Bad Alt" }, ["Officer Me"] = { "My Alt" }, ["Gm Boss"] = { "Gm Alt" } })[n] or {} end }
+ns.Roster = { byName = { ["Bad Main"] = { guid = "Player-1-AAA", rankIndex = 4 }, ["Bad Alt"] = { guid = "Player-1-BBB", rankIndex = 4 },
+  ["Gm Boss"] = { rankIndex = 0 }, ["Gm Alt"] = { rankIndex = 3 } } }
 ERR_GUILD_INVITE_S = "You have invited %s to join your guild."
 C_Timer = { NewTimer = function() return { Cancel = function() end } end }
 CreateFrame = function() local f = { Text = {} } function f:SetSize() end function f:SetPoint() end function f:SetFrameStrata() end
@@ -42,6 +43,9 @@ assert(printed[#printed]:find("Banned: Bad Alt (alt of Bad Main)", 1, true), pri
 local n = #printed
 events.CHAT_MSG_SYSTEM(nil, "You have invited Good Guy to join your guild.")
 assert(#printed == n, "nobody else")
+-- never your own characters or the Guild Master's (the whole family goes)
+assert(BN:Ban("My Alt") == nil and not BN:IsBanned("My Alt"), "not one of mine")
+assert(BN:Ban("Gm Alt") == nil and not BN:IsBanned("Gm Alt"), "not one of the Guild Master's")
 -- unban: the family
 assert(BN:Unban("Bad Main") == 2)
 assert(not BN:IsBanned("Bad Alt"))

@@ -210,9 +210,6 @@ function DB:Guild()
 end
 
 ------------------------------------------------------------------------
--- Guild-wide settings (shared; officers change them)
-------------------------------------------------------------------------
-------------------------------------------------------------------------
 -- Permissions (docs/PERMISSIONS.md): the Guild Master picks which ranks may
 -- do each of these, on the Permissions page, and only they change them.
 -- GS:perm_<key> = "" (the default) or rank numbers "1,3,4" ("-" = nobody

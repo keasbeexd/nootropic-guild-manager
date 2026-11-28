@@ -101,4 +101,15 @@ check("an officer can", rec("Mira Officer-R", "BN:Spammy-R", "Mira Officer-R", b
 check("bans can't carry escape codes", S.ValidValue("BN", ("%d;x;;y;|Hx|h"):format(NOW)), false)
 check("a ban's game ID is a player's", S.ValidValue("BN", ("%d;x;Creature-1;y;r"):format(NOW)), false)
 check("unbanning is a ban permission too", rec("Bob Member-R", "BN:Spammy-R", "Bob Member-R", ""), ban)
+
+-- your own copy writes by the same rules (S:Set goes through S:CanWrite)
+local myBan = ("%d;Me Self-R;;Spammy Main-R;x"):format(NOW)
+check("my own copy: a member can't ban", (S:Set("BN:Other Spammer-R", myBan)), nil)
+permRanks.ban = { [4] = true }
+check("handed to members: my copy bans", (S:Set("BN:Other Spammer-R", myBan)), true)
+check("...the Guild Master's messages too once handed out (not an officer rank)", (function() permRanks.rmsg = { [4] = true } permRanks.recruit = { [4] = true } return S:CanWrite("GS:rmsgs") end)(), true)
+check("...but never the rules themselves", S:CanWrite("GS:perm_ban"), false)
+permRanks.dnw_add, permRanks.dnw_remove = nil, nil
+check("Do Not Whisper: adding (everyone who may recruit)", S:CanWrite("DN:Spam2-R", "1;x"), true)
+check("...taking off needs dnw_remove (recruiters: the game's Invite Member)", S:CanWrite("DN:Spam2-R", ""), false)
 print("OK")
