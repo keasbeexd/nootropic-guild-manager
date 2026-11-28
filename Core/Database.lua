@@ -231,6 +231,8 @@ DB.PERMS = {
       hint = "Mark alts, change mains, unlink." },
     { group = "Profiles", key = "ownprofile", label = "Edit their own profile",
       hint = "Spec, roles, professions and contact info on their own characters. What their NGM Addon reports by itself (version, professions it reads, usual play hours) isn't affected." },
+    { group = "Profiles", key = "ownmain", label = "Choose their own main on NGM Peon's dashboard",
+      hint = "Members linked to NGM Peon pick their main among their own characters there. Linking mains and alts in game is the row above." },
     { group = "Profiles", key = "profiles", label = "Edit other guildmates' profiles",
       hint = "Spec, roles, professions and contact info on anyone's profile (their own included)." },
     { group = "Events", key = "ev_dungeon", label = "Create dungeons", event = "dungeon",
@@ -246,11 +248,11 @@ DB.PERMS = {
     { group = "Recruiting", key = "recruit", label = "Use the recruiting tools",
       hint = "Recruitment whispers, the button on /who results and the Invite prompt. Whispers happen on each player's own computer, so a changed copy of the NGM Addon could still send them; what they record is checked by everyone." },
     { group = "Recruiting", key = "rmsg", label = "Write the guild's recruitment messages",
-      hint = "The messages everyone's recruitment whispers start from (or must use, with Everyone uses the guild's messages)." },
+      hint = "The messages everyone's recruitment whispers start from (or must use, with Everyone uses the guild's messages). Only ranks that may use the recruiting tools." },
     { group = "Recruiting", key = "dnw_add", label = "Add to Do Not Whisper",
-      hint = "Put someone on the guild's Do Not Whisper list." },
+      hint = "Put someone on the guild's Do Not Whisper list. Only ranks that may use the recruiting tools." },
     { group = "Recruiting", key = "dnw_remove", label = "Take off Do Not Whisper",
-      hint = "Take someone off the guild's Do Not Whisper list." },
+      hint = "Take someone off the guild's Do Not Whisper list. Only ranks that may use the recruiting tools." },
     { group = "Members", key = "remind", label = "Send install reminders",
       hint = "Whisper a guildmate to install the NGM Addon." },
     { group = "Members", key = "imsg", label = "Write the install reminder text",
@@ -261,6 +263,8 @@ DB.PERMS = {
       hint = "The Ban List window. Everyone is still warned when they invite someone banned." },
     { group = "Members", key = "banreason", label = "See ban reasons",
       hint = "Why someone was banned, in the Ban List and the warnings." },
+    { group = "Officers", key = "officerlog", label = "Write in the Officer Log",
+      hint = "Officer data: the game only gives it to ranks it marks Officer, so this can only be narrowed." },
     { group = "Officers", key = "audit", label = "See the Audit tab",
       hint = "Officer data: the game only gives it to ranks it marks Officer, so this can only be narrowed." },
     { group = "Hall of Fame", key = "hofhide", label = "Hide someone from the Hall of Fame",
@@ -279,6 +283,9 @@ DB.PERM_BY_TYPE = { M = "links",
 DB.FEATURES = {
     { key = "recruit", label = "Recruiting", hint = "The Recruitment tab, whispers, the /who button and the Invite prompt." },
     { key = "together", label = "Play Together", hint = "The Play Together tab." },
+    { key = "events", label = "Upcoming Events", hint = "The Upcoming Events tab: events, sign-ups, resets and holidays." },
+    { key = "overview", label = "Overview", hint = "The Overview tab." },
+    { key = "crafting", label = "Who Can Craft", hint = "The Who Can Craft window." },
     { key = "fame", label = "Hall of Fame", hint = "The Hall of Fame tab and champions." },
     { key = "levelups", label = "Level-ups in chat", hint = "The Guild Feed's level-up lines." },
     { key = "reminders", label = "Install reminders", hint = "Whispering guildmates to install the NGM Addon." },
@@ -330,6 +337,8 @@ function DB:HasPerm(key)
     local rank = self:MyRankIndex()
     if rank == 0 then return true end
     local set = self:PermRanks(key)
+    local needs = ns.Sync.PERM_NEEDS[key]
+    if needs and not self:HasPerm(needs) then return false end
     if set then return rank ~= nil and set[rank] == true and (not ns.Sync.PERM_NARROW[key] or ns.IsOfficer()) end
     local default = ns.Sync.PERM_DEFAULT[key] or "officers"
     if default == "everyone" then return true end
@@ -355,16 +364,29 @@ function DB:PermDefaultText(key)
     return DEFAULT_TEXT[ns.Sync.PERM_DEFAULT[key] or "officers"]
 end
 
--- "Officers (default)", "Guild Master only" or "Veteran, Officer".
-function DB:PermText(key)
+-- Short, for a button (as the dashboard says it): "Officers (default)",
+-- "Everyone", "Only the Guild Master", "Raid Leader and above" (a top run of
+-- ranks), or "Officer, Veteran +2". full = true: every name.
+function DB:PermText(key, full)
     local set = self:PermRanks(key)
     if not set then return self:PermDefaultText(key) .. " (default)" end
-    local names = {}
-    for _, r in ipairs(self:GuildRanks()) do
-        if r.index ~= 0 and set[r.index] then names[#names + 1] = r.name end
+    local ranks, names, all, run = self:GuildRanks(), {}, true, true
+    for _, r in ipairs(ranks) do
+        if r.index ~= 0 then
+            if set[r.index] then names[#names + 1] = r.name else all = false end
+        end
     end
-    if #names == 0 then return "Guild Master only" end
-    return table.concat(names, ", ")
+    if #names == 0 then return "Only the Guild Master" end
+    if all then return "Everyone" end
+    -- ranks 1..k exactly: "<rank k> and above"
+    local k = 0
+    for i = 1, #ranks - 1 do if set[i] then k = i else break end end
+    for i in pairs(set) do if i > k then run = false end end
+    if run and k > 0 then
+        for _, r in ipairs(ranks) do if r.index == k then return r.name .. " and above" end end
+    end
+    if full or #names <= 2 then return table.concat(names, ", ") end
+    return ("%s, %s +%d"):format(names[1], names[2], #names - 2)
 end
 
 -- Your rank number in the guild (0 = Guild Master), or nil.

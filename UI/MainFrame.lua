@@ -348,6 +348,8 @@ end
 function UI:IsTabAvailable(id)
     if id == UI.TAB_RECRUIT then return ns.Recruit and ns.Recruit:MayRecruit() or false end
     if id == UI.TAB_TOGETHER then return ns.DB:FeatureOn("together") end
+    if id == UI.TAB_EVENTS then return ns.DB:FeatureOn("events") end
+    if id == UI.TAB_OVERVIEW then return ns.DB:FeatureOn("overview") end
     if id == UI.TAB_HOF then return ns.DB:FeatureOn("fame") end
     if id == UI.TAB_AUDIT then return ns.DB:HasPerm("audit") end
     return not OFFICER_TABS[id] or ns.IsOfficer()

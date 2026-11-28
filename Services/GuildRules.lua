@@ -12,8 +12,9 @@
                     are (a guild not using it, or a Guild Master before 3.2)
       Stale()       our rules don't match the code (yet): the page says so,
                     and a sync check asks guildmates for them
-      Publish()     the Guild Master's copy: put the new code in the Guild
-                    Info (out of combat), or hand back the line to paste
+      Publish()     the Guild Master's copy: is the code in the Guild Info?
+                    If not, the line to paste (the game forbids addons to
+                    write the Guild Info, so the Guild Master pastes it)
 ]]
 local _, ns = ...
 local GR = {}
@@ -89,44 +90,41 @@ function GR:Stale() return self.stale == true end
 -- The line for the Guild Info, as it should be now
 function GR:Line() return "NGM:" .. GR.Fingerprint(RawRules()) end
 
--- The Guild Master's copy: the new code into the Guild Info. True when it's
--- there; false and the line to paste when the game wouldn't take it.
+-- The Guild Master puts the line in the Guild Info by hand: on Forever the
+-- game forbids addons to write it (C_GuildInfo.SetInfoText raises
+-- ADDON_ACTION_FORBIDDEN even inside pcall), so the NGM Addon never tries.
+-- True when the Guild Info already has it; else false and the line to paste.
 function GR:Publish()
     if not ns.DB:IsGuildMaster() then return false end
     local line = self:Line()
-    if InCombatLockdown and InCombatLockdown() then
-        self.pending = true
-        return false, line
-    end
-    local text = InfoText() or ""
-    if text:find(line, 1, true) then self.pasteLine = nil return true end
-    local new = text:find(PATTERN) and text:gsub("NGM:%w+", line, 1) or ((text ~= "" and (text .. "\n") or "") .. line)
-    if #new > 499 then self.pasteLine = line return false, line end
-    local set = (C_GuildInfo and C_GuildInfo.SetInfoText) or rawget(_G, "SetGuildInfoText")
-    local ok = set and pcall(set, new)
-    -- the game may answer later: check back
-    if ok then
-        self.pasteLine = nil
-        if C_Timer then C_Timer.After(3, function() if not (InfoText() or ""):find(line, 1, true) then GR.pasteLine = line ns:Fire("GUILD_RULES_CHANGED") end end) end
-        return true
-    end
+    if (InfoText() or ""):find(line, 1, true) then self.pasteLine = nil return true end
     self.pasteLine = line
     return false, line
+end
+
+-- Does the Guild Info have the line for the rules as they are now? (the
+-- Guild Master's copy: nil when the guild has no rules set at all)
+function GR:LineInPlace()
+    if not next(RawRules()) then return nil end
+    return (InfoText() or ""):find(self:Line(), 1, true) ~= nil
 end
 
 function GR:Init()
     local function again() GR.effective = nil GR:Refresh() end
     ns:On("GUILD_SETTINGS_CHANGED", function()
         again()
-        -- the Guild Master changed a rule: the code follows
-        if ns.DB:IsGuildMaster() and GR.code ~= GR.mine then GR:Publish() end
+        -- the Guild Master changed a rule: the line to paste follows (Permissions page)
+        if ns.DB:IsGuildMaster() then GR:Publish() end
+    end)
+    -- at login, the Guild Master is told if the Guild Info needs the new line
+    C_Timer.After(25, function()
+        if ns.DB:IsGuildMaster() and GR:LineInPlace() == false then
+            ns:Print(("Your guild rules changed: put |cffffffff%s|r in the Guild Info (Options, Permissions, Copy the line), so every copy uses them."):format(GR:Line()))
+        end
     end)
     -- the Guild Info comes with the roster (and changes with it)
     ns:RegisterEvent("GUILD_ROSTER_UPDATE", function()
         local code = GR:Code()
         if code ~= GR.code then again() end
-    end)
-    ns:RegisterEvent("PLAYER_REGEN_ENABLED", function()
-        if GR.pending then GR.pending = nil GR:Publish() end
     end)
 end

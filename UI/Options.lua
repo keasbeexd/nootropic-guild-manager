@@ -584,7 +584,7 @@ function O:BuildPermissions()
         local btn = W.Button(L.panel, "", 210, 22)
         btn:SetPoint("TOPLEFT", 276, ry)
         btn:SetScript("OnClick", function(b) O:PermMenu(b, perm.key) end)
-        W.Tooltip(btn, perm.label, perm.hint)
+        W.Tooltip(btn, perm.label, perm.hint, function() return "|cffffd100Who may:|r " .. ns.DB:PermText(perm.key, true) end)
         local you = L.panel:CreateFontString(nil, "OVERLAY", "NGMFontDimSmall")
         you:SetPoint("LEFT", btn, "RIGHT", 8, 0)
         self.permRows[#self.permRows + 1] = { key = perm.key, btn = btn, you = you }
@@ -632,10 +632,13 @@ function O:RefreshPermControls()
     -- the Guild Info code
     local text, showCopy
     if gm then
-        if GR.pasteLine then
-            text, showCopy = "|cffff8000Put this line in the Guild Info|r (the game didn't let the NGM Addon do it): |cffffffff" .. GR:Line() .. "|r. Every copy checks the rules against it.", true
-        else
+        local inPlace = GR:LineInPlace()
+        if inPlace == false then
+            text, showCopy = "|cffff8000Put this line in the Guild Info|r (Guild & Communities, Guild Info; the game doesn't let addons write it): |cffffffff" .. GR:Line() .. "|r. Every copy checks your rules against it.", true
+        elseif inPlace then
             text = "|cff6cbf5aIn the Guild Info:|r " .. GR:Line() .. ". Every copy checks your rules against it, so nobody can change them but you."
+        else
+            text = "Nothing set yet: everything works as before. Change a row and the page gives you a line for the Guild Info."
         end
     elseif GR:Stale() then
         text = "|cffff8000Guild rules not up to date:|r they don't match the Guild Info yet, so the last ones that did are used. Fetching the Guild Master's from guildmates."

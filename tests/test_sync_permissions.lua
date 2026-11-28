@@ -52,9 +52,10 @@ check("member forges someone's own record (claims to be them)", rec("Bob Member-
 check("the refusal is remembered for /ngm sync", S.lastRefused and S.lastRefused.key == "AV:Ann Member-R" and S.lastRefused.sender == "Bob Member-R" and S.lastRefused.why ~= nil, true)
 check("member sends own version", rec("Ann Member-R", "AV:Ann Member-R", "Ann Member-R", "2.1"), "2.1")
 check("officer relays someone's own record", rec("Mira Officer-R", "SC:Ann Member-R", "Ann Member-R", "ff"), "ff")
-check("member adds to Do Not Whisper (anyone may)", rec("Bob Member-R", "DN:Spammer-R", "Bob Member-R", "1;no"), "1;no")
-check("escape codes are defused", rec("Bob Member-R", "DN:Other-R", "Bob Member-R", "1;|TInterface\\x:99|t hi"), "1;/TInterface\\x:99/t hi")
-check("key with an escape code is dropped", rec("Bob Member-R", "DN:Ev|cil-R", "Bob Member-R", "1;x"), nil)
+check("a member who can't recruit can't add to Do Not Whisper (3.2)", rec("Bob Member-R", "DN:Spammer-R", "Bob Member-R", "1;no"), nil)
+check("the Guild Master adds to Do Not Whisper", rec("Gm Boss-R", "DN:Spammer-R", "Gm Boss-R", "1;no"), "1;no")
+check("escape codes are defused", rec("Mira Officer-R", "DN:Other-R", "Mira Officer-R", "1;|TInterface\\x:99|t hi"), "1;/TInterface\\x:99/t hi")
+check("key with an escape code is dropped", rec("Mira Officer-R", "DN:Ev|cil-R", "Mira Officer-R", "1;x"), nil)
 check("officer-channel record from an officer", rec("Mira Officer-R", "L:Ann Member-R:1", "Mira Officer-R", "1;m;note", "OFFICER") ~= nil or not iAmOfficer, true)
 -- chunks
 S:OnMessage(table.concat({ P, "C", "zz", "1", "999", "x" }, "\t"), "GUILD", "Bob Member-R")
@@ -90,6 +91,7 @@ for i = 1, 12 do rec("Ann Member-R", "RP:Ann Member-R:" .. i, "Ann Member-R", "A
 check("13th profession list from one member", rec("Ann Member-R", "RP:Ann Member-R:99", "Ann Member-R", "Alchemy;1"), nil)
 check("recipe key with a made-up shape", rec("Ann Member-R", "RP:Ann Member-R:x", "Ann Member-R", "Alchemy;1"), nil)
 check("oversized value", rec("Ann Member-R", "AV:Ann Member-R", "Ann Member-R", string.rep("a", 5000)), "2.1")
+permRanks.recruit = { [4] = true } -- Bob may recruit (Do Not Whisper needs it, 3.2)
 S.NEW_KEYS_PER_WINDOW = 3
 for i = 1, 5 do rec("Bob Member-R", "DN:Flood" .. i .. "-R", "Bob Member-R", "1;x") end
 check("flood: 4th new entry in the window refused", guild.sync.guild["DN:Flood4-R"], nil)

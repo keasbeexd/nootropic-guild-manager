@@ -26,13 +26,16 @@ GR:Refresh()
 check("no code: rules as they are", GR:Value("perm_links"), "1")
 check("no code: not stale", GR:Stale(), false)
 
--- the Guild Master's copy puts the code in, keeping the guild's text
+-- the Guild Master's copy never writes the Guild Info (the game forbids it):
+-- it hands back the line, and the Guild Master pastes it
 gm = true
 GR:Refresh()
-check("published", GR:Publish(), true)
-check("the Guild Info keeps its text, plus the line", info, "Welcome to the guild!\n" .. GR:Line())
-GR:Publish()
-check("the same line isn't written again", setCalls, 1)
+local ok, line = GR:Publish()
+check("not written by the NGM Addon", ok, false)
+check("...the line to paste", line, GR:Line())
+check("...and the game's write is never called", setCalls, 0)
+info = info .. "\n" .. line -- pasted
+check("pasted: in place", GR:Publish(), true)
 
 -- a member's copy: matching
 gm = false
@@ -44,22 +47,13 @@ GR:Refresh()
 check("not matching: stale", GR:Stale(), true)
 check("...a sync check asks for the rules", ns.checked, true)
 check("...the last rules that matched still count", GR:Value("perm_links"), "1")
--- the Guild Master changes it for real, and the code follows
+-- the Guild Master changes it for real, and pastes the new line over the old
 gm = true
 GR:Refresh()
-GR:Publish()
-check("the code is replaced, not added twice", select(2, info:gsub("NGM:", "")), 1)
+info = info:gsub("NGM:%w+", GR:Line())
 gm = false
 GR:Refresh()
 check("matching again: the new rule counts", GR:Value("perm_links"), "1,4")
 check("...and it's no longer stale", GR:Stale(), false)
-
--- the Guild Info is full: the line comes back to paste
-gm = true
-info = ("x"):rep(495) .. "\n" .. "NGM:1"
-store["GS:feat_fame"] = { v = "0" }
-GR:Refresh()
-local ok, line = GR:Publish()
-check("no room: not published", ok, false)
-check("...the line to paste", line, GR:Line())
+check("still never written by the NGM Addon", setCalls, 0)
 print("OK")

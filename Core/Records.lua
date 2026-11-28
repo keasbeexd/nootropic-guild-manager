@@ -691,7 +691,7 @@ function S:MayAuthor(name, typ, member, rest)
     if def.selfOnly then return Same(name, member) end
     local permits = self:PermitsAuthor(typ, name, member, rest, nil)
     if typ == "GS" and permits ~= nil then return permits end
-    if typ == "HX" or typ == "HA" or typ == "BN" then return permits == true end
+    if typ == "HX" or typ == "HA" or typ == "BN" or typ == "L" then return permits == true end
     if def.self and Same(name, member) and self:Allowed(name, "ownprofile") then return true end
     local e = RosterEntry(name)
     if e and e.rankIndex == 0 then return true end
@@ -704,9 +704,12 @@ end
 -- Who may do each permission while the Guild Master hasn't set it, and the
 -- officer-only ones that can only be narrowed (docs/PERMISSIONS.md). Unlisted:
 -- officers. The one list every copy (and DB.PERMS, the page) goes by.
-S.PERM_DEFAULT = { ownprofile = "everyone", signup = "everyone", recruit = "recruiters", rmsg = "gm",
+S.PERM_DEFAULT = { ownprofile = "everyone", ownmain = "everyone", signup = "everyone", recruit = "recruiters", rmsg = "gm",
     dnw_add = "everyone", dnw_remove = "recruiters", remind = "everyone", imsg = "gm" }
-S.PERM_NARROW = { audit = true, peonnews = true, peoncode = true }
+S.PERM_NARROW = { audit = true, officerlog = true, peonnews = true, peoncode = true }
+-- Rows only someone who may also do another can hold: the recruiting ones
+-- need the recruiting tools (as officer data needs an officer rank)
+S.PERM_NEEDS = { rmsg = "recruit", dnw_add = "recruit", dnw_remove = "recruit" }
 
 -- What the Guild Master's permissions (docs/PERMISSIONS.md) say about a
 -- record's author: true or false, or nil when no permission covers it (the
@@ -724,6 +727,7 @@ function S:PermitsAuthor(typ, author, member, rest, rec)
     if typ == "HX" then return self:Allowed(author, "hofhide") end
     if typ == "HA" then return self:Allowed(author, "hofannounce") end
     if typ == "BN" then return self:Allowed(author, "ban") end
+    if typ == "L" then return self:Allowed(author, "officerlog") end
     if typ == "GS" then
         rest = rest or ""
         if rest:sub(1, 5) == "perm_" or rest:sub(1, 5) == "feat_" or rest:sub(1, 5) == "lock_" or rest == "officers" or rest == "recruiters" then return IsGuildMaster(author) end
@@ -739,6 +743,7 @@ function S:Allowed(name, perm)
     local e = RosterEntry(name)
     if not e then return false end
     if e.rankIndex == 0 then return true end
+    if S.PERM_NEEDS[perm] and not self:Allowed(name, S.PERM_NEEDS[perm]) then return false end
     local set = ns.DB.PermRanks and ns.DB:PermRanks(perm)
     if set then return set[e.rankIndex] == true and (not S.PERM_NARROW[perm] or self:KnownOfficer(name)) end
     local default = S.PERM_DEFAULT[perm] or "officers"
@@ -750,14 +755,14 @@ end
 
 
 function S:SenderAllowed(typ, member, rest, def, rec, ctx)
-    if def.scope == "officer" then return true end -- officer channel: officers only, by the game
     local sender, author = ctx.sender, rec.a
+    -- the Guild Master's permissions hold for the author, whoever passes it on (officer data too)
+    if self:PermitsAuthor(typ, author, member, rest, rec) == false then return false end
+    if def.scope == "officer" then return true end -- officer channel: officers only, by the game
     -- NGM Peon's records come into the game only through an officer's copy
     -- (its code); a character that happens to be called "Ngm Peon" can't
     -- speak for it
     if Same(author, S.PEON) and (Same(sender, S.PEON) or not self:KnownOfficer(sender) or not self:Allowed(sender, "peonnews")) then return false end
-    -- the Guild Master's permissions hold for the author, whoever passes it on
-    if self:PermitsAuthor(typ, author, member, rest, rec) == false then return false end
     -- anyone may put someone on the Do Not Whisper list; taking them off
     -- needs the recruit permission
     if typ == "DN" and (rec.v or "") == "" then

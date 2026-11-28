@@ -43,12 +43,23 @@ end
 local function check(name, got, want) print(("%-62s %s"):format(name, got == want and "ok" or ("FAIL (got " .. tostring(got) .. ")"))) assert(got == want) end
 
 -- defaults: today's behavior
-check("default: anyone adds to Do Not Whisper", rec("Bob Member-R", "DN:Spam-R", "Bob Member-R", "1;no"), "1;no")
+check("recruiting rows need the recruiting tools: a member can't add", rec("Bob Member-R", "DN:Spam-R", "Bob Member-R", "1;no"), nil)
+check("default: a rank that may invite adds", rec("Vic Veteran-R", "DN:Spam-R", "Vic Veteran-R", "1;no"), "1;no")
 check("default: a member can't take someone off it", rec("Bob Member-R", "DN:Spam-R", "Bob Member-R", ""), "1;no")
 check("default: a rank that may invite can", rec("Vic Veteran-R", "DN:Spam-R", "Vic Veteran-R", ""), "")
 check("default: anyone sends an install reminder", rec("Bob Member-R", "IR:Ann Member-R", "Bob Member-R", tostring(NOW - 50)) ~= nil, true)
 check("default: a member can't hide someone from the Hall of Fame", rec("Bob Member-R", "HX:Ann Member-R", "Bob Member-R", "1"), nil)
 check("default: an officer can", rec("Mira Officer-R", "HX:Ann Member-R", "Mira Officer-R", "1"), "1")
+
+-- handed to every rank, the recruiting rows still need the recruiting tools
+permRanks.dnw_remove = { [1] = true, [2] = true, [4] = true }
+check("Do Not Whisper handed to members: still needs recruiting", S:Allowed("Bob Member-R", "dnw_remove"), false)
+permRanks.dnw_remove = nil
+-- the Officer Log: officers, narrowed by the Guild Master
+check("an officer writes in the Officer Log", S:Allowed("Mira Officer-R", "officerlog"), true)
+permRanks.officerlog = { [4] = true }
+check("handed to members: still officers only, and Mira's rank isn't in it", S:Allowed("Bob Member-R", "officerlog") or S:Allowed("Mira Officer-R", "officerlog"), false)
+permRanks.officerlog = nil
 
 -- the Guild Master narrows Do Not Whisper to officers only
 permRanks.dnw_add = { [1] = true }
